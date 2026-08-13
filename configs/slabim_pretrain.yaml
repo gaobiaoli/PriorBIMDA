@@ -1,0 +1,23 @@
+extends: slabim_cv_pretrain.yaml
+
+experiment:
+  name: slabim_pretrain
+  output_dir: outputs/slabim_pretrain
+
+data:
+  # Fixed 70/15/15 temporal-segment annotation with fused-LiDAR embargo.
+  split_annotation: data/annotations/slabim_clean_global_v1.jsonl
+  split_annotation_sha256: "55e4a44afa27247557ba59dcd56d54385f0121d12257f4ceb6407702fc5ba3ce"
+  split_fingerprint_sha256: "d0fbcfebacf85235eba8d286dd7ec1e9ebaa8b96b82b706b2dc2e550291ec388"
+  train_regions: []
+  val_regions: []
+  test_regions: []
+  record_stride_by_region: {}
+
+train:
+  # Global pooled baseline: one shuffled pass over all 496 clean samples.
+  # Batch 16 uses the 16 GiB GPU efficiently and divides 496 exactly.
+  batch_size: 16
+  amp_init_scale: 32768
+  region_balanced_sampling: false
+  samples_per_epoch: null

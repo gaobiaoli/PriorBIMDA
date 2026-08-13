@@ -75,9 +75,7 @@ def smooth_poses(transforms: np.ndarray, requested_window: int = 5) -> np.ndarra
         window -= 1
     polynomial = min(3, window - 1)
     result = transforms.copy()
-    result[:, :3, 3] = savgol_filter(
-        transforms[:, :3, 3], window, polynomial, axis=0
-    )
+    result[:, :3, 3] = savgol_filter(transforms[:, :3, 3], window, polynomial, axis=0)
     quaternions = Rotation.from_matrix(transforms[:, :3, :3]).as_quat()
     for index in range(1, len(quaternions)):
         if np.dot(quaternions[index - 1], quaternions[index]) < 0:
@@ -151,8 +149,7 @@ def recover_lidar_poses(
         from rosbags.highlevel import AnyReader
     except ImportError as exc:
         raise RuntimeError(
-            "rosbags is required for pose recovery; install with "
-            "`pip install -e '.[slabim]'`"
+            "rosbags is required for pose recovery; install with `pip install -e '.[slabim]'`"
         ) from exc
 
     timestamps = np.atleast_1d(np.loadtxt(points_root / "timestamps.txt", dtype=np.float64))

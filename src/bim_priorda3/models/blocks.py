@@ -43,4 +43,3 @@ class UpBlock(nn.Module):
             inputs, size=skip.shape[-2:], mode="bilinear", align_corners=False
         )
         return self.block(torch.cat((inputs, skip), dim=1))
-

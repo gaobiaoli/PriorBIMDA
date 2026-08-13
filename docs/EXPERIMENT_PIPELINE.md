@@ -1,188 +1,129 @@
-# SLABIM 端到端实验流水线
+# 实验与数据流水线
 
-## 1. 目标和边界
+本文说明两套正式 pipeline 的数据边界、状态转换和复现实验顺序。逐个 CLI 参数见
+[USER_GUIDE.md](USER_GUIDE.md)；仅关心训练前数据步骤时读
+[DATA_PREPARATION.md](DATA_PREPARATION.md)。
 
-本项目可以从官方 SLABIM 下载产物开始，完成数据校验、逐 LiDAR 帧位姿恢复、遮挡感知
-GT 制备、DA3/BIM 缓存、V1/V3 训练、二维深度评测、三维重建评测和统一报告。
-
-固定划分为：
-
-- train：3F_Region2、3F_Region3、4F_Region2、4F_Region3；
-- validation：5F_Region3；
-- test：5F_Region2。
-
-验证集可以选择 checkpoint 或门控阈值；测试集只能在方案固定后报告。PCD 和融合 GT
-只能进入数据制备、监督和指标计算，不能作为模型前向输入。
-
-## 2. 原始数据目录
+## 共同原则
 
 ```text
-SLABIM/
-├── BIM/<floor>/mesh/*.ply
-├── calibration_files/
-│   ├── cam_intrinsics.txt
-│   └── cam_to_lidar.txt
-└── sensor_data/<region>/
-    ├── images/data/*.png
-    ├── images/timestamps.txt
-    ├── points/data/*.pcd
-    ├── points/timestamps.txt
-    ├── points/pose_frame_to_bim.txt
-    └── rosbag/*.bag                  # 位姿恢复后可删除
+public raw data
+  -> verified source inventory
+  -> pinned DA3 + fixed BIM rendering
+  -> immutable manifest
+  -> exhaustive split annotation
+  -> non-learning BIM baseline
+  -> train/val model selection
+  -> one-time blind test
 ```
 
-下载器使用 Hugging Face 官方数据集
-`BobH62/SLABIM`，支持 `.part` 文件续传、安全路径检查、只解压 rosbag 或排除 rosbag。
-它不会删除已有 region 目录，也不会用空 staging 目录替换现有数据。
+- `0.2–5.0 m` 是正式深度协议。
+- split 在训练前固定，坏帧在 annotation 中标记 `excluded`。
+- manifest 的逐帧 preparation fingerprint 会进入 split fingerprint 和 checkpoint provenance。
+- test 不参与 cap、loss、epoch、checkpoint 或阈值选择。
+- 所有方法共享同一 GT support；无效预测直接失败。
 
-## 3. 位姿恢复
+## SLABIM
 
-SLABIM bag 没有被本项目当作可直接读取的逐帧 GT trajectory。恢复链为：
+入口：
+
+```bash
+python scripts/pipelines/run_slabim_experiments.py --slabim-root ../SLABIM --stages all
+```
+
+### 数据
+
+- 原始来源由 `src/bim_priorda3/data/slabim_download_manifest.json` 固定 revision、size 和
+  SHA-256。
+- 位姿由 rosbag 轨迹与官方 SLAM PCD 做离线 ICP 恢复，并写回各 region。
+- `scripts/data/prepare_dataset.py` 生成 RGB 引用和包含 DA3/BIM/GT 的 NPZ。
+- `slabim_clean_global_v1.jsonl` 对 manifest exhaustive：811 总记录；103 excluded，其中
+  90 个 `ignore.txt` 数据错误，13 个 fused-LiDAR embargo；活动 496/104/108。
+
+### 训练
 
 ```text
-/livox/lidar raw scan (LiDAR-local)
-  -- point-to-point ICP -->
-official synchronized PCD (SLAM-global)
-  = local_to_slam
-
-constant map_to_BIM from pose_frame_to_bim
-  @ smoothed local_to_slam
-  = local_to_BIM
+slabim_pretrain.yaml --accepted.pt--> slabim.yaml --accepted.pt--> slabim_e2e.yaml (optional)
 ```
 
-输出：
+`slabim_pretrain` 先学习无 near-routing 的多尺度 residual；`slabim` 启用 depth-aware routing
+并用 504²、BS8 微调；E2E 使用 BS4×accum2，只训练 DA3 last-stage，且用 live direct anchor
+参与 loss/acceptance。
 
-- `lidar_pose_local_to_slam.txt`；
-- `lidar_pose_local_to_slam_smoothed.txt`；
-- `lidar_pose_local_to_bim_from_rosbag.txt`；
-- `lidar_pose_local_to_slam.diagnostics.npz`；
-- 根目录 `pose_recovery_summary.json`。
+### 产物
 
-正常历史六区域的 median fitness 约为 0.95–0.97，median ICP RMSE 约为
-0.116–0.120 m。新下载区域如果明显偏离，应先检查 bag/PCD 时间同步和轨迹跳变，
-不能直接继续训练。
+- `outputs/slabim/accepted.pt`：frozen 主 checkpoint。
+- `outputs/slabim_e2e/accepted.pt`：E2E 可选 checkpoint。
+- `results/slabim/`：正式 summary、逐帧 CSV、历史 ablation 摘要。
 
-## 4. GT 和模型输入
+## 2D-3D-S Area_1 + BIMSyn
 
-每张 RGB 同步到中心 LiDAR 索引。以中心前后各 50 个 PCD 为候选：
+### 数据
 
-1. SLAM-global PCD 用对应 `local_to_slam` 逆变换回扫描时 LiDAR-local；
-2. 经每帧 `local_to_BIM` 转到公共 BIM 坐标；
-3. 转到中心 LiDAR 和相机坐标；
-4. 每个扫描独立投影并 z-buffer；
-5. 每像素只融合最前方且互相一致的深度簇，拒绝后方遮挡点；
-6. 支持数和簇内 MAD 形成 `gt_weight`。
+- Area_1 noXYZ TAR：32,684,605,440 bytes，MD5
+  `21098fbe93b561e30e79197a95fa4fd2`。
+- 10,327 个规则视图；regular depth 为 camera-z `uint16/512 m`，65535 无效。
+- pose 的 `camera_rt_matrix` 实际是 3×4 Area→camera `[R|t]`。
+- BIMSyn 44 个 IFC 是 room-local、mm、IFC2X3；RVT 可选。
+- downloader/verifier 按 88 文件 canonical manifest 验证 IFC/RVT。
 
-缓存 NPZ 包含 RGB 路径、DA3 深度/置信度、BIM 深度/法向/边缘、融合 GT，以及强锚点和
-冻结 V1 候选。测试推理不会读取 `gt_*`、PCD 或 rosbag。
+### BIM prior
 
-## 5. 运行方式
+1. 每个 IFC 仅保留 wall/floor/ceiling/column/beam。
+2. 44 个固定 `T_area_from_bim` 将 room BIM 合入一个全局 scene。
+3. 相机用 JSON Area→camera 位姿直接从全局 scene 渲染 camera-z。
+4. 不允许逐帧 ICP、尺度或位姿微调。
 
-只验证原始数据：
-
-```bash
-python scripts/run_slabim_experiments.py \
-  --slabim-root /data/SLABIM \
-  --stages verify
-```
-
-查看完整流水线而不执行：
-
-```bash
-python scripts/run_slabim_experiments.py \
-  --slabim-root /data/SLABIM \
-  --stages all \
-  --dry-run
-```
-
-执行完整流水线：
-
-```bash
-python scripts/run_slabim_experiments.py \
-  --slabim-root /data/SLABIM \
-  --stages all
-```
-
-统一入口默认严格复现既有采样协议：train/validation 使用 stride 2，test 使用 stride 1，
-对应 565/82/164 帧。只有开展新协议实验时才修改 `--train-val-stride` 或
-`--test-stride`，并应写入新的配置、输出目录和报告。流水线会替换这些区域在 manifest
-中的旧记录，避免改变 stride 后旧样本仍被训练集读取；磁盘上的旧 NPZ 不自动删除。
-
-在已经下载并恢复位姿的数据上运行核心实验：
-
-```bash
-python scripts/run_slabim_experiments.py \
-  --slabim-root /data/SLABIM \
-  --stages verify prepare audit anchors train-v1 eval-v1 \
-           cache-candidates train-v3 eval-v3 reconstruct report
-```
-
-小规模烟雾测试可增加 `--max-frames 2`。该参数只截断制备和重建；训练仍会读取 manifest
-中已有的全部样本，因此应使用空的临时 processed root 配置测试全新制备。
-
-## 6. 输出
+冻结 alignment receipt：
 
 ```text
-data/processed/slabim_504_r50/
-├── manifest.jsonl
-├── metadata.json
-├── audit.json
-├── da3_cache/
-└── samples/<region>/*.npz
-
-outputs/
-├── pipeline_state.json
-├── dataset_verification.json
-├── slabim_single_frame_r50/
-│   ├── best.pt
-│   ├── history.json
-│   ├── evaluation_val/
-│   └── evaluation_test/
-├── slabim_single_frame_r50_v3/
-│   ├── best.pt
-│   ├── history.json
-│   ├── evaluation_val/
-│   ├── evaluation_test/
-│   └── reconstruction_test/
-│       ├── summary.json
-│       └── *.ply
-└── experiment_summary/
-    ├── summary.json
-    └── REPORT.md
+data/provenance/stanford_area1_bimsyn_alignment.json
+SHA256 079ff394fbfa9317953e0358d71e0548cd39171278dd16121d6c300c5a23e6d6
 ```
 
-二维 `summary.json` 包含原始 DA3、global scale、固定 scale+local BIM、coarse、refined，
-并按 0.2–1、1–2、2–3、3–5 m 分段。
+### split 与 robust scale
 
-三维报告包含：
+room-disjoint split 为 30/7/7 rooms，7013/1673/1641 frames。robust scale selector 只打开
+train NPZ，固定 48 候选和 leave-one-room-out，最终：
 
-- accuracy：预测点到 GT 最近表面的距离；
-- completeness：GT 点到预测表面的距离；
-- Chamfer-L1：上述两个平均距离的均值；
-- 5/10/20 cm precision、recall、F-score；
-- 每区域和合并场景结果。
+```yaml
+name: log_upper_cap_v1
+q10_log_cap: inf
+q25_log_cap: 0.05
+ratio_min: 0.2
+ratio_max: 5.0
+min_samples: 100
+```
 
-## 7. 断点恢复和注意事项
+fresh cache 会生成新的 preparation fingerprint。此时必须运行
+`scripts/data/materialize_runtime_config.py` 绑定当前
+annotation/split/alignment/scale receipt；不能把 config
+中的 SHA 置空。
 
-- ZIP 下载中断会保留 `.part`，再次运行续传；
-- archive 成功解压后默认删除；
-- 已有位姿和 checkpoint 默认复用；
-- 每阶段状态写入 `outputs/pipeline_state.json`；
-- `--force` 会重算位姿、缓存或训练，使用前确认确实需要；
-- `--keep-rosbags` 可保留 bag，否则位姿恢复成功后删除；
-- CUDA OOM 时训练脚本保存 `oom_state.pt` 和说明文件；
-- 不要使用 test 指标选择结构、checkpoint 或阈值；
-- 3D `prediction-mask=all` 才反映预测表面覆盖，但会受稀疏 LiDAR GT 覆盖影响；
-- 3D `prediction-mask=gt` 是同像素几何诊断，不能作为完整重建主指标。
+### 模型选择
 
-## 8. 尚未自动化的论文扩展
+```text
+SLABIM frozen --cross-dataset init + zero residual heads--> Area_1 frozen
+Area_1 frozen --same-dataset init + preserve heads--------> Area_1 E2E challenger
+```
 
-当前统一入口覆盖项目主方法及其解析基线，但下列工作仍应作为独立论文实验实现并注册新
-配置，不能暗中混入固定主结果：
+source zero-shot val AbsRel 为 0.16690，明显差于 robust direct 0.08710。target frozen 在 val
+达到 0.07005，通过 all/furniture/conflict 多聚合与 room-bootstrap 后才运行 test。E2E challenger
+为 0.07019，未胜 frozen，因此不运行 test。
 
-- region-wise out-of-fold V1 候选；
-- 独立视觉 SLAM/BIM localization 位姿；
-- 位姿平移/旋转噪声曲线；
-- COLMAP/SfM-MVS 与 DA3 多视图的统一可见域对比；
-- point-to-plane、法向和 BIM 构件级重建指标；
-- 新的、从未用于调参的最终测试区域。
+### 产物
+
+- `outputs/stanford_area1/accepted.pt`：唯一 Area_1 生产 checkpoint。
+- `outputs/stanford_area1_e2e/`：只留训练记录和 val summary，不留权重。
+- `results/stanford_area1/`：zero-shot、frozen val/test、challenger val 和逐帧 CSV。
+
+## 恢复与防错
+
+- `scripts/model/train.py --resume` 只接受同配置、同数据 fingerprint 和同训练源码；
+  不要给 resume 使用
+  cross-dataset 开关。
+- fresh run 使用全新空 output 目录；已有 history/run_state/checkpoint 会 fail-fast，避免旧
+  accepted.pt 被误认作新结果。
+- smoke subset checkpoint 的 provenance 包含实际 sample IDs/fingerprints，不能冒充 full run。
+- Area_1 evaluator 默认 `split=val`。只有明确传 `--split test` 才会读取 blind test。
+- 运行失败时先读 `run_state.json`；不要删除 receipt 或绕过 hash 检查。

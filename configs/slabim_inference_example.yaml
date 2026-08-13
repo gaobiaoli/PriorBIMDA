@@ -1,0 +1,14 @@
+extends: slabim.yaml
+
+experiment:
+  name: slabim_inference_example
+  output_dir: outputs/slabim_inference
+
+data:
+  processed_root: data/processed/slabim_504_r50_blind_5fr1
+  regions:
+    - 5F_Region1
+  train_regions: []
+  val_regions: []
+  test_regions:
+    - 5F_Region1

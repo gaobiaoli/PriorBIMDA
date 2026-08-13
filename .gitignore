@@ -10,6 +10,10 @@ dist/
 data/processed/
 outputs/*
 !outputs/.gitkeep
+configs/local/
 checkpoints/
 wandb/
 
+# Generated from licensed 2D-3D-S pixels; keep local and reproduce under the
+# dataset terms instead of redistributing RGB/GT/derived dense arrays.
+docs/assets/paper_evaluation/qualitative/

@@ -10,8 +10,19 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from bim_priorda3.baselines import strong_anchor_features
+from bim_priorda3.baselines import (
+    BIM_INVALID_DEPTH_ATOL,
+    LEGACY_SCALE_ESTIMATOR,
+    configured_scale_and_local_features,
+    resolve_scale_estimator_config,
+)
 from bim_priorda3.config import Config, resolve_project_path, resolve_slabim_root
+
+from .splits import (
+    ACTIVE_SPLITS,
+    manifest_preparation_identity,
+    resolve_annotation_splits,
+)
 
 
 def _read_manifest(path: Path) -> list[dict[str, Any]]:
@@ -23,27 +34,27 @@ def relocate_record(
     record: dict[str, Any],
     processed_root: Path,
     slabim_root: Path,
+    source_root: Path | None = None,
 ) -> dict[str, Any]:
     """Resolve manifest paths after copying the project to another machine."""
     relocated = dict(record)
     sample = Path(record["sample"]).expanduser()
     if not sample.exists():
+        relative_sample = record.get("sample_relative_to_processed")
         sample = (
-            processed_root
-            / "samples"
-            / str(record["region"])
-            / sample.name
+            processed_root / str(relative_sample)
+            if relative_sample
+            else processed_root / "samples" / str(record["region"]) / sample.name
         )
     image = Path(record["image"]).expanduser()
     if not image.exists():
-        image = (
-            slabim_root
-            / "sensor_data"
-            / str(record["region"])
-            / "images"
-            / "data"
-            / image.name
-        )
+        relative_image = record.get("image_relative_to_source")
+        if relative_image:
+            image = (source_root or slabim_root) / str(relative_image)
+        else:
+            image = (
+                slabim_root / "sensor_data" / str(record["region"]) / "images" / "data" / image.name
+            )
     relocated["sample"] = str(sample.resolve())
     relocated["image"] = str(image.resolve())
     return relocated
@@ -62,34 +73,173 @@ def _shift(array: np.ndarray, dx: int, dy: int) -> np.ndarray:
     return shifted
 
 
+def _enforce_bim_depth_mask_contract(
+    bim_depth: np.ndarray,
+    bim_valid: np.ndarray,
+    *,
+    sample_id: str,
+) -> None:
+    """Reject contradictory BIM support and canonicalize tolerated roundoff."""
+
+    if bim_depth.shape != bim_valid.shape:
+        raise ValueError(
+            f"{sample_id}: bim_depth and bim_valid shapes differ: "
+            f"{bim_depth.shape} != {bim_valid.shape}"
+        )
+    if not np.all(np.isfinite(bim_valid)):
+        raise ValueError(f"{sample_id}: bim_valid contains non-finite values")
+    invalid = bim_valid <= 0
+    invalid_depth = bim_depth[invalid]
+    violations = (~np.isfinite(invalid_depth)) | (np.abs(invalid_depth) > BIM_INVALID_DEPTH_ATOL)
+    if np.any(violations):
+        finite_magnitudes = np.abs(invalid_depth[np.isfinite(invalid_depth)])
+        maximum = float(finite_magnitudes.max()) if finite_magnitudes.size else float("nan")
+        raise ValueError(
+            f"{sample_id}: bim_depth must be zero within "
+            f"atol={BIM_INVALID_DEPTH_ATOL:g} wherever bim_valid <= 0; "
+            f"violations={int(np.count_nonzero(violations))}, "
+            f"max_abs_finite={maximum:g}"
+        )
+    # The CPU reference estimator historically infers support from depth > 0.
+    # Exact zeroing makes it identical to the explicit tensor mask while
+    # accepting harmless serialization roundoff inside the stated tolerance.
+    bim_depth[invalid] = 0.0
+
+
 class BIMDepthDataset(Dataset):
     """Prepared single-frame DA3/BIM samples with sparse fused-LiDAR supervision."""
 
-    def __init__(self, cfg: Config, split: str, augment: bool | None = None) -> None:
+    def __init__(
+        self,
+        cfg: Config,
+        split: str | None,
+        augment: bool | None = None,
+        *,
+        require_ground_truth: bool = True,
+        regions: list[str] | None = None,
+    ) -> None:
         self.cfg = cfg
-        self.split = split
+        self.split = split or "inference"
+        self.require_ground_truth = require_ground_truth
         self.augment = split == "train" if augment is None else augment
         root = resolve_project_path(cfg, cfg.data.processed_root)
         records = _read_manifest(root / "manifest.jsonl")
-        slabim_root = resolve_slabim_root(cfg)
-        records = [
-            relocate_record(record, root, slabim_root) for record in records
-        ]
-        if split == "train":
-            regions = set(cfg.data.train_regions)
-        elif split == "val":
-            regions = set(cfg.data.val_regions)
-        elif split == "test":
-            regions = set(cfg.data.test_regions)
+        source_value = cfg.data.get("source_root")
+        source_root = resolve_project_path(cfg, source_value) if source_value else None
+        slabim_root = resolve_slabim_root(cfg) if cfg.data.get("slabim_root") else source_root
+        if slabim_root is None:
+            raise ValueError("data.slabim_root or data.source_root must be configured")
+        records = [relocate_record(record, root, slabim_root, source_root) for record in records]
+        preparation_identity = manifest_preparation_identity(records)
+        annotation_value = cfg.data.get("split_annotation")
+        if annotation_value:
+            configured_region_splits = {
+                key: list(cfg.data.get(key, []))
+                for key in ("train_regions", "val_regions", "test_regions")
+                if cfg.data.get(key, [])
+            }
+            if configured_region_splits:
+                raise ValueError(
+                    "split_annotation is mutually exclusive with non-empty "
+                    f"region split fields: {sorted(configured_region_splits)}"
+                )
+            if cfg.data.get("record_stride_by_region", {}):
+                raise ValueError(
+                    "split_annotation already defines the effective population; "
+                    "record_stride_by_region must be empty"
+                )
+            annotation_path = resolve_project_path(cfg, annotation_value)
+            resolution = resolve_annotation_splits(records, annotation_path)
+            expected_annotation_sha = cfg.data.get("split_annotation_sha256")
+            actual_annotation_sha = resolution.provenance["annotation_raw_sha256"]
+            if expected_annotation_sha and str(expected_annotation_sha) != actual_annotation_sha:
+                raise ValueError(
+                    "split_annotation_sha256 mismatch: "
+                    f"configured={expected_annotation_sha}, "
+                    f"actual={actual_annotation_sha}"
+                )
+            expected_fingerprint = cfg.data.get("split_fingerprint_sha256")
+            actual_fingerprint = resolution.provenance["fingerprint_sha256"]
+            if expected_fingerprint and str(expected_fingerprint) != actual_fingerprint:
+                raise ValueError(
+                    "split_fingerprint_sha256 mismatch: "
+                    f"configured={expected_fingerprint}, "
+                    f"actual={actual_fingerprint}"
+                )
+            selected_regions = set(regions if regions is not None else cfg.data.regions)
+            if split in ACTIVE_SPLITS:
+                annotated_records = resolution.records_for(str(split))
+            elif split is None:
+                annotated_records = [
+                    record
+                    for record in records
+                    if resolution.assignments[str(record["id"])] in ACTIVE_SPLITS
+                ]
+            else:
+                raise ValueError(f"Unknown dataset split: {split}")
+            self.records = [
+                record for record in annotated_records if record["region"] in selected_regions
+            ]
+            self.split_provenance = {
+                **resolution.provenance,
+                "mode": "annotations",
+                "selected_regions": sorted(selected_regions),
+            }
         else:
-            raise ValueError(f"Unknown dataset split: {split}")
-        self.records = [record for record in records if record["region"] in regions]
+            if regions is not None:
+                selected_regions = set(regions)
+            elif split == "train":
+                selected_regions = set(cfg.data.train_regions)
+            elif split == "val":
+                selected_regions = set(cfg.data.val_regions)
+            elif split == "test":
+                selected_regions = set(cfg.data.test_regions)
+            elif split is None:
+                selected_regions = set(cfg.data.regions)
+            else:
+                raise ValueError(f"Unknown dataset split: {split}")
+            self.records = [record for record in records if record["region"] in selected_regions]
+            stride_by_region = {
+                str(region): int(stride)
+                for region, stride in cfg.data.get(
+                    "record_stride_by_region",
+                    {},
+                ).items()
+            }
+            if stride_by_region:
+                region_indices: dict[str, int] = {}
+                sampled_records = []
+                for record in self.records:
+                    region = str(record["region"])
+                    index = region_indices.get(region, 0)
+                    region_indices[region] = index + 1
+                    stride = stride_by_region.get(region, 1)
+                    if stride < 1:
+                        raise ValueError(f"record_stride_by_region[{region!r}] must be positive")
+                    if index % stride == 0:
+                        sampled_records.append(record)
+                self.records = sampled_records
+            self.split_provenance = {
+                "mode": "regions",
+                "selected_regions": sorted(selected_regions),
+                "record_stride_by_region": dict(sorted(stride_by_region.items())),
+                "manifest_preparation_fingerprint_status": preparation_identity["status"],
+                "manifest_preparation_fingerprint_sha256": preparation_identity[
+                    "fingerprint_sha256"
+                ],
+            }
         if not self.records:
-            raise RuntimeError(f"No '{split}' records for regions {sorted(regions)} in {root}")
+            raise RuntimeError(
+                f"No '{self.split}' records for regions {sorted(selected_regions)} in {root}"
+            )
         self.height = int(cfg.data.target_height)
         self.width = int(cfg.data.target_width)
         self.margin = float(cfg.loss.trust_margin)
         self.temperature = float(cfg.loss.trust_temperature)
+        self.scale_estimator = resolve_scale_estimator_config(cfg.model.get("scale_estimator"))
+        self.requires_bim_direct_residual_anchor = (
+            str(cfg.model.get("residual_anchor_mode", "scaled_depth")) == "robust_bim_direct"
+        )
 
     def __len__(self) -> int:
         return len(self.records)
@@ -117,54 +267,68 @@ class BIMDepthDataset(Dataset):
             "bim_valid": item["bim_valid"].astype(np.float32)[None],
             "bim_normals": item["bim_normals"].astype(np.float32),
             "bim_edge": item["bim_edge"].astype(np.float32)[None],
-            "gt_depth": item["gt_depth"].astype(np.float32)[None],
-            "gt_valid": item["gt_valid"].astype(np.float32)[None],
-            "gt_weight": item["gt_weight"].astype(np.float32)[None],
         }
-        candidate_frame_trust = None
-        if {
-            "candidate_depth",
-            "candidate_log_variance",
-            "candidate_trust",
-            "candidate_frame_trust",
-        }.issubset(item.files):
+        for key in (
+            "semantic_valid",
+            "structural_mask",
+            "furniture_mask",
+            "non_structural_mask",
+        ):
+            if key in item.files:
+                arrays[key] = item[key].astype(np.float32)[None]
+        if "semantic_class" in item.files:
+            arrays["semantic_class"] = item["semantic_class"].astype(np.int64)[None]
+        if "bim_category" in item.files:
+            arrays["bim_category"] = item["bim_category"].astype(np.int64)[None]
+        _enforce_bim_depth_mask_contract(
+            arrays["bim_depth"],
+            arrays["bim_valid"],
+            sample_id=str(record["id"]),
+        )
+        gt_keys = {"gt_depth", "gt_valid", "gt_weight"}
+        has_ground_truth = gt_keys.issubset(item.files)
+        if self.require_ground_truth and not has_ground_truth:
+            missing = sorted(gt_keys - set(item.files))
+            raise RuntimeError(
+                f"{record['id']}: prepared sample lacks training/evaluation "
+                f"fields {missing}; use inference mode or prepare GT"
+            )
+        if has_ground_truth:
             arrays.update(
                 {
-                    "candidate_depth": item["candidate_depth"].astype(np.float32)[None],
-                    "candidate_log_variance": item[
-                        "candidate_log_variance"
-                    ].astype(np.float32)[None],
-                    "candidate_trust": item["candidate_trust"].astype(np.float32)[None],
+                    "gt_depth": item["gt_depth"].astype(np.float32)[None],
+                    "gt_valid": item["gt_valid"].astype(np.float32)[None],
+                    "gt_weight": item["gt_weight"].astype(np.float32)[None],
                 }
             )
-            candidate_frame_trust = float(item["candidate_frame_trust"])
-        if {
-            "scaled_depth",
-            "anchor_depth",
-            "anchor_field",
-            "anchor_support",
-        }.issubset(item.files):
-            arrays.update(
-                {
-                    "scaled_depth": item["scaled_depth"].astype(np.float32)[None],
-                    "anchor_depth": item["anchor_depth"].astype(np.float32)[None],
-                    "anchor_field": item["anchor_field"].astype(np.float32)[None],
-                    "anchor_support": item["anchor_support"].astype(np.float32)[None],
-                }
-            )
+        recompute_baselines = (
+            bool(self.cfg.data.get("recompute_cached_baselines", False))
+            or self.scale_estimator["name"] != LEGACY_SCALE_ESTIMATOR
+        )
+        if (
+            self.require_ground_truth
+            and not recompute_baselines
+            and {"scaled_depth", "anchor_depth"}.issubset(item.files)
+        ):
+            arrays["scaled_depth"] = item["scaled_depth"].astype(np.float32)[None]
+            arrays["anchor_depth"] = item["anchor_depth"].astype(np.float32)[None]
+        elif (
+            not self.require_ground_truth
+            and not recompute_baselines
+            and "scaled_depth" in item.files
+        ):
+            arrays["scaled_depth"] = item["scaled_depth"].astype(np.float32)[None]
         else:
-            scaled, anchor, field, support, _ = strong_anchor_features(
-                arrays["base_depth"][0],
-                arrays["bim_depth"][0],
+            base = arrays["base_depth"][0]
+            bim = arrays["bim_depth"][0]
+            scaled, anchor, _, _, _ = configured_scale_and_local_features(
+                base,
+                bim,
+                self.scale_estimator,
             )
-            arrays.update(
-                {
-                    "scaled_depth": scaled[None],
-                    "anchor_depth": anchor[None],
-                    "anchor_field": field[None],
-                    "anchor_support": support[None],
-                }
-            )
+            if self.require_ground_truth or self.requires_bim_direct_residual_anchor:
+                arrays["anchor_depth"] = anchor[None]
+            arrays["scaled_depth"] = scaled[None]
 
         if self.augment:
             rgb = self._augment_rgb(rgb)
@@ -186,19 +350,41 @@ class BIMDepthDataset(Dataset):
                 arrays["bim_normals"][..., y : y + side, x : x + side] = 0
                 arrays["bim_edge"][..., y : y + side, x : x + side] = 1
                 bim_changed = True
+            if random.random() < float(aug.get("bim_full_dropout_probability", 0.0)):
+                arrays["bim_valid"][...] = 0
+                arrays["bim_depth"][...] = 0
+                arrays["bim_normals"][...] = 0
+                arrays["bim_edge"][...] = 1
+                bim_changed = True
+            if random.random() < float(aug.get("bim_depth_noise_probability", 0.0)):
+                noise_std = float(aug.get("bim_depth_noise_log_std", 0.02))
+                noise = np.random.normal(
+                    0.0,
+                    noise_std,
+                    size=arrays["bim_depth"].shape,
+                ).astype(np.float32)
+                valid_bim = arrays["bim_valid"] > 0
+                arrays["bim_depth"][valid_bim] *= np.exp(noise[valid_bim])
+                bim_changed = True
+            if random.random() < float(aug.get("bim_edge_dilation_probability", 0.0)):
+                kernel_size = int(aug.get("bim_edge_dilation_pixels", 3))
+                kernel_size = max(1, kernel_size)
+                kernel = np.ones((kernel_size, kernel_size), dtype=np.uint8)
+                arrays["bim_edge"][0] = cv2.dilate(
+                    arrays["bim_edge"][0].astype(np.float32),
+                    kernel,
+                )
             if bim_changed:
-                scaled, anchor, field, support, _ = strong_anchor_features(
-                    arrays["base_depth"][0],
-                    arrays["bim_depth"][0],
+                base = arrays["base_depth"][0]
+                bim = arrays["bim_depth"][0]
+                scaled, anchor, _, _, _ = configured_scale_and_local_features(
+                    base,
+                    bim,
+                    self.scale_estimator,
                 )
-                arrays.update(
-                    {
-                        "scaled_depth": scaled[None],
-                        "anchor_depth": anchor[None],
-                        "anchor_field": field[None],
-                        "anchor_support": support[None],
-                    }
-                )
+                if self.require_ground_truth or self.requires_bim_direct_residual_anchor:
+                    arrays["anchor_depth"] = anchor[None]
+                arrays["scaled_depth"] = scaled[None]
             if random.random() < float(aug.horizontal_flip_probability):
                 rgb = rgb[..., ::-1].copy()
                 for key in arrays:
@@ -215,38 +401,42 @@ class BIMDepthDataset(Dataset):
                     for key, value in arrays.items()
                 }
 
-        base = arrays["base_depth"]
-        scaled = arrays["scaled_depth"]
-        bim = arrays["bim_depth"]
-        gt = arrays["gt_depth"]
-        trust_mask = (
-            (arrays["gt_valid"] > 0)
-            & (arrays["bim_valid"] > 0)
-            & (base > 0)
-            & (bim > 0)
-            & (gt > 0)
+        _enforce_bim_depth_mask_contract(
+            arrays["bim_depth"],
+            arrays["bim_valid"],
+            sample_id=str(record["id"]),
         )
-        # BIM reliability must be judged after DA3 metric scale recovery.  Comparing
-        # against unscaled DA3 mostly teaches the global scale mismatch.
-        base_error = np.abs(
-            np.log(np.maximum(scaled, 1e-4)) - np.log(np.maximum(gt, 1e-4))
-        )
-        bim_error = np.abs(np.log(np.maximum(bim, 1e-4)) - np.log(np.maximum(gt, 1e-4)))
-        advantage = base_error - bim_error - self.margin
-        trust_logit = np.clip(advantage / self.temperature, -30.0, 30.0)
-        trust_target = 1.0 / (1.0 + np.exp(-trust_logit))
-        trust_target[~trust_mask] = 0.0
 
         output: dict[str, Any] = {
             "rgb": torch.from_numpy(rgb.copy()),
             **{key: torch.from_numpy(value.copy()) for key, value in arrays.items()},
-            "trust_target": torch.from_numpy(trust_target.astype(np.float32)),
-            "trust_mask": torch.from_numpy(trust_mask.astype(np.float32)),
             "sample_id": record["id"],
             "region": record["region"],
+            "image_timestamp": float(record.get("image_timestamp", index)),
+            "frame_index": int(record.get("lidar_index", index)),
         }
-        if candidate_frame_trust is not None:
-            output["candidate_frame_trust"] = torch.tensor(
-                candidate_frame_trust, dtype=torch.float32
+        if has_ground_truth:
+            base = arrays["scaled_depth"]
+            bim = arrays["bim_depth"]
+            gt = arrays["gt_depth"]
+            trust_mask = (
+                (arrays["gt_valid"] > 0)
+                & (arrays["bim_valid"] > 0)
+                & (base > 0)
+                & (bim > 0)
+                & (gt > 0)
+            )
+            # Reliability is judged only after DA3 metric-scale recovery.
+            base_error = np.abs(np.log(np.maximum(base, 1e-4)) - np.log(np.maximum(gt, 1e-4)))
+            bim_error = np.abs(np.log(np.maximum(bim, 1e-4)) - np.log(np.maximum(gt, 1e-4)))
+            advantage = base_error - bim_error - self.margin
+            trust_logit = np.clip(advantage / self.temperature, -30.0, 30.0)
+            trust_target = 1.0 / (1.0 + np.exp(-trust_logit))
+            trust_target[~trust_mask] = 0.0
+            output.update(
+                {
+                    "trust_target": torch.from_numpy(trust_target.astype(np.float32)),
+                    "trust_mask": torch.from_numpy(trust_mask.astype(np.float32)),
+                }
             )
         return output

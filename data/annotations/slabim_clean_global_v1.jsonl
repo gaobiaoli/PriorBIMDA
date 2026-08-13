@@ -1,0 +1,811 @@
+{"schema_version": 1, "id": "3F_Region2/000000", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000002", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000004", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000006", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000008", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000010", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000012", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000014", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000016", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000018", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000020", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000022", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000024", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000026", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000028", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000030", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000032", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000034", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000036", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000038", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000040", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000042", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000044", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000046", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000048", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000050", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000052", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000054", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000056", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000058", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000060", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000062", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000064", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000066", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000068", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000070", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000072", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000074", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000076", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000078", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000080", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000082", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000084", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000086", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000088", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000090", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000092", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000094", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000096", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000098", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000100", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000102", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000104", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000106", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000108", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000110", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000112", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000114", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000116", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000118", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000120", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000122", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000124", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000126", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000128", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000130", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000132", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000134", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000136", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000138", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000140", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000142", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000144", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000146", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000148", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000150", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000152", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000154", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000156", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000158", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000160", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000162", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000164", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000166", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000168", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000170", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000172", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000174", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000176", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000178", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000180", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000182", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000184", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000186", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000188", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000190", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000192", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000194", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000196", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000198", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000200", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000202", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000204", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000206", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000208", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000210", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000212", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000214", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000216", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000218", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000220", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000222", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000224", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000226", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000228", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000230", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000232", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000234", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000236", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000238", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000240", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000242", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000244", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000246", "split": "train"}
+{"schema_version": 1, "id": "3F_Region2/000248", "split": "excluded", "reason": "fused_lidar_leakage_guard"}
+{"schema_version": 1, "id": "3F_Region2/000250", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000252", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000254", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000256", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000258", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000260", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000262", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000264", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000266", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000268", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000270", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000272", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000274", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000276", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000278", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000280", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000282", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000284", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000286", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000288", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000290", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000292", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000294", "split": "val"}
+{"schema_version": 1, "id": "3F_Region2/000296", "split": "excluded", "reason": "fused_lidar_leakage_guard"}
+{"schema_version": 1, "id": "3F_Region2/000298", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000300", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000302", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000304", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000306", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000308", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000310", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000312", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000314", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000316", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000318", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000320", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000322", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000324", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000326", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000328", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000330", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000332", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000334", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000336", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000338", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000340", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region2/000342", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000344", "split": "test"}
+{"schema_version": 1, "id": "3F_Region2/000346", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000000", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000002", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000004", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000006", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000008", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000010", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000012", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000014", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000016", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000018", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000020", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000022", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000024", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000026", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000028", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000030", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000032", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000034", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000036", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000038", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000040", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000042", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000044", "split": "val"}
+{"schema_version": 1, "id": "3F_Region3/000046", "split": "excluded", "reason": "fused_lidar_leakage_guard"}
+{"schema_version": 1, "id": "3F_Region3/000048", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000050", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000052", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000054", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000056", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000058", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000060", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000062", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000064", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000066", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000068", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000070", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000072", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000074", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000076", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000078", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000080", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000082", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000084", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000086", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000088", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000090", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000092", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000094", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000096", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000098", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000100", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000102", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000104", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000106", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000108", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000110", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000112", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000114", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000116", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000118", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000120", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000122", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000124", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000126", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000128", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000130", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000132", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000134", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000136", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000138", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000140", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000142", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000144", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000146", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000148", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000150", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000152", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000154", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000156", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000158", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000160", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000162", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000164", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000166", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000168", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000170", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000172", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000174", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000176", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000178", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000180", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000182", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000184", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000186", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000188", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000190", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000192", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000194", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000196", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000198", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000200", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000202", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000204", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000206", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000208", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000210", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000212", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000214", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000216", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000218", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000220", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000222", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000224", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000226", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000228", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000230", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000232", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000234", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000236", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000238", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000240", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000242", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000244", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000246", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000248", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000250", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000252", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000254", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000256", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000258", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000260", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000262", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000264", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000266", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000268", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000270", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000272", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000274", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000276", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000278", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000280", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000282", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000284", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "3F_Region3/000286", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000288", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000290", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000292", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000294", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000296", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000298", "split": "train"}
+{"schema_version": 1, "id": "3F_Region3/000300", "split": "excluded", "reason": "fused_lidar_leakage_guard"}
+{"schema_version": 1, "id": "3F_Region3/000302", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000304", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000306", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000308", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000310", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000312", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000314", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000316", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000318", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000320", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000322", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000324", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000326", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000328", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000330", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000332", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000334", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000336", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000338", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000340", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000342", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000344", "split": "test"}
+{"schema_version": 1, "id": "3F_Region3/000346", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000000", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000002", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000004", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000006", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000008", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000010", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000012", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000014", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000016", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000018", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000020", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000022", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000024", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000026", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000028", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000030", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000032", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000034", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000036", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000038", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000040", "split": "test"}
+{"schema_version": 1, "id": "4F_Region2/000042", "split": "excluded", "reason": "fused_lidar_leakage_guard"}
+{"schema_version": 1, "id": "4F_Region2/000044", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000046", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000048", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000050", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000052", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000054", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000056", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000058", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000060", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000062", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000064", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000066", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000068", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000070", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000072", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000074", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000076", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000078", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000080", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000082", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000084", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000086", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region2/000088", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region2/000090", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000092", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000094", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000096", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000098", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000100", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000102", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000104", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000106", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000108", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000110", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000112", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000114", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000116", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000118", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000120", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000122", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000124", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000126", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000128", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000130", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000132", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000134", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000136", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000138", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000140", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000142", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000144", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000146", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000148", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000150", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000152", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000154", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000156", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000158", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000160", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000162", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000164", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000166", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000168", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000170", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000172", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000174", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000176", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000178", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000180", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000182", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000184", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000186", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000188", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000190", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000192", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000194", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000196", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000198", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000200", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000202", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000204", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000206", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000208", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000210", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000212", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000214", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000216", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000218", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000220", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000222", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000224", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000226", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000228", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000230", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000232", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000234", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000236", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000238", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000240", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000242", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000244", "split": "train"}
+{"schema_version": 1, "id": "4F_Region2/000246", "split": "excluded", "reason": "fused_lidar_leakage_guard"}
+{"schema_version": 1, "id": "4F_Region2/000248", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000250", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000252", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000254", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000256", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000258", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000260", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000262", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000264", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000266", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000268", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000270", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region2/000272", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region2/000274", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000276", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000278", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region2/000280", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000282", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000284", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000286", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000288", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region2/000290", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000292", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000294", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region2/000296", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region2/000298", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region2/000300", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region2/000302", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region2/000304", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region2/000306", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000308", "split": "val"}
+{"schema_version": 1, "id": "4F_Region2/000310", "split": "val"}
+{"schema_version": 1, "id": "4F_Region3/000000", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000002", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000004", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000006", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000008", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000010", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000012", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000014", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000016", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000018", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000020", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000022", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000024", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000026", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000028", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000030", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000032", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000034", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000036", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000038", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000040", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region3/000042", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region3/000044", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region3/000046", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region3/000048", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region3/000050", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region3/000052", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000054", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "4F_Region3/000056", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000058", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000060", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000062", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000064", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000066", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000068", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000070", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000072", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000074", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000076", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000078", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000080", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000082", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000084", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000086", "split": "train"}
+{"schema_version": 1, "id": "4F_Region3/000088", "split": "excluded", "reason": "fused_lidar_leakage_guard"}
+{"schema_version": 1, "id": "4F_Region3/000090", "split": "test"}
+{"schema_version": 1, "id": "4F_Region3/000092", "split": "test"}
+{"schema_version": 1, "id": "4F_Region3/000094", "split": "test"}
+{"schema_version": 1, "id": "4F_Region3/000096", "split": "test"}
+{"schema_version": 1, "id": "4F_Region3/000098", "split": "test"}
+{"schema_version": 1, "id": "4F_Region3/000100", "split": "test"}
+{"schema_version": 1, "id": "4F_Region3/000102", "split": "test"}
+{"schema_version": 1, "id": "4F_Region3/000104", "split": "test"}
+{"schema_version": 1, "id": "4F_Region3/000106", "split": "excluded", "reason": "fused_lidar_leakage_guard"}
+{"schema_version": 1, "id": "4F_Region3/000108", "split": "val"}
+{"schema_version": 1, "id": "4F_Region3/000110", "split": "val"}
+{"schema_version": 1, "id": "4F_Region3/000112", "split": "val"}
+{"schema_version": 1, "id": "4F_Region3/000114", "split": "val"}
+{"schema_version": 1, "id": "4F_Region3/000116", "split": "val"}
+{"schema_version": 1, "id": "4F_Region3/000118", "split": "val"}
+{"schema_version": 1, "id": "4F_Region3/000120", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000000", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000001", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000002", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000003", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000004", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000005", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000006", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000007", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000008", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000009", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000010", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000011", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000012", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000013", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000014", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000015", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000016", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000017", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000018", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000019", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000020", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000021", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000022", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000023", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000024", "split": "test"}
+{"schema_version": 1, "id": "5F_Region2/000025", "split": "excluded", "reason": "fused_lidar_leakage_guard"}
+{"schema_version": 1, "id": "5F_Region2/000026", "split": "excluded", "reason": "fused_lidar_leakage_guard"}
+{"schema_version": 1, "id": "5F_Region2/000027", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000028", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000029", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000030", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000031", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000032", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000033", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000034", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000035", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000036", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000037", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000038", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000039", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000040", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000041", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000042", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000043", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000044", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000045", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000046", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000047", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000048", "split": "val"}
+{"schema_version": 1, "id": "5F_Region2/000049", "split": "excluded", "reason": "fused_lidar_leakage_guard"}
+{"schema_version": 1, "id": "5F_Region2/000050", "split": "excluded", "reason": "fused_lidar_leakage_guard"}
+{"schema_version": 1, "id": "5F_Region2/000051", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000052", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000053", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000054", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000055", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000056", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000057", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000058", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000059", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000060", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000061", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000062", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000063", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000064", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000065", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000066", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000067", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000068", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000069", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000070", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000071", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000072", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000073", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000074", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000075", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000076", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000077", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000078", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000079", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000080", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000081", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000082", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000083", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000084", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000085", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000086", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000087", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000088", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000089", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000090", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000091", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000092", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000093", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000094", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000095", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000096", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000097", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000098", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000099", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000100", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000101", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000102", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000103", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000104", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000105", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000106", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000107", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000108", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000109", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000110", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000111", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000112", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000113", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000114", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000115", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000116", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000117", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000118", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000119", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000120", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000121", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000122", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000123", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000124", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000125", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000126", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000127", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000128", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000129", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000130", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000131", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000132", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000133", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000134", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000135", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000136", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000137", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000138", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000139", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000140", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000141", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000142", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000143", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000144", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000145", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000146", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000147", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000148", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000149", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000150", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000151", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000152", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000153", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000154", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000155", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000156", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000157", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000158", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000159", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000160", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000161", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000162", "split": "train"}
+{"schema_version": 1, "id": "5F_Region2/000163", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000000", "split": "val"}
+{"schema_version": 1, "id": "5F_Region3/000002", "split": "val"}
+{"schema_version": 1, "id": "5F_Region3/000004", "split": "val"}
+{"schema_version": 1, "id": "5F_Region3/000006", "split": "val"}
+{"schema_version": 1, "id": "5F_Region3/000008", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "5F_Region3/000010", "split": "val"}
+{"schema_version": 1, "id": "5F_Region3/000012", "split": "val"}
+{"schema_version": 1, "id": "5F_Region3/000014", "split": "val"}
+{"schema_version": 1, "id": "5F_Region3/000016", "split": "val"}
+{"schema_version": 1, "id": "5F_Region3/000018", "split": "val"}
+{"schema_version": 1, "id": "5F_Region3/000020", "split": "val"}
+{"schema_version": 1, "id": "5F_Region3/000022", "split": "val"}
+{"schema_version": 1, "id": "5F_Region3/000024", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "5F_Region3/000026", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "5F_Region3/000028", "split": "test"}
+{"schema_version": 1, "id": "5F_Region3/000030", "split": "test"}
+{"schema_version": 1, "id": "5F_Region3/000032", "split": "test"}
+{"schema_version": 1, "id": "5F_Region3/000034", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "5F_Region3/000036", "split": "test"}
+{"schema_version": 1, "id": "5F_Region3/000038", "split": "test"}
+{"schema_version": 1, "id": "5F_Region3/000040", "split": "test"}
+{"schema_version": 1, "id": "5F_Region3/000042", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "5F_Region3/000044", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "5F_Region3/000046", "split": "test"}
+{"schema_version": 1, "id": "5F_Region3/000048", "split": "test"}
+{"schema_version": 1, "id": "5F_Region3/000050", "split": "test"}
+{"schema_version": 1, "id": "5F_Region3/000052", "split": "test"}
+{"schema_version": 1, "id": "5F_Region3/000054", "split": "test"}
+{"schema_version": 1, "id": "5F_Region3/000056", "split": "excluded", "reason": "fused_lidar_leakage_guard"}
+{"schema_version": 1, "id": "5F_Region3/000058", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "5F_Region3/000060", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "5F_Region3/000062", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000064", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000066", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000068", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "5F_Region3/000070", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000072", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000074", "split": "excluded", "reason": "source_data_error"}
+{"schema_version": 1, "id": "5F_Region3/000076", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000078", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000080", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000082", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000084", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000086", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000088", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000090", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000092", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000094", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000096", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000098", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000100", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000102", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000104", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000106", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000108", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000110", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000112", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000114", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000116", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000118", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000120", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000122", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000124", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000126", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000128", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000130", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000132", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000134", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000136", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000138", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000140", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000142", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000144", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000146", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000148", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000150", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000152", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000154", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000156", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000158", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000160", "split": "train"}
+{"schema_version": 1, "id": "5F_Region3/000162", "split": "train"}

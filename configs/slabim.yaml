@@ -1,0 +1,24 @@
+extends: slabim_pretrain.yaml
+
+experiment:
+  name: slabim
+  output_dir: outputs/slabim
+
+model:
+  depth_aware_residual_routing: true
+  residual_routing_depth: 1.0
+  residual_routing_temperature: 0.05
+
+loss:
+  warmup_epochs: 0
+  near_range_boost: 2.0
+
+train:
+  epochs: 12
+  batch_size: 8
+  learning_rate: 0.00004
+  lr_warmup_epochs: 1
+  early_stopping_patience: 5
+  augment:
+    crop_height: 504
+    crop_width: 504

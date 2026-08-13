@@ -1,13 +1,24 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import Any
+
 import torch
 from torch import nn
+from torch.nn import functional
 
+from bim_priorda3.baselines import (
+    BIM_INVALID_DEPTH_ATOL,
+    LEGACY_SCALE_ESTIMATOR,
+    ROBUST_LOG_CAP_SCALE_ESTIMATOR,
+    previous_scale_baselines,
+    resolve_scale_estimator_config,
+    robust_scale_and_local_features,
+)
 from bim_priorda3.config import Config
 
-from .alignment import RobustLocalAffineAlignment
-from .refiner import ConditionalDepthRefiner
-from .trust import BIMTrustNet
+from .refiner import ScaleAnchoredDepthRefiner
 
 
 def safe_log(depth: torch.Tensor) -> torch.Tensor:
@@ -15,245 +26,767 @@ def safe_log(depth: torch.Tensor) -> torch.Tensor:
 
 
 class BIMPriorDA3(nn.Module):
-    """Single-frame DA3 refinement with learned BIM reliability."""
+    """Refine scale-corrected DA3 depth with RGB and raw BIM conditions."""
 
-    TRUST_CHANNELS = 12
-    REFINER_CHANNELS = 15
-    STRONG_TRUST_CHANNELS = 16
-    STRONG_REFINER_CHANNELS = 17
-    CANDIDATE_FUSION_CHANNELS = 13
+    # Kept as a serialized identifier so existing V5 checkpoints remain
+    # configuration-compatible. It no longer selects between implementations.
+    SUPPORTED_VARIANT = "prior_conditioned_v4"
+    GEOMETRY_CHANNELS = 4
+    BIM_CHANNELS = 8
+    RESIDUAL_ANCHOR_SCALED = "scaled_depth"
+    RESIDUAL_ANCHOR_ROBUST_DIRECT = "robust_bim_direct"
+    RESIDUAL_ROUTING_FRAME_AND_LOW = "frame_and_low"
+    RESIDUAL_ROUTING_FRAME_ONLY = "frame_only"
 
-    def __init__(self, cfg: Config) -> None:
+    def __init__(
+        self,
+        cfg: Config,
+        *,
+        da3_model: nn.Module | None = None,
+    ) -> None:
         super().__init__()
         model = cfg.model
         self.max_depth = float(cfg.data.max_depth)
-        self.candidate_fusion = bool(model.get("candidate_fusion", False))
-        self.frame_safety_threshold = model.get("frame_safety_threshold")
-        self.strong_anchor = bool(model.get("strong_anchor", False))
-        self.use_frame_residual = bool(model.get("frame_residual", False))
-        if self.candidate_fusion:
-            self.trust = BIMTrustNet(
-                self.CANDIDATE_FUSION_CHANNELS,
-                int(model.trust_channels),
-                initial_bias=float(model.get("initial_gate_bias", -2.0)),
+        self.variant = str(model.get("variant", ""))
+        if self.variant != self.SUPPORTED_VARIANT:
+            raise ValueError(
+                f"Unsupported model variant {self.variant!r}; expected {self.SUPPORTED_VARIANT!r}"
             )
-            self.alignment = None
-            self.refiner = None
-        elif self.strong_anchor:
-            self.trust = BIMTrustNet(
-                self.STRONG_TRUST_CHANNELS, int(model.trust_channels)
+        self.use_rgb_condition = bool(model.get("use_rgb_condition", True))
+        self.use_bim_condition = bool(model.get("use_bim_condition", True))
+        self.use_frame_residual = bool(model.get("use_frame_residual", True))
+        self.use_low_residual = bool(model.get("use_low_residual", True))
+        self.depth_aware_residual_routing = bool(model.get("depth_aware_residual_routing", False))
+        self.residual_routing_depth = float(model.get("residual_routing_depth", 1.0))
+        self.residual_routing_temperature = float(model.get("residual_routing_temperature", 0.1))
+        self.residual_routing_scope = str(
+            model.get(
+                "residual_routing_scope",
+                self.RESIDUAL_ROUTING_FRAME_AND_LOW,
             )
-            self.alignment = None
-            self.refiner = ConditionalDepthRefiner(
-                self.STRONG_REFINER_CHANNELS,
-                int(model.base_channels),
-                float(model.max_log_residual),
-                gated=True,
-                initial_gate_bias=float(model.get("initial_gate_bias", -1.5)),
-                frame_residual=self.use_frame_residual,
-            )
+        )
+        if self.residual_routing_scope not in {
+            self.RESIDUAL_ROUTING_FRAME_AND_LOW,
+            self.RESIDUAL_ROUTING_FRAME_ONLY,
+        }:
+            raise ValueError("model.residual_routing_scope must be 'frame_and_low' or 'frame_only'")
+        self.e2e_da3_config = Config(model.get("e2e_da3", {}))
+        self.e2e_da3_enabled = bool(self.e2e_da3_config.get("enabled", False))
+        self.da3: nn.Module | None = None
+        self._da3_trainable_module_names: tuple[str, ...] = ()
+        legacy_e2e_scale_defaults = {
+            "scale_quantile": 0.45,
+            "scale_ratio_min": 0.2,
+            "scale_ratio_max": 5.0,
+            "scale_min_samples": 100,
+        }
+        legacy_e2e_scale_keys = set(legacy_e2e_scale_defaults)
+        configured_scale = model.get("scale_estimator")
+        present_legacy_keys = legacy_e2e_scale_keys.intersection(self.e2e_da3_config)
+        if configured_scale is not None and present_legacy_keys:
+            missing_legacy_keys = legacy_e2e_scale_keys - present_legacy_keys
+            mismatched_legacy_values = {
+                key: self.e2e_da3_config[key]
+                for key in present_legacy_keys
+                if self.e2e_da3_config[key] != legacy_e2e_scale_defaults[key]
+            }
+            if missing_legacy_keys or mismatched_legacy_values:
+                raise ValueError(
+                    "model.scale_estimator may coexist with deprecated "
+                    "model.e2e_da3 scale fields only when all four fields "
+                    "equal their historical defaults; "
+                    f"missing={sorted(missing_legacy_keys)}, "
+                    f"non_default={mismatched_legacy_values}"
+                )
+            self.deprecated_e2e_scale_fields_ignored = dict(legacy_e2e_scale_defaults)
         else:
-            self.trust = BIMTrustNet(self.TRUST_CHANNELS, int(model.trust_channels))
-            self.alignment = RobustLocalAffineAlignment(
-                kernel_size=int(model.alignment_kernel),
-                downsample=int(model.alignment_downsample),
-                huber_delta=float(model.alignment_huber_delta),
-                min_support=float(model.alignment_min_support),
-                scale_range=(
-                    float(model.alignment_scale_min),
-                    float(model.alignment_scale_max),
-                ),
+            self.deprecated_e2e_scale_fields_ignored = {}
+        if configured_scale is None and present_legacy_keys:
+            legacy_quantile = float(self.e2e_da3_config.get("scale_quantile", 0.45))
+            if legacy_quantile != 0.45:
+                raise ValueError(
+                    "Deprecated model.e2e_da3.scale_quantile is supported only "
+                    "at its historical value 0.45; use model.scale_estimator"
+                )
+            configured_scale = {
+                "name": LEGACY_SCALE_ESTIMATOR,
+                "ratio_min": float(self.e2e_da3_config.get("scale_ratio_min", 0.2)),
+                "ratio_max": float(self.e2e_da3_config.get("scale_ratio_max", 5.0)),
+                "min_samples": int(self.e2e_da3_config.get("scale_min_samples", 100)),
+            }
+        self.scale_estimator_config = resolve_scale_estimator_config(configured_scale)
+        self.residual_anchor_mode = str(
+            model.get("residual_anchor_mode", self.RESIDUAL_ANCHOR_SCALED)
+        )
+        if self.residual_anchor_mode not in {
+            self.RESIDUAL_ANCHOR_SCALED,
+            self.RESIDUAL_ANCHOR_ROBUST_DIRECT,
+        }:
+            raise ValueError(
+                "model.residual_anchor_mode must be 'scaled_depth' or 'robust_bim_direct'"
             )
-            self.refiner = ConditionalDepthRefiner(
-                self.REFINER_CHANNELS,
-                int(model.base_channels),
-                float(model.max_log_residual),
+        if (
+            self.residual_anchor_mode == self.RESIDUAL_ANCHOR_ROBUST_DIRECT
+            and self.scale_estimator_config["name"] != ROBUST_LOG_CAP_SCALE_ESTIMATOR
+        ):
+            raise ValueError(
+                "model.residual_anchor_mode=robust_bim_direct requires "
+                "model.scale_estimator.name=log_upper_cap_v1"
             )
-
-    def _common_features(self, batch: dict[str, torch.Tensor]) -> list[torch.Tensor]:
-        base = batch["base_depth"]
-        bim = batch["bim_depth"]
-        valid = batch["bim_valid"]
-        log_base = safe_log(base) / 3.0
-        log_bim = safe_log(torch.where(valid > 0, bim, base)) / 3.0
-        disagreement = torch.abs(log_bim - log_base) * valid
-        return [
-            batch["rgb"],
-            log_base,
-            batch["base_confidence"].clamp(0.0, 1.0),
-            log_bim * valid,
-            valid,
-            batch["bim_normals"],
-            batch["bim_edge"],
-            disagreement,
-        ]
-
-    def _strong_features(self, batch: dict[str, torch.Tensor]) -> list[torch.Tensor]:
-        base = batch["base_depth"]
-        scaled = batch["scaled_depth"]
-        anchor = batch["anchor_depth"]
-        bim = batch["bim_depth"]
-        valid = batch["bim_valid"]
-        log_base = safe_log(base) / 3.0
-        log_scaled = safe_log(scaled) / 3.0
-        log_anchor = safe_log(anchor) / 3.0
-        log_bim = safe_log(torch.where(valid > 0, bim, scaled)) / 3.0
-        disagreement = torch.abs(safe_log(torch.where(valid > 0, bim, scaled)) - safe_log(scaled))
-        return [
-            batch["rgb"],
-            log_base,
-            batch["base_confidence"].clamp(0.0, 1.0),
-            log_scaled,
-            log_anchor,
-            log_bim * valid,
-            valid,
-            batch["bim_normals"],
-            batch["bim_edge"],
-            disagreement * valid,
-            batch["anchor_field"],
-            batch["anchor_support"].clamp(0.0, 1.0),
-        ]
+        # Compatibility attributes for downstream diagnostics.  The canonical
+        # configuration is model.scale_estimator and q=.45 remains immutable.
+        self.da3_scale_quantile = 0.45
+        self.da3_scale_ratio_min = float(self.scale_estimator_config["ratio_min"])
+        self.da3_scale_ratio_max = float(self.scale_estimator_config["ratio_max"])
+        self.da3_scale_min_samples = int(self.scale_estimator_config["min_samples"])
+        self.register_buffer(
+            "_da3_rgb_mean",
+            torch.tensor((0.485, 0.456, 0.406)).view(1, 3, 1, 1),
+            persistent=False,
+        )
+        self.register_buffer(
+            "_da3_rgb_std",
+            torch.tensor((0.229, 0.224, 0.225)).view(1, 3, 1, 1),
+            persistent=False,
+        )
+        self.refiner = ScaleAnchoredDepthRefiner(
+            rgb_channels=3,
+            geometry_channels=self.GEOMETRY_CHANNELS,
+            bim_channels=self.BIM_CHANNELS,
+            base_channels=int(model.base_channels),
+            max_frame_log_residual=float(model.get("max_frame_log_residual", 0.20)),
+            max_low_log_residual=float(model.get("max_low_log_residual", 0.25)),
+            max_detail_log_residual=float(model.get("max_detail_log_residual", 0.15)),
+            max_total_log_residual=float(model.get("max_total_log_residual", 0.45)),
+            gate_bim_adapters=bool(model.get("gate_bim_adapters", False)),
+            bim_adapter_gate_floor=float(model.get("bim_adapter_gate_floor", 0.25)),
+        )
+        if self.e2e_da3_enabled:
+            self.da3 = self._load_da3_model(cfg, da3_model)
+            self._configure_da3_trainable_scope()
 
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        if self.candidate_fusion:
-            return self._forward_candidate_fusion(batch)
-        if self.strong_anchor:
-            return self._forward_strong_anchor(batch)
-        common = self._common_features(batch)
-        pixel_trust_logits, frame_trust_logits = self.trust(torch.cat(common, dim=1))
-        trust_logits = pixel_trust_logits + frame_trust_logits
-        trust_probability = torch.sigmoid(trust_logits) * batch["bim_valid"]
-        coarse, support, scale, shift = self.alignment(
-            batch["base_depth"],
+        self._validate_bim_depth_mask_contract(batch)
+        if not self.e2e_da3_enabled:
+            return self._forward_scale_refinement(batch)
+        request_live_bim_direct = batch.get(
+            "request_live_bim_direct",
+            False,
+        )
+        if not isinstance(request_live_bim_direct, bool):
+            raise TypeError("batch['request_live_bim_direct'] must be a non-tensor bool")
+        live_batch, da3_receipt = self._build_live_da3_batch(batch)
+        live_direct: torch.Tensor | None = None
+        if self.residual_anchor_mode == self.RESIDUAL_ANCHOR_ROBUST_DIRECT:
+            live_direct = self._configured_fixed_bim_direct(
+                live_batch["base_depth"],
+                batch["bim_depth"],
+                batch["bim_valid"],
+            )
+            live_batch["anchor_depth"] = live_direct
+        output = self._forward_scale_refinement(live_batch)
+        output.update(da3_receipt)
+        if live_direct is not None or self.training or request_live_bim_direct:
+            if live_direct is None:
+                live_direct = self._configured_fixed_bim_direct(
+                    output["base_depth"],
+                    batch["bim_depth"],
+                    batch["bim_valid"],
+                )
+            output["live_bim_direct"] = live_direct
+            if self.scale_estimator_config["name"] == ROBUST_LOG_CAP_SCALE_ESTIMATOR:
+                output["live_robust_bim_direct"] = live_direct
+            else:
+                output["live_legacy_bim_direct_q45"] = live_direct
+        output["uses_live_da3"] = True
+        return output
+
+    @staticmethod
+    def _validate_bim_depth_mask_contract(
+        batch: dict[str, torch.Tensor],
+    ) -> None:
+        """Require one BIM support definition at every model entry point."""
+
+        bim_depth = batch["bim_depth"]
+        bim_valid = batch["bim_valid"]
+        if not torch.is_tensor(bim_depth) or not torch.is_tensor(bim_valid):
+            raise TypeError("bim_depth and bim_valid must be tensors")
+        if bim_depth.shape != bim_valid.shape:
+            raise ValueError(
+                "bim_depth and bim_valid shapes differ: "
+                f"{tuple(bim_depth.shape)} != {tuple(bim_valid.shape)}"
+            )
+        if not bool(torch.isfinite(bim_valid).all()):
+            raise ValueError("bim_valid contains non-finite values")
+        invalid = bim_valid <= 0
+        violations = invalid & (
+            ~torch.isfinite(bim_depth) | (bim_depth.abs() > BIM_INVALID_DEPTH_ATOL)
+        )
+        if bool(violations.any()):
+            finite_invalid = bim_depth[invalid & torch.isfinite(bim_depth)].abs()
+            maximum = float(finite_invalid.max()) if finite_invalid.numel() else float("nan")
+            raise ValueError(
+                "bim_depth must be zero within "
+                f"atol={BIM_INVALID_DEPTH_ATOL:g} wherever bim_valid <= 0; "
+                f"violations={int(violations.sum())}, "
+                f"max_abs_finite={maximum:g}"
+            )
+
+    def train(self, mode: bool = True) -> BIMPriorDA3:
+        """Keep the frozen DA3 encoder deterministic during refiner training."""
+        super().train(mode)
+        if self.da3 is None:
+            return self
+        self.da3.eval()
+        if mode:
+            for name in self._da3_trainable_module_names:
+                self.da3.get_submodule(name).train()
+        return self
+
+    def trainable_parameter_groups(
+        self,
+    ) -> dict[str, list[nn.Parameter]]:
+        """Return independently optimizable DA3 and non-DA3 parameters."""
+        groups = {"da3": [], "non_da3": []}
+        for name, parameter in self.named_parameters():
+            if not parameter.requires_grad:
+                continue
+            key = "da3" if name.startswith("da3.") else "non_da3"
+            groups[key].append(parameter)
+        return groups
+
+    def trainable_parameter_names(self) -> dict[str, tuple[str, ...]]:
+        groups: dict[str, list[str]] = {"da3": [], "non_da3": []}
+        for name, parameter in self.named_parameters():
+            if not parameter.requires_grad:
+                continue
+            key = "da3" if name.startswith("da3.") else "non_da3"
+            groups[key].append(name)
+        return {key: tuple(names) for key, names in groups.items()}
+
+    def _load_da3_model(
+        self,
+        cfg: Config,
+        injected_model: nn.Module | None,
+    ) -> nn.Module:
+        if injected_model is not None:
+            candidate = injected_model
+        else:
+            try:
+                from depth_anything_3.api import DepthAnything3
+            except ImportError as exc:
+                raise RuntimeError(
+                    "End-to-end DA3 is enabled, but depth-anything-3 is not "
+                    "installed. Install the optional 'da3' dependency."
+                ) from exc
+            source_value = self.e2e_da3_config.get(
+                "local_model_path",
+                self.e2e_da3_config.get(
+                    "model_name",
+                    cfg.data.get(
+                        "da3_model",
+                        "depth-anything/da3metric-large",
+                    ),
+                ),
+            )
+            source = Path(str(source_value)).expanduser()
+            if not source.is_absolute():
+                project_source = Path(cfg.project_root) / source
+                if project_source.exists():
+                    source = project_source
+            source_arg = str(source.resolve()) if source.exists() else str(source_value)
+            load_kwargs: dict[str, Any] = {
+                "local_files_only": bool(self.e2e_da3_config.get("local_files_only", True))
+            }
+            cache_dir = self.e2e_da3_config.get("cache_dir")
+            if cache_dir:
+                load_kwargs["cache_dir"] = str(Path(str(cache_dir)).expanduser())
+            revision = self.e2e_da3_config.get("revision")
+            if revision:
+                load_kwargs["revision"] = str(revision)
+            candidate = DepthAnything3.from_pretrained(
+                source_arg,
+                **load_kwargs,
+            )
+        if hasattr(candidate, "model"):
+            candidate = candidate.model
+        if not isinstance(candidate, nn.Module):
+            raise TypeError("The configured DA3 model is not a torch module")
+        required = ("backbone", "head", "_process_depth_head")
+        missing = [name for name in required if not hasattr(candidate, name)]
+        if missing:
+            raise TypeError("DA3 model lacks required Metric-Large modules: " + ", ".join(missing))
+        return candidate
+
+    def _configure_da3_trainable_scope(self) -> None:
+        assert self.da3 is not None
+        for parameter in self.da3.parameters():
+            parameter.requires_grad_(False)
+        scope = str(self.e2e_da3_config.get("trainable_scope", "last_stage"))
+        if scope == "frozen":
+            names: tuple[str, ...] = ()
+        elif scope == "last_stage":
+            names = (
+                "head.scratch.refinenet1",
+                "head.scratch.output_conv1",
+                "head.scratch.output_conv2",
+            )
+        elif scope == "full_head":
+            names = ("head",)
+        else:
+            raise ValueError(
+                "model.e2e_da3.trainable_scope must be one of "
+                "'frozen', 'last_stage', or 'full_head'"
+            )
+        for name in names:
+            try:
+                module = self.da3.get_submodule(name)
+            except AttributeError as exc:
+                raise TypeError(f"DA3 Metric-Large model lacks trainable module {name!r}") from exc
+            for parameter in module.parameters():
+                parameter.requires_grad_(True)
+        if scope == "full_head" and not bool(self.e2e_da3_config.get("train_sky_head", False)):
+            sky_name = "head.scratch.sky_output_conv2"
+            try:
+                sky_head = self.da3.get_submodule(sky_name)
+            except AttributeError:
+                sky_head = None
+            if sky_head is not None:
+                for parameter in sky_head.parameters():
+                    parameter.requires_grad_(False)
+        self._da3_trainable_module_names = names
+        self.da3.eval()
+
+    def _forward_da3_depth(self, rgb: torch.Tensor) -> torch.Tensor:
+        assert self.da3 is not None
+        if rgb.ndim != 4 or rgb.shape[1] != 3:
+            raise ValueError("DA3 RGB input must have shape [B, 3, H, W]")
+        height, width = rgb.shape[-2:]
+        patch_size = int(getattr(self.da3, "PATCH_SIZE", 14))
+        if height % patch_size or width % patch_size:
+            raise ValueError(
+                f"DA3 input {height}x{width} must be divisible by patch size {patch_size}"
+            )
+        normalized = (rgb.float().clamp(0.0, 1.0) - self._da3_rgb_mean) / self._da3_rgb_std
+        images = normalized.unsqueeze(1)
+        backbone_amp = rgb.device.type == "cuda"
+        backbone_dtype = (
+            torch.bfloat16 if backbone_amp and torch.cuda.is_bf16_supported() else torch.float16
+        )
+        with (
+            torch.no_grad(),
+            torch.autocast(
+                device_type=rgb.device.type,
+                dtype=backbone_dtype,
+                enabled=backbone_amp,
+            ),
+        ):
+            features, _ = self.da3.backbone(
+                images,
+                cam_token=None,
+                export_feat_layers=[],
+                ref_view_strategy="saddle_balanced",
+            )
+        with torch.autocast(device_type=rgb.device.type, enabled=False):
+            raw_output = self.da3._process_depth_head(
+                features,
+                height,
+                width,
+            )
+            if hasattr(self.da3, "_process_mono_sky_estimation"):
+                raw_output = self.da3._process_mono_sky_estimation(raw_output)
+        depth = raw_output["depth"] if isinstance(raw_output, dict) else raw_output.depth
+        if depth.ndim != 4 or depth.shape[1] != 1:
+            raise RuntimeError("DA3 Metric-Large depth must have shape [B, 1, H, W]")
+        return depth.clamp_min(1e-3)
+
+    @staticmethod
+    def _depth_confidence(depth: torch.Tensor) -> torch.Tensor:
+        """Differentiable-operator replica of the cached confidence proxy.
+
+        The proxy is intentionally detached: it conditions the BIM refiner but
+        is not a second gradient path into the DA3 decoder.
+        """
+        with (
+            torch.no_grad(),
+            torch.autocast(
+                device_type=depth.device.type,
+                enabled=False,
+            ),
+        ):
+            log_depth = safe_log(depth.detach()).float()
+            kernel = log_depth.new_tensor(
+                (
+                    (0.0, 1.0, 0.0),
+                    (1.0, -4.0, 1.0),
+                    (0.0, 1.0, 0.0),
+                )
+            ).view(1, 1, 3, 3)
+            padded = functional.pad(
+                log_depth,
+                (1, 1, 1, 1),
+                mode="reflect",
+            )
+            laplacian = functional.conv2d(padded, kernel).abs()
+            scale = torch.quantile(
+                laplacian.flatten(1),
+                0.9,
+                dim=1,
+            ).view(-1, 1, 1, 1)
+            confidence = torch.exp(-laplacian / (scale + 1e-6))
+        return confidence.to(dtype=depth.dtype)
+
+    def _robust_bim_scale(
+        self,
+        depth: torch.Tensor,
+        bim_depth: torch.Tensor,
+        bim_valid: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Apply the canonical detached model-input scale estimator."""
+        scales = []
+        support_counts = []
+        quantile_receipts = []
+        cap_receipts = []
+        with torch.no_grad():
+            reference = depth.detach()
+            valid = (
+                torch.isfinite(reference)
+                & torch.isfinite(bim_depth)
+                & (reference > 0)
+                & (bim_depth > 0)
+                & (bim_valid > 0)
+            )
+            ratios = bim_depth / reference.clamp_min(1e-6)
+            valid &= (ratios > self.da3_scale_ratio_min) & (ratios < self.da3_scale_ratio_max)
+            for sample_index in range(reference.shape[0]):
+                values = ratios[sample_index][valid[sample_index]]
+                support_counts.append(values.new_tensor(values.numel()))
+                if values.numel() < self.da3_scale_min_samples:
+                    scale = values.new_tensor(1.0)
+                    quantiles = values.new_full((3,), float("nan"))
+                    cap_flags = torch.zeros(
+                        2,
+                        dtype=torch.bool,
+                        device=values.device,
+                    )
+                elif self.scale_estimator_config["name"] == ROBUST_LOG_CAP_SCALE_ESTIMATOR:
+                    log_quantiles = torch.quantile(
+                        values.float().log(),
+                        values.new_tensor((0.10, 0.25, 0.45)).float(),
+                    )
+                    q10, q25, q45 = log_quantiles.unbind()
+                    q10_bound = q10 + float(self.scale_estimator_config["q10_log_cap"])
+                    q25_bound = q25 + float(self.scale_estimator_config["q25_log_cap"])
+                    robust_log_scale = torch.minimum(
+                        q45,
+                        torch.minimum(q10_bound, q25_bound),
+                    )
+                    scale = robust_log_scale.exp().to(values.dtype)
+                    quantiles = log_quantiles.exp().to(values.dtype)
+                    cap_flags = torch.stack(
+                        (
+                            (q10_bound < q45 - 1e-12) & (q10_bound <= q25_bound),
+                            (q25_bound < q45 - 1e-12) & (q25_bound <= q10_bound),
+                        )
+                    )
+                else:
+                    scale = torch.quantile(
+                        values.float(),
+                        0.45,
+                    ).to(values.dtype)
+                    quantiles = torch.stack(
+                        (
+                            values.new_tensor(float("nan")),
+                            values.new_tensor(float("nan")),
+                            scale,
+                        )
+                    )
+                    cap_flags = torch.zeros(
+                        2,
+                        dtype=torch.bool,
+                        device=values.device,
+                    )
+                scales.append(scale)
+                quantile_receipts.append(quantiles)
+                cap_receipts.append(cap_flags)
+        scale_tensor = torch.stack(scales).view(-1, 1, 1, 1)
+        support_tensor = torch.stack(support_counts).view(-1)
+        quantile_tensor = torch.stack(quantile_receipts)
+        cap_tensor = torch.stack(cap_receipts)
+        return scale_tensor, support_tensor, quantile_tensor, cap_tensor
+
+    @staticmethod
+    @torch.no_grad()
+    def _fixed_bim_direct(
+        base_depth: torch.Tensor,
+        bim_depth: torch.Tensor,
+    ) -> torch.Tensor:
+        """Apply the authoritative OpenCV fixed BIM-direct baseline.
+
+        The local correction contains OpenCV Sobel and large-sigma Gaussian
+        operations whose border and kernel semantics define the published
+        baseline.  Keeping this detached CPU reference avoids silently changing
+        that comparator while the online DA3 decoder is being fine-tuned.
+        """
+        if base_depth.shape != bim_depth.shape or base_depth.ndim != 4:
+            raise ValueError(
+                "Fixed BIM-direct expects equal [B, 1, H, W] depth tensors; "
+                f"base={tuple(base_depth.shape)}, bim={tuple(bim_depth.shape)}"
+            )
+        if base_depth.shape[1] != 1:
+            raise ValueError("Fixed BIM-direct requires one depth channel")
+
+        base_cpu = base_depth.detach().float().cpu().contiguous()
+        bim_cpu = bim_depth.detach().float().cpu().contiguous()
+
+        def compute_sample(sample_index: int) -> torch.Tensor:
+            _, direct, _ = previous_scale_baselines(
+                base_cpu[sample_index, 0].numpy(),
+                bim_cpu[sample_index, 0].numpy(),
+            )
+            return torch.from_numpy(direct)
+
+        sample_count = base_cpu.shape[0]
+        if sample_count > 1:
+            with ThreadPoolExecutor(max_workers=min(sample_count, 8)) as executor:
+                direct_samples = list(executor.map(compute_sample, range(sample_count)))
+        else:
+            direct_samples = [compute_sample(0)] if sample_count else []
+        if not direct_samples:
+            return torch.empty_like(base_depth)
+        direct_batch = torch.stack(direct_samples, dim=0).unsqueeze(1)
+        return direct_batch.to(
+            device=base_depth.device,
+            dtype=base_depth.dtype,
+        )
+
+    @torch.no_grad()
+    def _configured_fixed_bim_direct(
+        self,
+        base_depth: torch.Tensor,
+        bim_depth: torch.Tensor,
+        bim_valid: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        """Compute the configured authoritative CPU BIM-direct comparator."""
+
+        if bim_valid is not None:
+            if bim_valid.shape != bim_depth.shape:
+                raise ValueError(
+                    "Configured BIM-direct BIM mask shape differs from depth: "
+                    f"{tuple(bim_valid.shape)} != {tuple(bim_depth.shape)}"
+                )
+            bim_depth = torch.where(
+                bim_valid > 0,
+                bim_depth,
+                torch.zeros_like(bim_depth),
+            )
+        if self.scale_estimator_config["name"] == LEGACY_SCALE_ESTIMATOR:
+            return self._fixed_bim_direct(base_depth, bim_depth)
+        if base_depth.shape != bim_depth.shape or base_depth.ndim != 4:
+            raise ValueError(
+                "Configured BIM-direct expects equal [B, 1, H, W] tensors; "
+                f"base={tuple(base_depth.shape)}, bim={tuple(bim_depth.shape)}"
+            )
+        if base_depth.shape[1] != 1:
+            raise ValueError("Configured BIM-direct requires one depth channel")
+        base_cpu = base_depth.detach().float().cpu().contiguous()
+        bim_cpu = bim_depth.detach().float().cpu().contiguous()
+        parameters = self.scale_estimator_config
+
+        def compute_sample(sample_index: int) -> torch.Tensor:
+            _, direct, _, _, _ = robust_scale_and_local_features(
+                base_cpu[sample_index, 0].numpy(),
+                bim_cpu[sample_index, 0].numpy(),
+                q10_log_cap=float(parameters["q10_log_cap"]),
+                q25_log_cap=float(parameters["q25_log_cap"]),
+                ratio_min=float(parameters["ratio_min"]),
+                ratio_max=float(parameters["ratio_max"]),
+                min_samples=int(parameters["min_samples"]),
+            )
+            return torch.from_numpy(direct)
+
+        sample_count = base_cpu.shape[0]
+        if sample_count > 1:
+            with ThreadPoolExecutor(max_workers=min(sample_count, 8)) as executor:
+                direct_samples = list(executor.map(compute_sample, range(sample_count)))
+        else:
+            direct_samples = [compute_sample(0)] if sample_count else []
+        if not direct_samples:
+            return torch.empty_like(base_depth)
+        return (
+            torch.stack(direct_samples, dim=0)
+            .unsqueeze(1)
+            .to(
+                device=base_depth.device,
+                dtype=base_depth.dtype,
+            )
+        )
+
+    def _build_live_da3_batch(
+        self,
+        batch: dict[str, torch.Tensor],
+    ) -> tuple[dict[str, torch.Tensor], dict[str, torch.Tensor]]:
+        rgb = batch.get("da3_rgb", batch["rgb"])
+        base = self._forward_da3_depth(rgb)
+        confidence = self._depth_confidence(base)
+        scale, scale_support, scale_quantiles, scale_cap_flags = self._robust_bim_scale(
+            base,
             batch["bim_depth"],
             batch["bim_valid"],
-            trust_probability,
-            batch["bim_edge"],
         )
-        coarse_ratio = safe_log(coarse) - safe_log(batch["base_depth"])
-        refiner_input = torch.cat(
-            common + [trust_probability, coarse_ratio, support.clamp(0.0, 1.0)],
+        scaled = base * scale
+        live_batch = dict(batch)
+        live_batch.update(
+            {
+                "base_depth": base,
+                "base_confidence": confidence,
+                "scaled_depth": scaled,
+            }
+        )
+        receipt = {
+            "da3_scale": scale,
+            "da3_scale_support": scale_support,
+            "da3_scale_quantiles_q10_q25_q45": scale_quantiles,
+            "da3_scale_cap_flags_q10_q25": scale_cap_flags,
+        }
+        return live_batch, receipt
+
+    def _forward_scale_refinement(
+        self,
+        batch: dict[str, torch.Tensor],
+    ) -> dict[str, torch.Tensor]:
+        base = batch["base_depth"]
+        scaled = batch["scaled_depth"]
+        bim = batch["bim_depth"]
+        valid = batch["bim_valid"].clamp(0.0, 1.0)
+        residual_anchor = scaled
+        if self.residual_anchor_mode == self.RESIDUAL_ANCHOR_ROBUST_DIRECT:
+            if "anchor_depth" not in batch:
+                raise KeyError(
+                    "robust_bim_direct residual anchoring requires batch['anchor_depth']"
+                )
+            residual_anchor = batch["anchor_depth"]
+            if residual_anchor.shape != scaled.shape:
+                raise ValueError(
+                    "Residual anchor shape differs from scaled depth: "
+                    f"{tuple(residual_anchor.shape)} != {tuple(scaled.shape)}"
+                )
+            if not bool(torch.all(torch.isfinite(residual_anchor) & (residual_anchor > 0)).item()):
+                raise ValueError("robust_bim_direct residual anchor must be finite and positive")
+
+        log_base = safe_log(base)
+        log_scaled = safe_log(scaled)
+        if self.residual_anchor_mode == self.RESIDUAL_ANCHOR_ROBUST_DIRECT:
+            geometry_scale_channel = ((safe_log(residual_anchor) - log_scaled) / 0.5).clamp(
+                -2.0, 2.0
+            )
+            geometry_scale_channel_semantics = "log(anchor/scaled)/0.5"
+        else:
+            geometry_scale_channel = ((log_scaled - log_base) / 0.5).clamp(-2.0, 2.0)
+            geometry_scale_channel_semantics = "log(scaled/base)/0.5"
+        safe_bim = torch.where(valid > 0, bim, scaled)
+        log_bim = safe_log(safe_bim)
+        signed_disagreement = (log_bim - log_scaled) * valid
+
+        rgb = batch["rgb"] if self.use_rgb_condition else torch.zeros_like(batch["rgb"])
+        geometry = torch.cat(
+            [
+                log_base / 3.0,
+                log_scaled / 3.0,
+                batch["base_confidence"].clamp(0.0, 1.0),
+                geometry_scale_channel,
+            ],
             dim=1,
         )
-        residual, log_variance = self.refiner(refiner_input)
-        refined = batch["base_depth"] * torch.exp(residual)
-        refined = refined.clamp(1e-3, self.max_depth * 2.0)
-        return {
-            "depth": refined,
-            "base_depth": batch["base_depth"],
-            "coarse_depth": coarse,
-            "trust_logits": trust_logits,
-            "pixel_trust_logits": pixel_trust_logits,
-            "frame_trust_logits": frame_trust_logits,
-            "trust_probability": trust_probability,
-            "support": support,
-            "local_scale": scale,
-            "local_shift": shift,
-            "log_residual": residual,
-            "log_variance": log_variance,
-        }
-
-    def _forward_candidate_fusion(
-        self, batch: dict[str, torch.Tensor]
-    ) -> dict[str, torch.Tensor]:
-        anchor = batch["anchor_depth"]
-        candidate = batch["candidate_depth"]
-        valid = batch["bim_valid"]
-        log_anchor = safe_log(anchor)
-        log_candidate = safe_log(candidate)
-        log_bim = safe_log(torch.where(valid > 0, batch["bim_depth"], anchor))
-        frame_candidate_trust = batch["candidate_frame_trust"].view(-1, 1, 1, 1)
-        frame_candidate_map = frame_candidate_trust.expand_as(anchor)
-        features = [
-            batch["rgb"],
-            log_anchor / 3.0,
-            log_candidate / 3.0,
-            torch.abs(log_candidate - log_anchor),
-            batch["candidate_log_variance"].clamp(-3.0, 3.0) / 3.0,
-            batch["candidate_trust"].clamp(0.0, 1.0),
-            frame_candidate_map.clamp(0.0, 1.0),
-            batch["anchor_support"].clamp(0.0, 1.0),
-            (log_bim / 3.0) * valid,
-            valid,
-            batch["bim_edge"],
-        ]
-        pixel_logits, frame_logits = self.trust(torch.cat(features, dim=1))
-        fusion_logits = pixel_logits + frame_logits
-        fusion_gate = torch.sigmoid(fusion_logits)
-        fused_log_depth = log_anchor + fusion_gate * (log_candidate - log_anchor)
-        pixel_fused = torch.exp(fused_log_depth).clamp(
-            1e-3, self.max_depth * 2.0
+        bim_features = torch.cat(
+            [
+                (log_bim / 3.0) * valid,
+                valid,
+                batch["bim_normals"],
+                batch["bim_edge"].clamp(0.0, 1.0),
+                signed_disagreement.clamp(-1.0, 1.0),
+                signed_disagreement.abs().clamp(0.0, 1.0),
+            ],
+            dim=1,
         )
-        frame_probability = torch.sigmoid(frame_logits)
-        if not self.training and self.frame_safety_threshold is not None:
-            use_fusion = frame_probability >= float(self.frame_safety_threshold)
-            refined = torch.where(use_fusion, pixel_fused, anchor)
+        if not self.use_bim_condition:
+            bim_features = torch.zeros_like(bim_features)
+
+        prediction = self.refiner(rgb, geometry, bim_features)
+        raw_frame_residual = prediction["frame_log_residual"]
+        raw_low_residual = prediction["low_log_residual"]
+        if not self.use_frame_residual:
+            raw_frame_residual = torch.zeros_like(raw_frame_residual)
+        if not self.use_low_residual:
+            raw_low_residual = torch.zeros_like(raw_low_residual)
+        residual_routing_depth = (
+            residual_anchor
+            if self.residual_anchor_mode == self.RESIDUAL_ANCHOR_ROBUST_DIRECT
+            else scaled
+        )
+        if self.depth_aware_residual_routing:
+            residual_routing_gate = torch.sigmoid(
+                (residual_routing_depth - self.residual_routing_depth)
+                / self.residual_routing_temperature
+            )
         else:
-            refined = pixel_fused
-        local_scale = batch["scaled_depth"] / batch["base_depth"].clamp_min(1e-3)
-        return {
+            residual_routing_gate = torch.ones_like(scaled)
+        frame_residual = raw_frame_residual * residual_routing_gate
+        low_residual = (
+            raw_low_residual * residual_routing_gate
+            if self.residual_routing_scope == self.RESIDUAL_ROUTING_FRAME_AND_LOW
+            else raw_low_residual
+        )
+        log_residual = torch.clamp(
+            frame_residual + low_residual + prediction["detail_log_residual"],
+            -float(self.refiner.max_total_log_residual),
+            float(self.refiner.max_total_log_residual),
+        )
+        refined = residual_anchor * torch.exp(log_residual)
+        if self.residual_anchor_mode == self.RESIDUAL_ANCHOR_SCALED:
+            refined = refined.clamp(1e-3, self.max_depth * 2.0)
+        reliability_logits = prediction["bim_reliability_logits"]
+        reliability = torch.sigmoid(reliability_logits) * valid
+        local_scale = scaled / base.clamp_min(1e-3)
+
+        output = {
             "depth": refined,
-            "base_depth": batch["base_depth"],
-            "scaled_depth": batch["scaled_depth"],
-            "anchor_depth": anchor,
-            "candidate_depth": candidate,
-            "pixel_fused_depth": pixel_fused,
-            "coarse_depth": anchor,
-            "trust_logits": fusion_logits,
-            "pixel_trust_logits": pixel_logits,
-            "frame_trust_logits": frame_logits,
-            "trust_probability": fusion_gate,
-            "support": batch["anchor_support"],
+            "base_depth": base,
+            "base_confidence": batch["base_confidence"],
+            "scaled_depth": scaled,
+            "coarse_depth": scaled,
+            "refinement_anchor_depth": residual_anchor,
+            "geometry_scale_channel": geometry_scale_channel,
+            "geometry_scale_channel_semantics": (geometry_scale_channel_semantics),
+            "residual_anchor_mode": self.residual_anchor_mode,
+            "trust_logits": reliability_logits,
+            "pixel_trust_logits": reliability_logits,
+            "frame_trust_logits": prediction["frame_trust_logits"],
+            "trust_probability": reliability,
+            "bim_reliability_logits": reliability_logits,
+            "bim_reliability": reliability,
+            "support": valid * (1.0 - batch["bim_edge"]).clamp(0.0, 1.0),
             "local_scale": local_scale,
             "local_shift": torch.zeros_like(local_scale),
-            "log_residual": safe_log(refined) - log_anchor,
-            "update_gate_logits": fusion_logits,
-            "update_gate": fusion_gate,
-            "log_variance": batch["candidate_log_variance"],
+            "log_residual": log_residual,
+            "raw_frame_log_residual": raw_frame_residual,
+            "raw_low_log_residual": raw_low_residual,
+            "frame_log_residual": frame_residual,
+            "low_log_residual": low_residual,
+            "detail_log_residual": prediction["detail_log_residual"],
+            "residual_routing_gate": residual_routing_gate,
+            "residual_routing_depth": residual_routing_depth,
+            "residual_routing_depth_semantics": (
+                "refinement_anchor_depth"
+                if self.residual_anchor_mode == self.RESIDUAL_ANCHOR_ROBUST_DIRECT
+                else "scaled_depth"
+            ),
+            "residual_routing_scope": self.residual_routing_scope,
+            "log_variance": prediction["log_variance"],
         }
-
-    def _forward_strong_anchor(
-        self, batch: dict[str, torch.Tensor]
-    ) -> dict[str, torch.Tensor]:
-        common = self._strong_features(batch)
-        pixel_trust_logits, frame_trust_logits = self.trust(torch.cat(common, dim=1))
-        trust_logits = pixel_trust_logits + frame_trust_logits
-        trust_probability = torch.sigmoid(trust_logits) * batch["bim_valid"]
-        refiner_input = torch.cat(common + [trust_probability], dim=1)
-        refiner_output = self.refiner(refiner_input)
-        if self.use_frame_residual:
-            proposal, log_variance, update_gate_logits, frame_residual = refiner_output
-        else:
-            proposal, log_variance, update_gate_logits = refiner_output
-            frame_residual = torch.zeros_like(proposal[..., :1, :1])
-        update_gate = torch.sigmoid(update_gate_logits)
-        combined_proposal = (proposal + frame_residual).clamp(
-            -float(self.refiner.max_log_residual),
-            float(self.refiner.max_log_residual),
-        )
-        effective_residual = combined_proposal * update_gate
-        anchor = batch["anchor_depth"]
-        refined = anchor * torch.exp(effective_residual)
-        refined = refined.clamp(1e-3, self.max_depth * 2.0)
-        local_scale = batch["scaled_depth"] / batch["base_depth"].clamp_min(1e-3)
-        return {
-            "depth": refined,
-            "base_depth": batch["base_depth"],
-            "scaled_depth": batch["scaled_depth"],
-            "anchor_depth": anchor,
-            "coarse_depth": anchor,
-            "trust_logits": trust_logits,
-            "pixel_trust_logits": pixel_trust_logits,
-            "frame_trust_logits": frame_trust_logits,
-            "trust_probability": trust_probability,
-            "support": batch["anchor_support"],
-            "local_scale": local_scale,
-            "local_shift": torch.zeros_like(local_scale),
-            "log_residual": effective_residual,
-            "residual_proposal": combined_proposal,
-            "pixel_residual_proposal": proposal,
-            "frame_residual_proposal": frame_residual,
-            "update_gate_logits": update_gate_logits,
-            "update_gate": update_gate,
-            "log_variance": log_variance,
-        }
+        if "bim_adapter_gate_logits" in prediction:
+            output["bim_adapter_gate_logits"] = prediction["bim_adapter_gate_logits"]
+            output["bim_adapter_gate_logits_pyramid"] = prediction[
+                "bim_adapter_gate_logits_pyramid"
+            ]
+        return output

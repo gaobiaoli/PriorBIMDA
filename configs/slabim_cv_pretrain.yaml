@@ -1,0 +1,16 @@
+extends: slabim_base.yaml
+
+experiment:
+  name: slabim_cv_pretrain
+  output_dir: outputs/slabim_cv_pretrain
+
+data:
+  # Match training/acceptance exactly to scripts/model/evaluate.py's float32 fixed baseline.
+  recompute_cached_baselines: true
+
+train:
+  batch_size: 12
+  num_workers: 8
+  samples_per_epoch: 480
+  learning_rate: 0.00045
+  lr_warmup_epochs: 2

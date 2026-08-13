@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "protocol": "stanford-area1-room-disjoint-v1",
+  "seed": 42,
+  "search_trials": 20000,
+  "objective": "frame-ratio-squared-error + 0.25*camera-ratio-squared-error",
+  "room_counts": {
+    "train": 30,
+    "val": 7,
+    "test": 7
+  },
+  "room_type_counts": {
+    "WC": 1,
+    "conferenceRoom": 2,
+    "copyRoom": 1,
+    "hallway": 8,
+    "office": 31,
+    "pantry": 1
+  },
+  "room_type_quotas": {
+    "WC": {
+      "train": 1,
+      "val": 0,
+      "test": 0
+    },
+    "conferenceRoom": {
+      "train": 1,
+      "val": 0,
+      "test": 1
+    },
+    "copyRoom": {
+      "train": 1,
+      "val": 0,
+      "test": 0
+    },
+    "hallway": {
+      "train": 5,
+      "val": 2,
+      "test": 1
+    },
+    "office": {
+      "train": 21,
+      "val": 5,
+      "test": 5
+    },
+    "pantry": {
+      "train": 1,
+      "val": 0,
+      "test": 0
+    }
+  },
+  "rooms": {
+    "train": [
+      "WC_1",
+      "conferenceRoom_2",
+      "copyRoom_1",
+      "hallway_1",
+      "hallway_3",
+      "hallway_4",
+      "hallway_6",
+      "hallway_7",
+      "office_1",
+      "office_10",
+      "office_11",
+      "office_12",
+      "office_13",
+      "office_15",
+      "office_17",
+      "office_18",
+      "office_19",
+      "office_2",
+      "office_21",
+      "office_25",
+      "office_26",
+      "office_27",
+      "office_29",
+      "office_3",
+      "office_4",
+      "office_5",
+      "office_7",
+      "office_8",
+      "office_9",
+      "pantry_1"
+    ],
+    "val": [
+      "hallway_2",
+      "hallway_5",
+      "office_14",
+      "office_24",
+      "office_28",
+      "office_31",
+      "office_6"
+    ],
+    "test": [
+      "conferenceRoom_1",
+      "hallway_8",
+      "office_16",
+      "office_20",
+      "office_22",
+      "office_23",
+      "office_30"
+    ]
+  },
+  "frame_counts": {
+    "train": 7013,
+    "val": 1673,
+    "test": 1641
+  },
+  "camera_counts": {
+    "train": 125,
+    "val": 30,
+    "test": 31
+  },
+  "room_assignment": {
+    "WC_1": "train",
+    "conferenceRoom_1": "test",
+    "conferenceRoom_2": "train",
+    "copyRoom_1": "train",
+    "hallway_1": "train",
+    "hallway_2": "val",
+    "hallway_3": "train",
+    "hallway_4": "train",
+    "hallway_5": "val",
+    "hallway_6": "train",
+    "hallway_7": "train",
+    "hallway_8": "test",
+    "office_1": "train",
+    "office_10": "train",
+    "office_11": "train",
+    "office_12": "train",
+    "office_13": "train",
+    "office_14": "val",
+    "office_15": "train",
+    "office_16": "test",
+    "office_17": "train",
+    "office_18": "train",
+    "office_19": "train",
+    "office_2": "train",
+    "office_20": "test",
+    "office_21": "train",
+    "office_22": "test",
+    "office_23": "test",
+    "office_24": "val",
+    "office_25": "train",
+    "office_26": "train",
+    "office_27": "train",
+    "office_28": "val",
+    "office_29": "train",
+    "office_3": "train",
+    "office_30": "test",
+    "office_31": "val",
+    "office_4": "train",
+    "office_5": "train",
+    "office_6": "val",
+    "office_7": "train",
+    "office_8": "train",
+    "office_9": "train",
+    "pantry_1": "train"
+  },
+  "objective_value": 5.538146956544385e-05,
+  "room_disjoint": true,
+  "camera_uuid_disjoint": true,
+  "manifest": "PROJECT_ROOT/data/processed/stanford_area1_504/manifest.jsonl",
+  "annotation": "PROJECT_ROOT/data/annotations/stanford_area1_room_v1.jsonl",
+  "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+  "split_fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+  "manifest_preparation_fingerprint_status": "verified",
+  "manifest_preparation_fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+  "split_counts": {
+    "train": 7013,
+    "val": 1673,
+    "test": 1641,
+    "excluded": 0
+  },
+  "ordered_ids_sha256": {
+    "train": "b2aec61d770b08e32eb920d76cc40c77031fb1f58ecd525c402aa3fbeb7d543f",
+    "val": "cf475a95336872579aad4c7a1762f781c7ec3146474fed119d955b92e3d35bfc",
+    "test": "b7d6d7ea4fbd3a15ef74494cda16532fdf284b050618064e206317e30316404f",
+    "excluded": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  }
+}

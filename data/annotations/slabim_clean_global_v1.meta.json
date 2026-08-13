@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "strategy": "per_region_contiguous_segments_global_ratio",
+  "seed": 42,
+  "requested_ratios": {
+    "train": 0.7,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "realized_ratios": {
+    "train": 0.7005649717514124,
+    "val": 0.14689265536723164,
+    "test": 0.15254237288135594
+  },
+  "stride_by_region": {},
+  "region_quotas_before_embargo": {
+    "3F_Region2": {
+      "train": 95,
+      "val": 20,
+      "test": 20
+    },
+    "3F_Region3": {
+      "train": 106,
+      "val": 23,
+      "test": 23
+    },
+    "4F_Region2": {
+      "train": 101,
+      "val": 22,
+      "test": 21
+    },
+    "4F_Region3": {
+      "train": 38,
+      "val": 8,
+      "test": 8
+    },
+    "5F_Region2": {
+      "train": 115,
+      "val": 24,
+      "test": 25
+    },
+    "5F_Region3": {
+      "train": 50,
+      "val": 11,
+      "test": 11
+    }
+  },
+  "region_segment_orders": {
+    "3F_Region2": [
+      "train",
+      "val",
+      "test"
+    ],
+    "3F_Region3": [
+      "val",
+      "train",
+      "test"
+    ],
+    "4F_Region2": [
+      "test",
+      "train",
+      "val"
+    ],
+    "4F_Region3": [
+      "train",
+      "test",
+      "val"
+    ],
+    "5F_Region2": [
+      "test",
+      "val",
+      "train"
+    ],
+    "5F_Region3": [
+      "val",
+      "test",
+      "train"
+    ]
+  },
+  "region_embargo_samples": {
+    "3F_Region2": [
+      {
+        "id": "3F_Region2/000248",
+        "original_split": "train"
+      },
+      {
+        "id": "3F_Region2/000296",
+        "original_split": "val"
+      }
+    ],
+    "3F_Region3": [
+      {
+        "id": "3F_Region3/000046",
+        "original_split": "train"
+      },
+      {
+        "id": "3F_Region3/000300",
+        "original_split": "train"
+      }
+    ],
+    "4F_Region2": [
+      {
+        "id": "4F_Region2/000042",
+        "original_split": "train"
+      },
+      {
+        "id": "4F_Region2/000246",
+        "original_split": "train"
+      }
+    ],
+    "4F_Region3": [
+      {
+        "id": "4F_Region3/000088",
+        "original_split": "train"
+      },
+      {
+        "id": "4F_Region3/000106",
+        "original_split": "val"
+      }
+    ],
+    "5F_Region2": [
+      {
+        "id": "5F_Region2/000025",
+        "original_split": "val"
+      },
+      {
+        "id": "5F_Region2/000026",
+        "original_split": "val"
+      },
+      {
+        "id": "5F_Region2/000049",
+        "original_split": "train"
+      },
+      {
+        "id": "5F_Region2/000050",
+        "original_split": "train"
+      }
+    ],
+    "5F_Region3": [
+      {
+        "id": "5F_Region3/000056",
+        "original_split": "train"
+      }
+    ]
+  },
+  "counts": {
+    "excluded": 103,
+    "test": 108,
+    "train": 496,
+    "val": 104
+  },
+  "excluded_reasons": {
+    "fused_lidar_leakage_guard": 13,
+    "source_data_error": 90
+  },
+  "region_split_counts": {
+    "3F_Region2": {
+      "excluded": 41,
+      "test": 20,
+      "train": 94,
+      "val": 19
+    },
+    "3F_Region3": {
+      "excluded": 24,
+      "test": 23,
+      "train": 104,
+      "val": 23
+    },
+    "4F_Region2": {
+      "excluded": 14,
+      "test": 21,
+      "train": 99,
+      "val": 22
+    },
+    "4F_Region3": {
+      "excluded": 9,
+      "test": 8,
+      "train": 37,
+      "val": 7
+    },
+    "5F_Region2": {
+      "excluded": 4,
+      "test": 25,
+      "train": 113,
+      "val": 22
+    },
+    "5F_Region3": {
+      "excluded": 11,
+      "test": 11,
+      "train": 49,
+      "val": 11
+    }
+  },
+  "leakage_guard": {
+    "key": "(region, fused_lidar_filename)",
+    "overlap_by_pair": {
+      "train__val": 0,
+      "train__test": 0,
+      "val__test": 0
+    },
+    "verified_disjoint": true
+  },
+  "assignment_semantic_sha256": "030c44594659e8b3fcc95cb8c7486b014e861a5c4593d349bcc3992dc2d31f98",
+  "manifest": "PROJECT_ROOT/data/processed/slabim_504_r50/manifest.jsonl",
+  "manifest_sha256": "e4e48eeb87fbd9510a0c677c8f35d68691fdcc867ef955dced5ae26c0d89d62a",
+  "ignore_file": "PROJECT_ROOT/ignore.txt",
+  "ignore_file_sha256": "cee00dfafe28e773951619362b30235d00c40f7ced619194c7c99792d09a64ac",
+  "ignore_id_count": 90,
+  "annotation": "PROJECT_ROOT/data/annotations/slabim_clean_global_v1.jsonl",
+  "annotation_sha256": "55e4a44afa27247557ba59dcd56d54385f0121d12257f4ceb6407702fc5ba3ce"
+}

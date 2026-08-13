@@ -1,0 +1,209 @@
+{
+  "generated_at": "2026-07-28T10:12:33.109490+00:00",
+  "protocol": {
+    "seed": 42,
+    "selection_split": "5F_Region3",
+    "single_training_seed": true,
+    "training_source_sha256": "f2030855d05efba20fbe6fe1dd7a8bda5118cbda9a7249fd8e28f0400cd61145",
+    "first_stage_comparison": "fresh training with a common 18-epoch budget",
+    "second_stage_comparison": "same frozen initialization and 12-epoch budget",
+    "second_stage_initialization_sha256": "b804a1143df861f817a7f7ac9f8c8a22d9c4ff55a7c4bafd91c3e2f6001e531a"
+  },
+  "direct_bim_validation_baseline": {
+    "abs_rel": 0.1266711468096988,
+    "rmse": 0.46780071350317404,
+    "mae": 0.21072664325740972,
+    "delta1": 0.8892101907700078,
+    "near_abs_rel": 0.15334732598968775
+  },
+  "first_stage": [
+    {
+      "experiment": "slabim_single_frame_r50_v5_pretrain",
+      "config": "configs/slabim_single_frame_r50_v5_pretrain.yaml",
+      "output_dir": "outputs/slabim_single_frame_r50_v5_pretrain",
+      "run_status": "complete",
+      "completed_epochs": 13,
+      "epoch_budget": 18,
+      "resolved_config_sha256": "d240bc93a4a5a58a32379f10bd1d41fcfe77af5c0f80f1982ea8ecfe2a96fc4b",
+      "training_source_sha256": "f2030855d05efba20fbe6fe1dd7a8bda5118cbda9a7249fd8e28f0400cd61145",
+      "initialized_from_sha256": null,
+      "best": {
+        "epoch_zero_based": 6,
+        "accepted": true,
+        "abs_rel": 0.10233455866818678,
+        "rmse": 0.40071284550259034,
+        "mae": 0.16494707284965307,
+        "delta1": 0.9129733201608262,
+        "near_abs_rel": 0.1444702836351826
+      },
+      "accepted": {
+        "epoch_zero_based": 6,
+        "accepted": true,
+        "abs_rel": 0.10233455866818678,
+        "rmse": 0.40071284550259034,
+        "mae": 0.16494707284965307,
+        "delta1": 0.9129733201608262,
+        "near_abs_rel": 0.1444702836351826
+      },
+      "best_checkpoint_sha256": "f16242ff7958f6795845afa254aad33ac42d0234ce8a09cf03de97863aef3e89",
+      "accepted_checkpoint_sha256": "b804a1143df861f817a7f7ac9f8c8a22d9c4ff55a7c4bafd91c3e2f6001e531a"
+    },
+    {
+      "experiment": "slabim_single_frame_r50_v5_no_bim_input",
+      "config": "configs/slabim_single_frame_r50_v5_no_bim_input.yaml",
+      "output_dir": "outputs/slabim_single_frame_r50_v5_no_bim_input",
+      "run_status": "complete",
+      "completed_epochs": 13,
+      "epoch_budget": 18,
+      "resolved_config_sha256": "20ab61ef895d78e9f17de49d6b32ce2385225eaec138cea7650546c4c96cbbf3",
+      "training_source_sha256": "f2030855d05efba20fbe6fe1dd7a8bda5118cbda9a7249fd8e28f0400cd61145",
+      "initialized_from_sha256": null,
+      "best": {
+        "epoch_zero_based": 6,
+        "accepted": true,
+        "abs_rel": 0.10411096696968354,
+        "rmse": 0.4034324128229032,
+        "mae": 0.16876792956619616,
+        "delta1": 0.9134451777073272,
+        "near_abs_rel": 0.1429716670512645
+      },
+      "accepted": {
+        "epoch_zero_based": 6,
+        "accepted": true,
+        "abs_rel": 0.10411096696968354,
+        "rmse": 0.4034324128229032,
+        "mae": 0.16876792956619616,
+        "delta1": 0.9134451777073272,
+        "near_abs_rel": 0.1429716670512645
+      },
+      "best_checkpoint_sha256": "a27adf98705375db3ed8e7cbf71f9cc6faffe466bb1c21ccb32ce2fac2517d8f",
+      "accepted_checkpoint_sha256": "2bb74b1bac8288af6c41d74e3051408e8b4e4309985a46aab099461ad20978d3"
+    },
+    {
+      "experiment": "slabim_single_frame_r50_v5_single_residual",
+      "config": "configs/slabim_single_frame_r50_v5_single_residual.yaml",
+      "output_dir": "outputs/slabim_single_frame_r50_v5_single_residual",
+      "run_status": "complete",
+      "completed_epochs": 10,
+      "epoch_budget": 18,
+      "resolved_config_sha256": "3ff6da997223bec19a2d1a6c5e79df24a209ac89df4a94776bedf650e5145b11",
+      "training_source_sha256": "f2030855d05efba20fbe6fe1dd7a8bda5118cbda9a7249fd8e28f0400cd61145",
+      "initialized_from_sha256": null,
+      "best": {
+        "epoch_zero_based": 3,
+        "accepted": true,
+        "abs_rel": 0.09913863936696118,
+        "rmse": 0.4145956014194432,
+        "mae": 0.16736221495916934,
+        "delta1": 0.9270606450636547,
+        "near_abs_rel": 0.12440331147825806
+      },
+      "accepted": {
+        "epoch_zero_based": 3,
+        "accepted": true,
+        "abs_rel": 0.09913863936696118,
+        "rmse": 0.4145956014194432,
+        "mae": 0.16736221495916934,
+        "delta1": 0.9270606450636547,
+        "near_abs_rel": 0.12440331147825806
+      },
+      "best_checkpoint_sha256": "45237d3888e244f9c44d9f06948c2687e2a3058026edd23b03da5e9db504788e",
+      "accepted_checkpoint_sha256": "3c5fc71b9666b205d136dffb8c8afa9f406c5eb898f40a3841c7573d277af5bc"
+    },
+    {
+      "experiment": "slabim_single_frame_r50_v5_no_robust",
+      "config": "configs/slabim_single_frame_r50_v5_no_robust.yaml",
+      "output_dir": "outputs/slabim_single_frame_r50_v5_no_robust",
+      "run_status": "complete",
+      "completed_epochs": 12,
+      "epoch_budget": 18,
+      "resolved_config_sha256": "a653be237b2a75ca1d1adc6303695cb08e43354a05f471360620fac815954f14",
+      "training_source_sha256": "f2030855d05efba20fbe6fe1dd7a8bda5118cbda9a7249fd8e28f0400cd61145",
+      "initialized_from_sha256": null,
+      "best": {
+        "epoch_zero_based": 5,
+        "accepted": true,
+        "abs_rel": 0.10311993993961324,
+        "rmse": 0.41326774116642334,
+        "mae": 0.17018665652774786,
+        "delta1": 0.9252624750666538,
+        "near_abs_rel": 0.13607906286692245
+      },
+      "accepted": {
+        "epoch_zero_based": 5,
+        "accepted": true,
+        "abs_rel": 0.10311993993961324,
+        "rmse": 0.41326774116642334,
+        "mae": 0.17018665652774786,
+        "delta1": 0.9252624750666538,
+        "near_abs_rel": 0.13607906286692245
+      },
+      "best_checkpoint_sha256": "1ab613f8486749fc026dd81f65cfc479e044f878fdd7c083fd2663fc631173b4",
+      "accepted_checkpoint_sha256": "3716e3a274e130033c3f2f17ed6b949ff98b67086aa9535eeaa64ffb975b96fd"
+    }
+  ],
+  "second_stage": [
+    {
+      "experiment": "slabim_single_frame_r50_v5",
+      "config": "configs/slabim_single_frame_r50_v5.yaml",
+      "output_dir": "outputs/slabim_single_frame_r50_v5",
+      "run_status": "complete",
+      "completed_epochs": 12,
+      "epoch_budget": 12,
+      "resolved_config_sha256": "152d9917280b0410e88863215a64227767a50edd75efe0e96bca5db5733b1ec3",
+      "training_source_sha256": "f2030855d05efba20fbe6fe1dd7a8bda5118cbda9a7249fd8e28f0400cd61145",
+      "initialized_from_sha256": "b804a1143df861f817a7f7ac9f8c8a22d9c4ff55a7c4bafd91c3e2f6001e531a",
+      "best": {
+        "epoch_zero_based": 6,
+        "accepted": true,
+        "abs_rel": 0.09647512253905453,
+        "rmse": 0.40654099586592873,
+        "mae": 0.16274138720866146,
+        "delta1": 0.9230027829134576,
+        "near_abs_rel": 0.11992179741832293
+      },
+      "accepted": {
+        "epoch_zero_based": 6,
+        "accepted": true,
+        "abs_rel": 0.09647512253905453,
+        "rmse": 0.40654099586592873,
+        "mae": 0.16274138720866146,
+        "delta1": 0.9230027829134576,
+        "near_abs_rel": 0.11992179741832293
+      },
+      "best_checkpoint_sha256": "1ee7381446abd7e7f33fc824ad211e8b7863221c36e044b96791daa86ebd6024",
+      "accepted_checkpoint_sha256": "325f1e44ac7044f8a59cd1bdad57d4b10726cf0e94aba4ddfd966914cc4dfab6"
+    },
+    {
+      "experiment": "slabim_single_frame_r50_v5_no_routing",
+      "config": "configs/slabim_single_frame_r50_v5_no_routing.yaml",
+      "output_dir": "outputs/slabim_single_frame_r50_v5_no_routing",
+      "run_status": "complete",
+      "completed_epochs": 12,
+      "epoch_budget": 12,
+      "resolved_config_sha256": "d5a5c71ee07e57967858f50bae042b2662cb63470569a781eb15e68fd6c76265",
+      "training_source_sha256": "f2030855d05efba20fbe6fe1dd7a8bda5118cbda9a7249fd8e28f0400cd61145",
+      "initialized_from_sha256": "b804a1143df861f817a7f7ac9f8c8a22d9c4ff55a7c4bafd91c3e2f6001e531a",
+      "best": {
+        "epoch_zero_based": 6,
+        "accepted": true,
+        "abs_rel": 0.1018301295845976,
+        "rmse": 0.3995076109661314,
+        "mae": 0.16345733786057662,
+        "delta1": 0.9070100505093657,
+        "near_abs_rel": 0.1448428764057218
+      },
+      "accepted": {
+        "epoch_zero_based": 6,
+        "accepted": true,
+        "abs_rel": 0.1018301295845976,
+        "rmse": 0.3995076109661314,
+        "mae": 0.16345733786057662,
+        "delta1": 0.9070100505093657,
+        "near_abs_rel": 0.1448428764057218
+      },
+      "best_checkpoint_sha256": "12c61a48e1e9d28d0b4a3250eb37062e187a3b75f49161a22258af4e50946527",
+      "accepted_checkpoint_sha256": "9f9ba55bcb15013ad336aba4f1f9c0fa461522c19e3937abe0f6b0a51eba9518"
+    }
+  ]
+}

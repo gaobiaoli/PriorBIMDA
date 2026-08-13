@@ -1,0 +1,107 @@
+experiment:
+  name: slabim_base
+  seed: 42
+  output_dir: outputs/slabim_base
+
+data:
+  slabim_root: ../SLABIM
+  processed_root: data/processed/slabim_504_r50
+  regions:
+    - 3F_Region2
+    - 3F_Region3
+    - 4F_Region2
+    - 4F_Region3
+    - 5F_Region2
+    - 5F_Region3
+  train_regions:
+    - 3F_Region2
+    - 3F_Region3
+    - 4F_Region2
+    - 4F_Region3
+  val_regions:
+    - 5F_Region3
+  test_regions:
+    - 5F_Region2
+  target_height: 504
+  target_width: 504
+  min_depth: 0.2
+  max_depth: 5.0
+  max_time_diff: 0.06
+  fusion_radius: 50
+  splat_radius: 1
+  occlusion_abs_m: 0.06
+  occlusion_rel: 0.02
+  min_gt_support: 1
+  pose_bim_file: lidar_pose_local_to_bim_from_rosbag.txt
+  pose_slam_file: lidar_pose_local_to_slam_smoothed.txt
+  da3_cache_roots: {}
+  da3_model: depth-anything/da3metric-large
+  da3_revision: 4010e39f3634a45bc60553321fb49fb760bd594e
+  local_files_only: false
+  da3_require_pinned_revision: true
+  da3_process_res: 504
+
+model:
+  # Serialized compatibility token used by existing V5 checkpoints.
+  variant: prior_conditioned_v4
+  base_channels: 16
+  use_rgb_condition: true
+  use_bim_condition: true
+  use_frame_residual: true
+  use_low_residual: true
+  max_frame_log_residual: 0.20
+  max_low_log_residual: 0.25
+  max_detail_log_residual: 0.15
+  max_total_log_residual: 0.45
+
+loss:
+  depth: 1.0
+  gradient: 0.20
+  residual_teacher: 0.50
+  frame_residual_teacher: 0.25
+  local_residual_teacher: 0.25
+  low_smoothness: 0.02
+  detail_regularization: 0.005
+  trust: 0.10
+  frame_trust: 0.02
+  uncertainty: 0.01
+  degradation: 0.25
+  near_range_boost: 0.25
+  trust_margin: 0.005
+  trust_temperature: 0.03
+  warmup_epochs: 3
+
+train:
+  epochs: 18
+  batch_size: 2
+  num_workers: 4
+  region_balanced_sampling: true
+  learning_rate: 0.0002
+  weight_decay: 0.0001
+  amp: true
+  gradient_accumulation: 1
+  gradient_clip_norm: 1.0
+  log_every: 25
+  save_every: 1
+  early_stopping_patience: 6
+  acceptance:
+    enabled: true
+    near_relative_tolerance: 1.02
+  augment:
+    horizontal_flip_probability: 0.5
+    color_jitter: 0.10
+    bim_shift_probability: 0.20
+    bim_shift_pixels: 4
+    bim_dropout_probability: 0.15
+    bim_dropout_fraction: 0.12
+    bim_full_dropout_probability: 0.03
+    bim_depth_noise_probability: 0.20
+    bim_depth_noise_log_std: 0.02
+    bim_edge_dilation_probability: 0.15
+    bim_edge_dilation_pixels: 3
+    crop_height: 416
+    crop_width: 416
+
+evaluation:
+  distance_bins: [0.2, 1.0, 2.0, 3.0, 5.0]
+  min_valid_points: 50

@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="1000.8pt" height="482.4pt" viewBox="0 0 1000.8 482.4" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>scripts/analysis/generate_paper_assets.py</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 482.4 
+L 1000.8 482.4 
+L 1000.8 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 42.7104 171.936 
+L 159.1056 171.936 
+Q 176.8608 171.936 176.8608 163.512 
+L 176.8608 94.248 
+Q 176.8608 85.824 159.1056 85.824 
+L 42.7104 85.824 
+Q 24.9552 85.824 24.9552 94.248 
+L 24.9552 163.512 
+Q 24.9552 171.936 42.7104 171.936 
+z
+" clip-path="url(#pb4f6f454e8)" style="fill: #dcebfa; stroke: #203040; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 42.7104 391.896 
+L 159.1056 391.896 
+Q 176.8608 391.896 176.8608 383.472 
+L 176.8608 295.488 
+Q 176.8608 287.064 159.1056 287.064 
+L 42.7104 287.064 
+Q 24.9552 287.064 24.9552 295.488 
+L 24.9552 383.472 
+Q 24.9552 391.896 42.7104 391.896 
+z
+" clip-path="url(#pb4f6f454e8)" style="fill: #fde9c9; stroke: #203040; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 239.9904 171.936 
+L 316.9296 171.936 
+Q 334.6848 171.936 334.6848 163.512 
+L 334.6848 94.248 
+Q 334.6848 85.824 316.9296 85.824 
+L 239.9904 85.824 
+Q 222.2352 85.824 222.2352 94.248 
+L 222.2352 163.512 
+Q 222.2352 171.936 239.9904 171.936 
+z
+" clip-path="url(#pb4f6f454e8)" style="fill: #d9f1ed; stroke: #203040; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 239.9904 382.536 
+L 316.9296 382.536 
+Q 334.6848 382.536 334.6848 374.112 
+L 334.6848 304.848 
+Q 334.6848 296.424 316.9296 296.424 
+L 239.9904 296.424 
+Q 222.2352 296.424 222.2352 304.848 
+L 222.2352 374.112 
+Q 222.2352 382.536 239.9904 382.536 
+z
+" clip-path="url(#pb4f6f454e8)" style="fill: #fff1d9; stroke: #203040; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 368.2224 171.936 
+L 445.1616 171.936 
+Q 462.9168 171.936 462.9168 163.512 
+L 462.9168 94.248 
+Q 462.9168 85.824 445.1616 85.824 
+L 368.2224 85.824 
+Q 350.4672 85.824 350.4672 94.248 
+L 350.4672 163.512 
+Q 350.4672 171.936 368.2224 171.936 
+z
+" clip-path="url(#pb4f6f454e8)" style="fill: #d9f1ed; stroke: #203040; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 368.2224 382.536 
+L 445.1616 382.536 
+Q 462.9168 382.536 462.9168 374.112 
+L 462.9168 304.848 
+Q 462.9168 296.424 445.1616 296.424 
+L 368.2224 296.424 
+Q 350.4672 296.424 350.4672 304.848 
+L 350.4672 374.112 
+Q 350.4672 382.536 368.2224 382.536 
+z
+" clip-path="url(#pb4f6f454e8)" style="fill: #fff1d9; stroke: #203040; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 496.4544 171.936 
+L 573.3936 171.936 
+Q 591.1488 171.936 591.1488 163.512 
+L 591.1488 94.248 
+Q 591.1488 85.824 573.3936 85.824 
+L 496.4544 85.824 
+Q 478.6992 85.824 478.6992 94.248 
+L 478.6992 163.512 
+Q 478.6992 171.936 496.4544 171.936 
+z
+" clip-path="url(#pb4f6f454e8)" style="fill: #d9f1ed; stroke: #203040; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 496.4544 382.536 
+L 573.3936 382.536 
+Q 591.1488 382.536 591.1488 374.112 
+L 591.1488 304.848 
+Q 591.1488 296.424 573.3936 296.424 
+L 496.4544 296.424 
+Q 478.6992 296.424 478.6992 304.848 
+L 478.6992 374.112 
+Q 478.6992 382.536 496.4544 382.536 
+z
+" clip-path="url(#pb4f6f454e8)" style="fill: #fff1d9; stroke: #203040; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 644.4144 284.256 
+L 760.8096 284.256 
+Q 778.5648 284.256 778.5648 275.832 
+L 778.5648 178.488 
+Q 778.5648 170.064 760.8096 170.064 
+L 644.4144 170.064 
+Q 626.6592 170.064 626.6592 178.488 
+L 626.6592 275.832 
+Q 626.6592 284.256 644.4144 284.256 
+z
+" clip-path="url(#pb4f6f454e8)" style="fill: #e8e0f2; stroke: #203040; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 831.8304 139.176 
+L 948.2256 139.176 
+Q 965.9808 139.176 965.9808 130.752 
+L 965.9808 75.528 
+Q 965.9808 67.104 948.2256 67.104 
+L 831.8304 67.104 
+Q 814.0752 67.104 814.0752 75.528 
+L 814.0752 130.752 
+Q 814.0752 139.176 831.8304 139.176 
+z
+" clip-path="url(#pb4f6f454e8)" style="fill: #cdede5; stroke: #203040; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 831.8304 256.176 
+L 948.2256 256.176 
+Q 965.9808 256.176 965.9808 247.752 
+L 965.9808 192.528 
+Q 965.9808 184.104 948.2256 184.104 
+L 831.8304 184.104 
+Q 814.0752 184.104 814.0752 192.528 
+L 814.0752 247.752 
+Q 814.0752 256.176 831.8304 256.176 
+z
+" clip-path="url(#pb4f6f454e8)" style="fill: #cdede5; stroke: #203040; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 831.8304 373.176 
+L 948.2256 373.176 
+Q 965.9808 373.176 965.9808 364.752 
+L 965.9808 309.528 
+Q 965.9808 301.104 948.2256 301.104 
+L 831.8304 301.104 
+Q 814.0752 301.104 814.0752 309.528 
+L 814.0752 364.752 
+Q 814.0752 373.176 831.8304 373.176 
+z
+" clip-path="url(#pb4f6f454e8)" style="fill: #cdede5; stroke: #203040; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 13px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #203040" x="17.064" y="31.117969" transform="rotate(-0 17.064 31.117969)">Candidate B — multi-condition network detail (architecture figure)</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(46.575969 125.476289)">RGB + DA3 geometry</text>
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(50.37675 137.479023)">(separate encoders)</text>
+   </g>
+   <g id="text_3">
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(56.20175 330.075312)">BIM depth + valid</text>
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(55.135344 342.078047)">+ normals + edge</text>
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(60.548625 354.080781)">+ disagreement</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(264.365859 125.81666)">Image</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(263.465156 136.619121)">level 1</text>
+   </g>
+   <g id="text_5">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(270.162422 336.41666)">BIM</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(263.465156 347.219121)">level 1</text>
+   </g>
+   <g id="patch_14">
+    <path d="M 167.025819 128.88 
+Q 199.548373 128.88 230.393876 128.88 
+" style="fill: none; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 226.393876 126.88 
+L 230.393876 128.88 
+L 226.393876 130.88 
+z
+" style="fill: #536273; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_15">
+    <path d="M 167.025819 339.48 
+Q 199.548373 339.48 230.393876 339.48 
+" style="fill: none; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 226.393876 337.48 
+L 230.393876 339.48 
+L 226.393876 341.48 
+z
+" style="fill: #536273; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(392.597859 125.81666)">Image</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(391.697156 136.619121)">level 2</text>
+   </g>
+   <g id="text_7">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(398.394422 336.41666)">BIM</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(391.697156 347.219121)">level 2</text>
+   </g>
+   <g id="patch_16">
+    <path d="M 324.846809 128.88 
+Q 342.576332 128.88 358.628805 128.88 
+" style="fill: none; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 354.628805 126.88 
+L 358.628805 128.88 
+L 354.628805 130.88 
+z
+" style="fill: #536273; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_17">
+    <path d="M 324.846809 339.48 
+Q 342.576332 339.48 358.628805 339.48 
+" style="fill: none; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 354.628805 337.48 
+L 358.628805 339.48 
+L 354.628805 341.48 
+z
+" style="fill: #536273; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(520.829859 125.81666)">Image</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(519.929156 136.619121)">level 3</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(526.626422 336.41666)">BIM</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(519.929156 347.219121)">level 3</text>
+   </g>
+   <g id="patch_18">
+    <path d="M 453.078809 128.88 
+Q 470.808332 128.88 486.860805 128.88 
+" style="fill: none; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 482.860805 126.88 
+L 486.860805 128.88 
+L 482.860805 130.88 
+z
+" style="fill: #536273; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_19">
+    <path d="M 453.078809 339.48 
+Q 470.808332 339.48 486.860805 339.48 
+" style="fill: none; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 482.860805 337.48 
+L 486.860805 339.48 
+L 482.860805 341.48 
+z
+" style="fill: #536273; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(649.176844 217.755312)">RGB/geometry fusion</text>
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(642.075281 229.758047)">+ additive BIM adapters</text>
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; fill: #203040" transform="translate(663.497156 241.760781)">(at every scale)</text>
+   </g>
+   <g id="patch_20">
+    <path d="M 580.552827 130.449902 
+Q 608.904629 166.320796 636.216519 200.875985 
+" style="fill: none; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 635.305251 196.497676 
+L 636.216519 200.875985 
+L 632.167111 198.978013 
+z
+" style="fill: #536273; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_21">
+    <path d="M 580.419171 337.816549 
+Q 608.903722 295.020418 636.459056 253.620373 
+" style="fill: none; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 632.577815 255.842076 
+L 636.459056 253.620373 
+L 635.907674 258.058388 
+z
+" style="fill: #536273; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #203040" x="890.028" y="105.478242" transform="rotate(-0 890.028 105.478242)">Frame residual</text>
+   </g>
+   <g id="patch_22">
+    <path d="M 767.802856 225.475042 
+Q 803.849507 168.745637 824.742173 106.629232 
+" style="fill: none; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 821.571337 109.782929 
+L 824.742173 106.629232 
+L 825.362629 111.058118 
+z
+" style="fill: #536273; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #203040" x="890.028" y="222.478242" transform="rotate(-0 890.028 222.478242)">Low-frequency residual</text>
+   </g>
+   <g id="patch_23">
+    <path d="M 768.711155 226.924772 
+Q 796.318313 223.6502 822.260095 220.573164 
+" style="fill: none; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 818.052365 219.058236 
+L 822.260095 220.573164 
+L 818.523514 223.030391 
+z
+" style="fill: #536273; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #203040" x="890.028" y="339.478242" transform="rotate(-0 890.028 339.478242)">Detail residual</text>
+   </g>
+   <g id="patch_24">
+    <path d="M 767.884111 228.792889 
+Q 802.979099 278.5674 824.575157 333.715485 
+" style="fill: none; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 824.978898 329.261611 
+L 824.575157 333.715485 
+L 821.254303 330.720167 
+z
+" style="fill: #536273; stroke: #536273; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="text_14">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #718096" transform="translate(518.65875 408.237539)">Depth-aware routing gates the frame residual (and optionally the low residual);</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #718096" transform="translate(538.512187 419.04)">BIM reliability is auxiliary supervision, not a multiplicative output gate.</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pb4f6f454e8">
+   <rect x="7.2" y="7.2" width="986.4" height="468"/>
+  </clipPath>
+ </defs>
+</svg>

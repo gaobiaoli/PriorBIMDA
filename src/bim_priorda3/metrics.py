@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import torch
 
-
 METRIC_NAMES = ("abs_rel", "rmse", "mae", "delta1", "delta2", "delta3")
 
 
@@ -27,4 +26,3 @@ def depth_metrics(
         "delta3": float((ratio < 1.25**3).double().mean()),
         "count": int(pred.numel()),
     }
-

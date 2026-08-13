@@ -1,0 +1,31 @@
+extends: slabim.yaml
+
+experiment:
+  name: slabim_e2e
+  output_dir: outputs/slabim_e2e
+
+model:
+  e2e_da3:
+    enabled: true
+    model_name: depth-anything/da3metric-large
+    revision: 4010e39f3634a45bc60553321fb49fb760bd594e
+    local_files_only: true
+    trainable_scope: last_stage
+    train_sky_head: false
+    scale_quantile: 0.45
+    scale_ratio_min: 0.2
+    scale_ratio_max: 5.0
+    scale_min_samples: 100
+
+train:
+  epochs: 8
+  batch_size: 4
+  gradient_accumulation: 2
+  learning_rate: 0.00001
+  da3_learning_rate: 0.000001
+  amp_init_scale: 32768
+  lr_warmup_epochs: 1
+  early_stopping_patience: 4
+  augment:
+    crop_height: 504
+    crop_width: 504

@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "dataset": "BobH62/SLABIM",
+  "repository": "https://huggingface.co/datasets/BobH62/SLABIM/resolve",
+  "revision": "53bff75888bcf3ec7b2e1e3a65b0a278e80b65aa",
+  "files": {
+    "BIM.zip": {
+      "bytes": 96380034,
+      "sha256": "700a25338edd83bfd415c4446cef9e54878c5cf4468206aeecd7ae98fdd94cae"
+    },
+    "calibration_files/cam_intrinsics.txt": {
+      "bytes": 225,
+      "sha256": "182f5af8d8c801ddc1ff933189e7b5ea4be2b5249427321fd3a5b2c1e48aee2d"
+    },
+    "calibration_files/cam_to_lidar.txt": {
+      "bytes": 403,
+      "sha256": "3730b1b364a8642e5d431c864e4498e0f75c59f4b619ffd69a1dc10699549429"
+    },
+    "sensor_data/1F_Region1.zip": {
+      "bytes": 40565900717,
+      "sha256": "445089ba4fdf19795e7ce31dd045bcb9c4199eb751085fb7e310c6d2365aaf24"
+    },
+    "sensor_data/1F_Region2.zip": {
+      "bytes": 38895134816,
+      "sha256": "adf4f44fc53a85d5800f93b89f01f4e8b04cfae5dfbcc9808b86855a1ac6cca4"
+    },
+    "sensor_data/1F_Region3.zip": {
+      "bytes": 31838970462,
+      "sha256": "21d3a6417b2b5924a33db9f6e8e0a65a7e55f72f278f10490b6104898fe2a386"
+    },
+    "sensor_data/3F_Region1.zip": {
+      "bytes": 21181499188,
+      "sha256": "992e2c4b3c9639976cb3da2b126be5ea96e3eb62deb2d11d539019361678814f"
+    },
+    "sensor_data/3F_Region2.zip": {
+      "bytes": 12749276771,
+      "sha256": "2d74e1c0ddf9002a9615c21cecfde778a7316b024a2b3a12c7308af572396625"
+    },
+    "sensor_data/3F_Region3.zip": {
+      "bytes": 12629160939,
+      "sha256": "00f0f46360fa7ba85c35a734b7a0f02a0026b4cfd541b2b49de8d85656747c43"
+    },
+    "sensor_data/4F_Region1.zip": {
+      "bytes": 22053120024,
+      "sha256": "aaf57f097978de4e796a2dcbf736b945dbc2d32f51be357325e4cc30aaf09cd4"
+    },
+    "sensor_data/4F_Region2.zip": {
+      "bytes": 14392981388,
+      "sha256": "bc61d2e4f1fae63dda2fb5f794c72b80865262b7df4863c44afabf4d47c6cb66"
+    },
+    "sensor_data/4F_Region3.zip": {
+      "bytes": 5870423706,
+      "sha256": "aef475d2c68dc2ffb56e12c41b5460a9a756bbff23c3c1cf9dd6918056fdc563"
+    },
+    "sensor_data/5F_Region1.zip": {
+      "bytes": 16298602414,
+      "sha256": "2585897d3ade30d8b27ace0b72737aaf1680d5433cd251a764ca34e16ffbe04a"
+    },
+    "sensor_data/5F_Region2.zip": {
+      "bytes": 6473155061,
+      "sha256": "a2a121916f65ff74dee414ce1a70d2d89f5b5b19110eeffc9ea4362c5bdff6b8"
+    },
+    "sensor_data/5F_Region3.zip": {
+      "bytes": 8962559321,
+      "sha256": "5cf172a2e00410a4ad220fa3cc2dcf1962a49cbcca0c482067729737372fbc73"
+    }
+  }
+}

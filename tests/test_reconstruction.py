@@ -16,9 +16,7 @@ def test_depth_to_world_points_applies_intrinsics_and_pose() -> None:
         min_depth=0.1,
         max_depth=5.0,
     )
-    expected = np.array(
-        [[1.0, 2.0, 5.0], [2.0, 2.0, 5.0], [1.0, 3.0, 5.0], [2.0, 3.0, 5.0]]
-    )
+    expected = np.array([[1.0, 2.0, 5.0], [2.0, 2.0, 5.0], [1.0, 3.0, 5.0], [2.0, 3.0, 5.0]])
     assert np.allclose(points, expected)
 
 

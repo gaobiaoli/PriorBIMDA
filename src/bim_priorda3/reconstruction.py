@@ -35,9 +35,7 @@ def depth_to_world_points(
             z,
         )
     )
-    return (
-        camera @ camera_to_world[:3, :3].T + camera_to_world[:3, 3]
-    ).astype(np.float32)
+    return (camera @ camera_to_world[:3, :3].T + camera_to_world[:3, 3]).astype(np.float32)
 
 
 def voxel_downsample(points: np.ndarray, voxel_size: float) -> np.ndarray:
@@ -71,13 +69,11 @@ def reconstruction_metrics(
     accuracy_distance = reference_tree.query(reconstruction, workers=-1)[0]
     completeness_distance = reconstruction_tree.query(reference, workers=-1)[0]
     result = {
-        "reconstruction_points": int(len(reconstruction)),
-        "reference_points": int(len(reference)),
+        "reconstruction_points": len(reconstruction),
+        "reference_points": len(reference),
         "accuracy_pred_to_gt": _distance_statistics(accuracy_distance),
         "completeness_gt_to_pred": _distance_statistics(completeness_distance),
-        "chamfer_l1_m": float(
-            (accuracy_distance.mean() + completeness_distance.mean()) / 2.0
-        ),
+        "chamfer_l1_m": float((accuracy_distance.mean() + completeness_distance.mean()) / 2.0),
         "threshold_metrics": {},
     }
     for threshold in thresholds:
@@ -97,4 +93,3 @@ def save_point_cloud(path: str, points: np.ndarray, color: tuple[float, float, f
     cloud.paint_uniform_color(color)
     if not o3d.io.write_point_cloud(path, cloud, compressed=True):
         raise OSError(f"Failed to write point cloud: {path}")
-

@@ -16,4 +16,3 @@ def test_front_cluster_rejects_occluded_surface() -> None:
     assert np.allclose(depth, 2.015)
     assert np.all(support == 2)
     assert np.all(weight > 0)
-

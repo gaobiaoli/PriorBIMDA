@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -37,9 +37,7 @@ def synchronize(
     matches: list[tuple[int, int, float]] = []
     for image_index, candidate in enumerate(right):
         choices = [
-            index
-            for index in (candidate - 1, candidate)
-            if 0 <= index < len(lidar_timestamps)
+            index for index in (candidate - 1, candidate) if 0 <= index < len(lidar_timestamps)
         ]
         if not choices:
             continue
@@ -87,11 +85,7 @@ def project_depth(
     if not len(points_camera):
         return np.full((height, width), np.nan, dtype=np.float32)
     z = points_camera[:, 2]
-    valid = (
-        np.isfinite(points_camera).all(axis=1)
-        & (z >= min_depth)
-        & (z <= max_depth)
-    )
+    valid = np.isfinite(points_camera).all(axis=1) & (z >= min_depth) & (z <= max_depth)
     points_camera = points_camera[valid]
     z = z[valid]
     if not len(z):

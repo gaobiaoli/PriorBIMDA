@@ -1,0 +1,27 @@
+extends: stanford_area1_transfer.yaml
+
+experiment:
+  name: stanford_area1
+  output_dir: outputs/stanford_area1
+
+model:
+  residual_anchor_mode: robust_bim_direct
+  residual_routing_scope: frame_only
+  scale_estimator:
+    name: log_upper_cap_v1
+    q10_log_cap: "inf"
+    q25_log_cap: 0.05
+    ratio_min: 0.2
+    ratio_max: 5.0
+    min_samples: 100
+
+train:
+  init_checkpoint_policy: zero_multiplicative_residual_heads
+  refiner_head_warmup_epochs: 1
+  gradient_accumulation: 2
+  learning_rate: 0.00004
+  lr_warmup_epochs: 0
+
+loss:
+  furniture_multiplier: 2.0
+  bim_foreground_conflict_multiplier: 2.0
