@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "status": "frozen",
+  "name": "universal_log_upper_cap_v1",
+  "adopted_utc": "2026-08-13T12:56:29Z",
+  "runtime_inputs": [
+    "DA3 depth",
+    "fixed BIM depth",
+    "fixed BIM validity"
+  ],
+  "ground_truth_used_at_runtime": false,
+  "test_time_fitting": false,
+  "per_dataset_overrides_allowed": false,
+  "estimator": {
+    "name": "log_upper_cap_v1",
+    "formula": "exp(min(Q45(log(BIM/DA3)), Q25(log(BIM/DA3)) + 0.05))",
+    "q10_log_cap": "inf",
+    "q25_log_cap": 0.05,
+    "ratio_min": 0.2,
+    "ratio_max": 5.0,
+    "min_samples": 100,
+    "fallback_scale": 1.0
+  },
+  "model_contract": {
+    "refinement_anchor": "universally scaled DA3 depth",
+    "bim_direct_role": "shared deterministic non-learning baseline",
+    "bim_direct_is_model_anchor": false
+  },
+  "calibration_provenance": {
+    "parameter_origin": "Area_1 train-only fixed-grid selection",
+    "source_receipt": "data/provenance/stanford_area1_robust_scale_selection_v1.json",
+    "source_receipt_sha256": "c78bcea75c5387f3fabef466505624f1ea815595511576a96c4af9282d661d2d",
+    "disclosure": "The cap was not jointly re-selected after examining another validation or test split. It is frozen unchanged for SLABIM, Area_1, and future datasets."
+  },
+  "pre_adoption_cross_domain_diagnostic": {
+    "dataset": "SLABIM validation",
+    "frames": 104,
+    "legacy_q45_bim_direct_abs_rel": 0.08476461544567622,
+    "frozen_universal_bim_direct_abs_rel": 0.07848316813353756,
+    "legacy_q45_bim_direct_mae_m": 0.12944897196896352,
+    "frozen_universal_bim_direct_mae_m": 0.12301074527364604,
+    "cap_triggered_frames": 25,
+    "fallback_frames": 0,
+    "role": "diagnostic confirmation only; parameters were not changed"
+  }
+}

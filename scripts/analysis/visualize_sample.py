@@ -8,7 +8,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from bim_priorda3.baselines import bim_scale_and_local_features
+from bim_priorda3.baselines import configured_scale_and_local_features
 from bim_priorda3.config import load_config, resolve_project_path, resolve_slabim_root
 from bim_priorda3.data import relocate_record
 
@@ -64,11 +64,11 @@ def main() -> None:
     rgb = cv2.resize(cv2.imread(record["image"]), (width, height), interpolation=cv2.INTER_AREA)
     base = sample["base_depth"].astype(np.float32)
     bim = sample["bim_depth"].astype(np.float32)
-    scaled = (
-        sample["scaled_depth"].astype(np.float32)
-        if "scaled_depth" in sample
-        else bim_scale_and_local_features(base, bim)[0]
-    )
+    scaled = configured_scale_and_local_features(
+        base,
+        bim,
+        cfg.model.get("scale_estimator"),
+    )[0]
     gt = sample["gt_depth"].astype(np.float32)
     base_valid = base > 0
     scaled_valid = scaled > 0

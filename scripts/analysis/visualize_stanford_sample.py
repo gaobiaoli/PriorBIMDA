@@ -20,7 +20,7 @@ import numpy as np
 import torch
 from matplotlib.colors import BoundaryNorm, ListedColormap, Normalize, TwoSlopeNorm
 
-from bim_priorda3.baselines import bim_scale_and_local_features
+from bim_priorda3.baselines import configured_scale_and_local_features
 from bim_priorda3.checkpoints import (
     dataset_split_identity,
     validate_checkpoint_evaluation_dataset_provenance,
@@ -718,7 +718,11 @@ def main(argv: list[str] | None = None) -> None:
     bim = item_hw(item, "bim_depth")
     raw = item_hw(item, "base_depth")
     fixed_support, bim_valid, subsets = build_fixed_support_and_subsets(item)
-    global_scale, bim_direct, _, _, scale = bim_scale_and_local_features(raw, bim)
+    global_scale, bim_direct, _, _, scale_estimate = configured_scale_and_local_features(
+        raw,
+        bim,
+        frozen_cfg.model.get("scale_estimator"),
+    )
     predictions: dict[str, np.ndarray] = {
         "raw_da3": raw,
         "global_scale": global_scale,
@@ -810,7 +814,7 @@ def main(argv: list[str] | None = None) -> None:
             "included_categories": ["wall", "floor", "ceiling", "column", "beam"],
             "excluded_categories": ["door", "window", "furniture", "proxy", "MEP"],
             "standalone_global_core_envelope": envelope,
-            "fixed_bim_scale": float(scale),
+            "fixed_bim_scale": float(scale_estimate.scale),
         },
         "subsets": subset_receipt,
         "methods": method_metrics,

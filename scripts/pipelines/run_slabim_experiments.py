@@ -19,7 +19,6 @@ STAGES = (
     "verify",
     "prepare",
     "audit",
-    "baselines",
     "pretrain",
     "finetune",
     "evaluate",
@@ -353,17 +352,6 @@ class Pipeline:
                     self.pretrain_config,
                     "--output",
                     processed / "audit.json",
-                ),
-            )
-
-        if "baselines" in stages:
-            self.run(
-                "baselines",
-                self.command(
-                    "data/cache_bim_baselines.py",
-                    "--config",
-                    self.pretrain_config,
-                    *(["--overwrite"] if self.args.force else []),
                 ),
             )
 

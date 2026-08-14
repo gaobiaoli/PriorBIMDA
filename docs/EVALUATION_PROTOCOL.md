@@ -18,10 +18,10 @@
 [2D-3D-S 原始论文](https://arxiv.org/abs/1702.01105)与
 [BIMSyn 原始论文](https://doi.org/10.1016/j.autcon.2023.105076)。
 
-当前可以主张的核心结果是：学习式 refiner 在 SLABIM 正式 test 和 Area_1 room-disjoint
-test 的总体固定 support 上均优于直接 BIM 矫正；Area_1 家具子集也稳定改善。不能主张
-Area_1 的 BIM-前景冲突 test 子集已经改善，也不能主张 Area_1 的 E2E challenger 优于
-冻结 DA3 主模型。
+当前可以主张的核心结果是：统一尺度协议下，学习式 refiner 在 SLABIM 正式 test 和
+Area_1 room-disjoint test 的总体固定 support 上均优于直接 BIM 矫正；Area_1 家具子集
+也稳定改善。冲突子集的点估计改善，但 room-bootstrap AbsRel 区间跨 0，不能主张房间
+层面的显著优越。当前正式结果不包含 E2E 模型。
 
 ## 2. 研究问题与预注册式假设
 
@@ -29,8 +29,8 @@ Area_1 的 BIM-前景冲突 test 子集已经改善，也不能主张 Area_1 的
 
 | 编号 | 假设 | 主要比较 | 预先规定的通过条件 |
 |---|---|---|---|
-| H1 | BIM 可修正 DA3 的度量尺度 | robust global scale vs. raw DA3 | all pixel-micro AbsRel、MAE 均降低 |
-| H2 | 学习细化优于确定性 BIM 矫正 | frozen refiner vs. robust BIM-direct | all 的 AbsRel、MAE 在 pixel/frame/group 三层聚合均降低 |
+| H1 | BIM 可修正 DA3 的度量尺度 | universal global scale vs. raw DA3 | all pixel-micro AbsRel、MAE 均降低 |
+| H2 | 学习细化优于确定性 BIM 矫正 | learned refiner vs. universal BIM-direct | all 的 AbsRel、MAE 在 pixel/frame/group 三层聚合均降低 |
 | H3 | 学习细化能恢复 BIM 中不存在的家具 | 同 H2，在 furniture 子集 | AbsRel、MAE 在三层聚合均降低 |
 | H4 | 改善不是少数大房间或高像素帧造成 | 配对 group 差值与 bootstrap | room/region mean difference < 0，95% CI 不跨 0 |
 
@@ -42,9 +42,9 @@ Area_1 的 group 是房间；SLABIM 的 group 是区域。H2/H3 的“通过”�
 
 - **H5，跨域可迁移性**：SLABIM 上训练的 refiner 能否不更新权重直接用于 Area_1。
   这是诊断性假设；当前已有证据明确不支持它。
-- **H6，冲突区恢复**：refiner 是否优于 robust BIM-direct 处理“真实前景比 BIM 围护更
-  靠近相机”的像素。Area_1 validation 支持该假设，但一次盲测不支持，故只能报告为
-  未解决问题。
+- **H6，冲突区恢复**：refiner 是否优于 universal BIM-direct 处理“真实前景比 BIM 围护
+  更靠近相机”的像素。盲测点估计支持，但 room-bootstrap AbsRel 区间跨 0，故仍只能
+  报告为未解决问题。
 - **H7，E2E 微调收益**：解冻 DA3 decoder 尾部是否在相同 validation protocol 下优于
   frozen refiner。它必须同时胜过自己的 live robust comparator 和 frozen 主模型，且
   资源增量可接受，才能晋级。Area_1 challenger 未满足第二项。
@@ -156,28 +156,27 @@ Area_1 使用房间作为重采样单位，对每个房间的
 以下均为 0.2--5.0 m、pixel-micro、同一固定 support；来源为
 [`results/metrics.json`](../results/metrics.json)。
 
-| 数据集 / split | raw DA3 | global scale | BIM-direct | frozen refiner | E2E refiner |
-|---|---:|---:|---:|---:|---:|
-| SLABIM clean global test，108 帧 | 0.199347 | 0.082008 | 0.081447 | 0.062113 | **0.061331** |
-| Area_1 room-disjoint test，1,641 帧 / 7 房间 | 0.301228 | **0.077521** robust | 0.078146 robust | **0.067924** | 未评测 |
+| 数据集 / split | raw DA3 | universal scale | universal BIM-direct | learned refiner |
+|---|---:|---:|---:|---:|
+| SLABIM clean global test，108 帧 | 0.199347 | 0.063615 | 0.062625 | **0.056013** |
+| Area_1 room-disjoint test，1,641 帧 / 7 房间 | 0.301228 | 0.077521 | 0.078146 | **0.066889** |
 
-表内为 AbsRel。SLABIM frozen 相对 BIM-direct 降低 23.74%，E2E 降低 24.70%；Area_1
-frozen 相对 robust BIM-direct 降低 13.08%。Area_1 test 中 robust global scale 略好于
-robust local-direct，但 learned refiner 仍优于两者。Area_1 E2E 没有 test 数字不是遗漏，
-而是 validation 未晋级后遵守 test-once 协议的结果。
+表内为 AbsRel。SLABIM learned 相对 direct 降低 10.56%；Area_1 降低 14.41%。两个数据集
+运行同一公式和参数，差异只来自数据、BIM 几何和训练权重。
 
 ### 5.2 Area_1 子集、聚合与 bootstrap
 
-Area_1 test 的主模型相对 robust BIM-direct：
+Area_1 test 的主模型相对 universal BIM-direct（正式 JSON 中兼容键仍为
+`robust_bim_direct`）：
 
 | 子集 | pixel AbsRel / MAE | frame AbsRel / MAE | room AbsRel / MAE | 结论 |
 |---|---:|---:|---:|---|
 | all，direct | 0.078146 / 0.138907 | 0.078809 / 0.140639 | 0.091003 / 0.166845 | reference |
-| all，refined | **0.067924 / 0.117484** | **0.068773 / 0.119316** | **0.078948 / 0.141219** | 三层均改善 |
+| all，refined | **0.066889 / 0.117610** | **0.067672 / 0.119405** | **0.077769 / 0.141963** | 三层均改善 |
 | furniture，direct | 0.089286 / 0.151608 | 0.093287 / 0.188137 | 0.086848 / 0.142063 | reference |
-| furniture，refined | **0.085884 / 0.146141** | **0.090250 / 0.183242** | **0.082817 / 0.135784** | 三层均改善 |
-| conflict，direct | **0.140639** / 0.179008 | 0.117081 / 0.165091 | **0.171254 / 0.207006** | reference |
-| conflict，refined | 0.141725 / **0.177721** | **0.116221 / 0.161897** | 0.177144 / 0.210833 | **未通过** |
+| furniture，refined | **0.085734 / 0.145756** | **0.090684 / 0.183606** | **0.083486 / 0.136726** | 三层均改善 |
+| conflict，direct | 0.140639 / 0.179008 | 0.117081 / 0.165091 | 0.171254 / 0.207006 | reference |
+| conflict，refined | **0.137720 / 0.175033** | **0.115114 / 0.161867** | **0.168528 / 0.203342** | 点估计改善，CI 跨 0 |
 
 conflict 的 pixel AbsRel 和 room AbsRel/MAE 退化，只有 frame 层及 pixel MAE 略改善，
 所以按预定合取条件必须写为“未改善”，不能用局部有利指标替代总体结论。
@@ -203,30 +202,13 @@ analysis，而不是在看过 test 后重新调模型。
 | Area_1 frozen → Area_1 | validation | robust direct 0.087100 / 0.171213 | **0.070050 / 0.139691** | 晋级主模型 |
 | Area_1 E2E → Area_1 | validation | live robust direct 0.087218 / 0.171611 | 0.070185 / 0.140186 | 胜 direct，但未胜 frozen |
 
-因此，现有网络不是无需适配即可跨建筑直接部署的通用 refiner。Area_1 E2E challenger
-虽然比 live direct 好，但其 AbsRel/MAE 均略差于 frozen 主模型（约 0.19%/0.35% 相对
-退化），训练 5 epoch 后 early-stop，未晋级且未打开 test。论文中应把它写成负结果，
-而不是删除这一比较。
+因此，现有网络不是无需适配即可跨建筑直接部署的通用 refiner。这里的“通用”指尺度
+估计和网络结构跨数据集一致，不表示同一组 residual 权重无需目标域训练即可跨建筑部署。
 
-### 5.4 已有消融与敏感性证据的边界
+### 5.4 已有敏感性证据的边界
 
-历史 SLABIM 消融来自旧的 `5F_Region3` validation、单 seed 42，不属于当前 global clean
-正式 test 协议。它可用于提出假设，不能与当前主表直接合并：
-
-| 历史组别 | AbsRel | 可得出的有限结论 |
-|---|---:|---|
-| first-stage full | 0.102335 | reference |
-| no BIM input | 0.104111 | BIM 输入在该旧协议下有小幅收益 |
-| single residual | **0.099139** | 单残差反而更好，不能声称多残差必然有效 |
-| no robust training | 0.103120 | 鲁棒训练有小幅收益 |
-| second-stage full | **0.096475** | 与下项共初始化、共预算时的 reference |
-| second-stage no routing | 0.101830 | 深度路由在该旧协议下有效 |
-
-来源为
-[`legacy_ablation_summary.json`](../results/slabim/legacy_ablation_summary.json)。这些数字没有
-训练 seed 方差，而且第一阶段与第二阶段的初始化和预算不同；只能在各自组内比较。
-
-已有、可直接作图的稳健尺度敏感性证据来自 Area_1 **train only**：\(c_{10}\) 有
+旧区域协议消融已从公开精简结果移除，不能用于当前统一协议的定量 claim。当前可直接
+作图的尺度敏感性证据来自 Area_1 **train only**：\(c_{10}\) 有
 8 个候选、\(c_{25}\) 有 6 个候选，共 48 格；按等房间 scale-only AbsRel 选出
 \(c_{10}=\infty,c_{25}=0.05\)，全 train room-macro AbsRel 为 0.092673。选择过程中打开
 validation/test 样本数均为 0。热图应直接读取
@@ -240,7 +222,7 @@ validation/test 样本数均为 0。热图应直接读取
 
 | ID | 变体 | 唯一改动 | 回答的问题 | 优先级 |
 |---|---|---|---|---|
-| A0 | robust BIM-direct | 无学习 | 最强确定性基线 | 必须 |
+| A0 | universal BIM-direct | 无学习 | 最强确定性基线 | 必须 |
 | A1 | full frozen refiner | 当前完整模型 | 主模型 | 必须 |
 | A2 | no BIM features | BIM 分支置零，但尺度 anchor 保持相同 | 网络是否真正读取局部 BIM | 必须 |
 | A3 | no RGB | RGB 分支置零 | 家具恢复是否来自视觉信息 | 必须 |
@@ -316,7 +298,7 @@ validation/test 样本数均为 0。热图应直接读取
 
 1. DA3 online；
 2. DA3 + robust scale；
-3. DA3 + robust BIM-direct；
+3. DA3 + universal BIM-direct；
 4. DA3 + frozen refiner；
 5. partial E2E；
 6. BIM ray casting 预处理，单独计时。
@@ -458,20 +440,14 @@ conflict test 的负结果相互印证。
 ## 12. 可审计来源
 
 - 两数据集紧凑主表：[`results/metrics.json`](../results/metrics.json)
-- SLABIM frozen/E2E 正式结果：
-  [`frozen_test_summary.json`](../results/slabim/frozen_test_summary.json)、
-  [`e2e_test_summary.json`](../results/slabim/e2e_test_summary.json)
+- SLABIM 正式结果：
+  [`test_summary.json`](../results/slabim/test_summary.json)
 - Area_1 正式 validation/test：
-  [`frozen_val_summary.json`](../results/stanford_area1/frozen_val_summary.json)、
-  [`frozen_test_summary.json`](../results/stanford_area1/frozen_test_summary.json)
-- Area_1 未晋级 E2E：
-  [`e2e_challenger_val_summary.json`](../results/stanford_area1/e2e_challenger_val_summary.json)
-- Area_1 跨域诊断：
-  [`zero_shot_frozen_val_summary.json`](../results/stanford_area1/zero_shot_frozen_val_summary.json)、
-  [`zero_shot_e2e_val_summary.json`](../results/stanford_area1/zero_shot_e2e_val_summary.json)
+  [`val_summary.json`](../results/stanford_area1/val_summary.json)、
+  [`test_summary.json`](../results/stanford_area1/test_summary.json)
 - train-only 稳健尺度选择：
   [`stanford_area1_robust_scale_selection_v1.json`](../data/provenance/stanford_area1_robust_scale_selection_v1.json)
-- 历史单 seed 消融：
-  [`legacy_ablation_summary.json`](../results/slabim/legacy_ablation_summary.json)
+- 跨数据集冻结尺度协议：
+  [`universal_scale_estimator_v1.json`](../data/provenance/universal_scale_estimator_v1.json)
 - 完整 Area_1 标定和 test-once 边界：
   [`STANFORD_BIMSYNC_EVALUATION.md`](STANFORD_BIMSYNC_EVALUATION.md)

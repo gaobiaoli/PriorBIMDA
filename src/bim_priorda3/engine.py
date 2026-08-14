@@ -76,7 +76,7 @@ def move_batch(batch: dict[str, Any], device: torch.device) -> dict[str, Any]:
 
 
 def uses_robust_scale_estimator(model: torch.nn.Module) -> bool:
-    """Return whether the model's frozen/runtime anchor is robust BIM-direct."""
+    """Return whether the model uses the universal robust scale estimator."""
 
     unwrapped = getattr(model, "module", model)
     parameters = getattr(unwrapped, "scale_estimator_config", {})

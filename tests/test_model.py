@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 import torch
 from torch import nn
@@ -5,7 +7,6 @@ from torch.nn import functional
 
 from bim_priorda3.baselines import (
     estimate_robust_bim_scale,
-    previous_scale_baselines,
     robust_scale_and_local_features,
 )
 from bim_priorda3.config import Config, load_config
@@ -143,7 +144,7 @@ def test_v5_is_initialized_as_scale_only_and_has_residual_gradients() -> None:
     assert torch.count_nonzero(model.refiner.frame_output.weight.grad) > 0
 
 
-def test_robust_direct_anchor_is_exact_at_zero_residual_and_drives_teacher() -> None:
+def test_universal_model_ignores_direct_baseline_as_residual_anchor() -> None:
     cfg = load_config("configs/stanford_area1.yaml")
     cfg.model.base_channels = 4
     model = BIMPriorDA3(cfg)
@@ -161,7 +162,7 @@ def test_robust_direct_anchor_is_exact_at_zero_residual_and_drives_teacher() -> 
         "bim_valid": torch.ones_like(base),
         "bim_normals": torch.zeros(1, 3, height, width),
         "bim_edge": torch.zeros_like(base),
-        "gt_depth": robust_direct.clone(),
+        "gt_depth": scaled.clone(),
         "gt_valid": torch.ones_like(base),
         "gt_weight": torch.ones_like(base),
         "furniture_mask": torch.zeros_like(base),
@@ -172,49 +173,28 @@ def test_robust_direct_anchor_is_exact_at_zero_residual_and_drives_teacher() -> 
     output = model(batch)
 
     assert torch.equal(output["coarse_depth"], scaled)
-    assert torch.equal(output["refinement_anchor_depth"], robust_direct)
-    assert torch.equal(output["depth"], robust_direct)
-    assert output["residual_anchor_mode"] == "robust_bim_direct"
-    assert output["geometry_scale_channel_semantics"] == "log(anchor/scaled)/0.5"
+    assert torch.equal(output["refinement_anchor_depth"], scaled)
+    assert torch.equal(output["depth"], scaled)
+    assert output["residual_anchor_mode"] == "scaled_depth"
+    assert output["geometry_scale_channel_semantics"] == "log(scaled/base)/0.5"
     assert torch.equal(
         output["geometry_scale_channel"],
-        torch.full_like(scaled, 2.0),
+        (torch.log(scaled) - torch.log(base)) / 0.5,
     )
-    assert output["residual_routing_depth_semantics"] == ("refinement_anchor_depth")
-    assert torch.equal(output["residual_routing_depth"], robust_direct)
+    assert output["residual_routing_depth_semantics"] == "scaled_depth"
+    assert torch.equal(output["residual_routing_depth"], scaled)
     losses = BIMPriorLoss(cfg)(output, batch)
     assert float(losses["residual_teacher"]) == 0.0
     assert float(losses["frame_residual_teacher"]) == 0.0
     assert float(losses["local_residual_teacher"]) == 0.0
 
 
-def test_robust_direct_anchor_requires_robust_scale_estimator() -> None:
+def test_removed_direct_anchor_configuration_is_rejected() -> None:
     cfg = load_config("configs/slabim_base.yaml")
     cfg.model.residual_anchor_mode = "robust_bim_direct"
 
-    with pytest.raises(ValueError, match="requires.*log_upper_cap_v1"):
+    with pytest.raises(ValueError, match="residual_anchor_mode was removed"):
         BIMPriorDA3(cfg)
-
-
-def test_robust_anchor_is_validated_before_refiner_safe_log() -> None:
-    cfg = load_config("configs/stanford_area1.yaml")
-    cfg.model.base_channels = 4
-    model = BIMPriorDA3(cfg)
-    shape = (1, 1, 16, 16)
-    batch = {
-        "rgb": torch.rand(1, 3, 16, 16),
-        "base_depth": torch.ones(shape),
-        "base_confidence": torch.ones(shape),
-        "scaled_depth": torch.ones(shape),
-        "anchor_depth": torch.zeros(shape),
-        "bim_depth": torch.ones(shape),
-        "bim_valid": torch.ones(shape),
-        "bim_normals": torch.zeros(1, 3, 16, 16),
-        "bim_edge": torch.zeros(shape),
-    }
-
-    with pytest.raises(ValueError, match="anchor must be finite and positive"):
-        model(batch)
 
 
 def test_v5_handles_missing_bim_and_respects_total_residual_bound() -> None:
@@ -278,7 +258,7 @@ def test_configured_cpu_bim_direct_applies_the_explicit_bim_mask() -> None:
 
 
 def test_v5_depth_routing_suppresses_coarse_residuals_near_camera() -> None:
-    cfg = load_config("configs/slabim_cv.yaml")
+    cfg = load_config("configs/slabim.yaml")
     cfg.model.base_channels = 4
     model = BIMPriorDA3(cfg)
     height = width = 32
@@ -306,16 +286,13 @@ def test_v5_depth_routing_suppresses_coarse_residuals_near_camera() -> None:
     assert float(gate[..., 0].mean()) < float(gate[..., -1].mean())
     assert raw_frame.shape == (1, 1, 1, 1)
     assert torch.allclose(effective_frame, raw_frame * gate)
-    assert torch.allclose(
-        output["low_log_residual"],
-        output["raw_low_log_residual"] * gate,
-    )
-    assert output["residual_routing_scope"] == "frame_and_low"
+    assert torch.allclose(output["low_log_residual"], output["raw_low_log_residual"])
+    assert output["residual_routing_scope"] == "frame_only"
     assert float(effective_frame[..., 0].mean()) < float(effective_frame[..., -1].mean())
 
 
 def test_frame_only_routing_preserves_low_residual_capacity_near_camera() -> None:
-    cfg = load_config("configs/slabim_cv.yaml")
+    cfg = load_config("configs/slabim.yaml")
     cfg.model.base_channels = 4
     cfg.model.residual_routing_scope = "frame_only"
     model = BIMPriorDA3(cfg)
@@ -351,15 +328,15 @@ def test_frame_only_routing_preserves_low_residual_capacity_near_camera() -> Non
     assert output["residual_routing_scope"] == "frame_only"
 
 
-def test_robust_anchor_mode_routes_frame_by_refinement_anchor_depth() -> None:
+def test_universal_model_routes_frame_by_scaled_depth() -> None:
     cfg = load_config("configs/stanford_area1.yaml")
     cfg.model.base_channels = 4
     model = BIMPriorDA3(cfg)
     height = width = 32
     base = torch.ones(1, 1, height, width)
     scaled = torch.full_like(base, 2.0)
-    anchor = torch.full_like(base, 2.0)
-    anchor[..., :, : width // 2] = 0.5
+    scaled[..., :, : width // 2] = 0.5
+    anchor = torch.full_like(base, 9.0)
     batch = {
         "rgb": torch.rand(1, 3, height, width),
         "base_depth": base,
@@ -377,12 +354,12 @@ def test_robust_anchor_mode_routes_frame_by_refinement_anchor_depth() -> None:
 
     gate = output["residual_routing_gate"]
     assert float(gate[..., : width // 2].mean()) < float(gate[..., width // 2 :].mean())
-    assert torch.equal(output["residual_routing_depth"], anchor)
-    assert output["residual_routing_depth_semantics"] == ("refinement_anchor_depth")
+    assert torch.equal(output["residual_routing_depth"], scaled)
+    assert output["residual_routing_depth_semantics"] == "scaled_depth"
 
 
 def test_gated_adapters_preserve_scale_initialization_and_learn_gate() -> None:
-    cfg = load_config("configs/slabim_cv_pretrain.yaml")
+    cfg = load_config("configs/slabim_pretrain.yaml")
     cfg.model.gate_bim_adapters = True
     cfg.model.bim_adapter_gate_floor = 0.25
     cfg.loss.adapter_gate = 0.05
@@ -424,8 +401,8 @@ def test_gated_adapters_preserve_scale_initialization_and_learn_gate() -> None:
 
 
 def test_gated_adapters_share_identical_common_initialization() -> None:
-    plain_cfg = load_config("configs/slabim_cv_pretrain.yaml")
-    gated_cfg = load_config("configs/slabim_cv_pretrain.yaml")
+    plain_cfg = load_config("configs/slabim_pretrain.yaml")
+    gated_cfg = load_config("configs/slabim_pretrain.yaml")
     gated_cfg.model.gate_bim_adapters = True
     gated_cfg.model.bim_adapter_gate_floor = 0.25
     gated_cfg.loss.adapter_gate = 0.05
@@ -489,9 +466,11 @@ def test_e2e_da3_last_stage_has_live_depth_scale_and_gradients(
     assert torch.all(output["da3_scale_support"] == height * width)
 
     for sample_index in range(output["base_depth"].shape[0]):
-        _, expected_direct, _ = previous_scale_baselines(
+        _, expected_direct, _, _, _ = robust_scale_and_local_features(
             output["base_depth"][sample_index, 0].detach().cpu().numpy(),
             bim[sample_index, 0].numpy(),
+            q10_log_cap=float("inf"),
+            q25_log_cap=0.05,
         )
         assert torch.equal(
             output["live_bim_direct"][sample_index, 0],
@@ -519,12 +498,12 @@ def test_e2e_da3_last_stage_has_live_depth_scale_and_gradients(
     criterion.set_epoch(int(cfg.loss.warmup_epochs))
     live_anchor_output = dict(output)
     live_anchor_output["depth"] = batch["gt_depth"] * 1.10
-    live_anchor_output["live_bim_direct"] = batch["gt_depth"] * 1.20
+    live_anchor_output["live_robust_bim_direct"] = batch["gt_depth"] * 1.20
     batch["anchor_depth"] = batch["gt_depth"].clone()
     live_anchor_losses = criterion(live_anchor_output, batch)
     assert float(live_anchor_losses["degradation"]) == 0.0
 
-    live_anchor_output["live_bim_direct"] = batch["gt_depth"] * 1.05
+    live_anchor_output["live_robust_bim_direct"] = batch["gt_depth"] * 1.05
     live_anchor_losses = criterion(live_anchor_output, batch)
     expected_degradation = torch.log(torch.tensor(1.10 / 1.05))
     assert live_anchor_losses["degradation"] == pytest.approx(float(expected_degradation))
@@ -545,21 +524,23 @@ def test_e2e_da3_last_stage_has_live_depth_scale_and_gradients(
             for parameter in module.parameters()
         )
 
-    original_fixed_bim_direct = BIMPriorDA3._fixed_bim_direct
+    original_fixed_bim_direct = BIMPriorDA3._configured_fixed_bim_direct
     fixed_bim_direct_calls = 0
 
     def tracked_fixed_bim_direct(
+        self: BIMPriorDA3,
         base_depth: torch.Tensor,
         bim_depth: torch.Tensor,
+        bim_valid: torch.Tensor | None = None,
     ) -> torch.Tensor:
         nonlocal fixed_bim_direct_calls
         fixed_bim_direct_calls += 1
-        return original_fixed_bim_direct(base_depth, bim_depth)
+        return original_fixed_bim_direct(self, base_depth, bim_depth, bim_valid)
 
     monkeypatch.setattr(
         BIMPriorDA3,
-        "_fixed_bim_direct",
-        staticmethod(tracked_fixed_bim_direct),
+        "_configured_fixed_bim_direct",
+        tracked_fixed_bim_direct,
     )
     model.eval()
     inference_output = model(batch)
@@ -643,7 +624,7 @@ def test_e2e_robust_scale_and_live_direct_match_authoritative_cpu() -> None:
     assert torch.equal(output["live_bim_direct"], output["live_robust_bim_direct"])
 
 
-def test_e2e_robust_refinement_uses_current_live_direct_anchor() -> None:
+def test_e2e_uses_live_universal_scale_but_not_live_direct_as_anchor() -> None:
     cfg = load_config("configs/stanford_area1_e2e.yaml")
     cfg.model.base_channels = 4
     model = BIMPriorDA3(cfg, da3_model=_FakeDA3Net()).eval()
@@ -659,6 +640,7 @@ def test_e2e_robust_refinement_uses_current_live_direct_anchor() -> None:
         "bim_valid": torch.ones(1, 1, height, width),
         "bim_normals": torch.zeros(1, 3, height, width),
         "bim_edge": torch.zeros(1, 1, height, width),
+        "request_live_bim_direct": True,
     }
 
     output = model(batch)
@@ -670,13 +652,13 @@ def test_e2e_robust_refinement_uses_current_live_direct_anchor() -> None:
     )
     assert torch.equal(
         output["refinement_anchor_depth"],
-        output["live_robust_bim_direct"],
+        output["scaled_depth"],
     )
-    assert torch.equal(output["depth"], output["live_robust_bim_direct"])
+    assert torch.equal(output["depth"], output["scaled_depth"])
     assert not torch.equal(output["depth"], stale_cached_anchor)
     batch.update(
         {
-            "gt_depth": output["live_robust_bim_direct"].detach().clone(),
+            "gt_depth": output["scaled_depth"].detach().clone(),
             "gt_valid": torch.ones_like(stale_cached_anchor),
             "gt_weight": torch.ones_like(stale_cached_anchor),
             "furniture_mask": torch.zeros_like(stale_cached_anchor),
@@ -688,51 +670,11 @@ def test_e2e_robust_refinement_uses_current_live_direct_anchor() -> None:
     assert float(losses["residual_teacher"]) == 0.0
 
 
-def test_robust_estimator_accepts_only_complete_inert_legacy_e2e_defaults() -> None:
+def test_deprecated_e2e_scale_fields_are_rejected() -> None:
     cfg = load_config("configs/slabim_e2e.yaml")
     cfg.model.base_channels = 4
-    cfg.model.scale_estimator = Config(
-        {
-            "name": "log_upper_cap_v1",
-            "q10_log_cap": 0.20,
-            "q25_log_cap": 0.05,
-        }
-    )
-
-    model = BIMPriorDA3(cfg, da3_model=_FakeDA3Net())
-    assert model.deprecated_e2e_scale_fields_ignored == {
-        "scale_quantile": 0.45,
-        "scale_ratio_min": 0.2,
-        "scale_ratio_max": 5.0,
-        "scale_min_samples": 100,
-    }
-    assert model.scale_estimator_config["name"] == "log_upper_cap_v1"
-
-    cfg.model.e2e_da3.scale_ratio_max = 4.0
-    with pytest.raises(ValueError, match="all four fields.*historical defaults"):
-        BIMPriorDA3(cfg, da3_model=_FakeDA3Net())
-
-    cfg.model.e2e_da3.scale_ratio_max = 5.0
-    del cfg.model.e2e_da3["scale_min_samples"]
-    with pytest.raises(ValueError, match="all four fields.*historical defaults"):
-        BIMPriorDA3(cfg, da3_model=_FakeDA3Net())
-
-
-def test_deprecated_e2e_defaults_keep_source_checkpoint_configuration_compatible() -> None:
-    cfg = load_config("configs/slabim_e2e.yaml")
-    cfg.model.base_channels = 4
-
-    model = BIMPriorDA3(cfg, da3_model=_FakeDA3Net())
-
-    assert model.scale_estimator_config == {
-        "name": "legacy_q45",
-        "ratio_min": 0.2,
-        "ratio_max": 5.0,
-        "min_samples": 100,
-    }
-
-    cfg.model.e2e_da3.scale_min_samples = 99
-    with pytest.raises(ValueError, match="immutable historical baseline"):
+    cfg.model.e2e_da3.scale_quantile = 0.45
+    with pytest.raises(ValueError, match="Deprecated model.e2e_da3 scale fields"):
         BIMPriorDA3(cfg, da3_model=_FakeDA3Net())
 
 

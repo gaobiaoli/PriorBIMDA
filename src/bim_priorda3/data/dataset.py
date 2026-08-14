@@ -237,9 +237,6 @@ class BIMDepthDataset(Dataset):
         self.margin = float(cfg.loss.trust_margin)
         self.temperature = float(cfg.loss.trust_temperature)
         self.scale_estimator = resolve_scale_estimator_config(cfg.model.get("scale_estimator"))
-        self.requires_bim_direct_residual_anchor = (
-            str(cfg.model.get("residual_anchor_mode", "scaled_depth")) == "robust_bim_direct"
-        )
 
     def __len__(self) -> int:
         return len(self.records)
@@ -326,7 +323,7 @@ class BIMDepthDataset(Dataset):
                 bim,
                 self.scale_estimator,
             )
-            if self.require_ground_truth or self.requires_bim_direct_residual_anchor:
+            if self.require_ground_truth:
                 arrays["anchor_depth"] = anchor[None]
             arrays["scaled_depth"] = scaled[None]
 

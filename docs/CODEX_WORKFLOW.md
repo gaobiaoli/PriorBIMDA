@@ -1,213 +1,106 @@
 # Codex 对话要点与项目演化
 
-> 给接手的新 chatbot / 研究者：先读本页，再读 `README.md`、`docs/USER_GUIDE.md` 和两套
-> 正式结果 summary。不要从旧版网络或旧区域划分重新开始。
+> 给接手的新 chatbot / 研究者：先读本页、`README.md`、`docs/USER_GUIDE.md`、
+> `docs/UNIVERSAL_SCALE_PROTOCOL.md` 与 `results/metrics.json`。不要恢复历史 V1–V6、region-CV
+> 或 BIM-direct 网络锚点。
 
-## 1. 当前结论
+## 1. 当前唯一活动方法
 
-项目已经从“BIM 与旧 V1 预测加权融合”演化为“以非学习 BIM 矫正为锚点、学习有界残差”
-的单帧深度系统。当前支持：
-
-- SLABIM：公开下载、位姿恢复、坏帧排除、pooled split、训练、E2E、2D/3D 评测。
-- 2D-3D-S Area_1 + BIMSyn：公开下载、IFC 围护过滤、固定全局 BIM 配准、DA3 缓存、
-  room split、robust scale 选择、迁移/target 训练、家具与冲突子集评测。
-- 正式主模型：SLABIM frozen/E2E 与 Area_1 target frozen。Area_1 E2E 只是未晋级 challenger。
-
-统一指标范围 `0.2–5.0 m`。最关键结果：
-
-| 数据 / 方法 | AbsRel | MAE | 备注 |
-|---|---:|---:|---|
-| SLABIM raw DA3 | 0.19935 | 0.31109 | pooled test，108 帧 |
-| SLABIM direct BIM | 0.08145 | 0.12939 | 非学习基线 |
-| SLABIM frozen | **0.06211** | **0.09689** | 比 direct AbsRel 好 23.74% |
-| Area_1 raw DA3 | 0.30123 | 0.67323 | blind test，1641 帧/7 rooms |
-| Area_1 robust BIM-direct | 0.07815 | 0.13891 | train-only cap |
-| Area_1 target frozen | **0.06792** | **0.11748** | 比 robust direct AbsRel 好 13.08% |
-
-完整数值在 `results/metrics.json`。
-
-## 2. 对话驱动的演化时间线
-
-### 阶段 A：读取原项目、数据和位姿
-
-1. 拉取并理解 `gaobiaoli/PriorBIMDA`。
-2. 准备 SLABIM 数据；用户随后放入 `sensor_data`，用于核对原作者生成的位姿。
-3. 复核相机/LiDAR/BIM 坐标方向、时间戳配对与深度定义，确认不能靠错误的 pose 解释性能。
-4. 重现旧 BIM 矫正约 `AbsRel≈0.07` 的来源，区分 raw DA3、global scale 和 direct local BIM，
-   避免把不同区域/支持集的数值混为同一个 baseline。
-
-### 阶段 B：否定 V1/BIM 加权融合
-
-旧设计把 BIM 与 V1 输出做权重融合，存在三个根本问题：
-
-- 融合对象都可能有系统性偏差，权重不能保证安全改进；
-- 旧候选缓存、区域阈值和门控使训练/推理协议复杂且不可迁移；
-- 学习模型可能只学会“选择哪个旧结果”，而没有学习几何残差空间。
-
-因此删除 V1/V2/V3 的候选融合、信任网络和局部仿射分支。历史代码/config 不再是活动路径。
-
-### 阶段 C：V5 尺度锚定残差网络
-
-参考 prior-domain-adaptation 的思路，先用 BIM 矫正 DA3 尺度，再由网络微调。输入同时包含：
-
-- RGB；
-- DA3 base depth、置信度与 log-depth 几何；
-- BIM depth、valid、normal、edge 及 base/BIM 关系。
-
-输出拆成 frame、low-frequency、detail 三个 log-residual：
+项目用固定 BIM 先验细化 DA3 Metric Large 的单帧公制深度，支持 SLABIM 与
+2D-3D-S Area_1 + BIMSyn。两个数据集运行同一个尺度估计器：
 
 ```text
-D_pred = D_anchor * exp(clamp(r_frame + r_low + r_detail))
+log(s) = min(Q45(log(BIM/DA3)), Q25(log(BIM/DA3)) + 0.05)
+D_scaled = s * D_DA3
+D_pred = D_scaled * exp(clamp(r_frame + r_low + r_detail))
 ```
 
-三个分量分别承担全帧偏差、平滑空间偏差和局部边缘；总 residual 有界。可靠性和不确定性是
-辅助监督，不做会导致硬切换伪影的推理门控。训练 acceptance 要求 learned depth 在同一固定
-GT support 上优于 direct BIM 的 AbsRel/MAE，并保护 near range。
+网络同时读取 RGB、DA3 geometry/confidence 与 BIM depth/valid/normal/edge；学习 frame、low、
+detail 三个有界 log-residual。乘法锚点始终是 `D_scaled`，不是 BIM-direct。BIM-direct 是所有
+数据集共享的确定性强比较器，也是训练 acceptance 的门槛。推理不读取 GT、语义或家具 mask。
 
-### 阶段 D：资源利用、区域 CV 与全局 pooled split
+尺度参数最初只用 Area_1 train rooms 选择，随后冻结并原样应用于 SLABIM；SLABIM validation
+没有用于重新调参。机器 receipt SHA 为
+`361fc2c97ffca9dde1a3a1b6b97fcd1d894003809a01935205f16cb4043c3ba1`。
 
-先做了六区域交叉验证、batch/image-size 调整和单 seed 对比，确认不同区域误差主要来自：
+## 2. 最终结果（0.2–5.0 m，pixel-micro）
 
-- BIM/pose 局部偏移；
-- DA3 尺度尾部；
-- BIM coverage、近距遮挡与几何冲突；
-- 场景像素分布差异，而非 RGB 外观本身。
+| 数据 / 方法 | AbsRel | MAE | RMSE | δ1 |
+|---|---:|---:|---:|---:|
+| SLABIM raw DA3 | 0.19935 | 0.31109 | 0.42167 | 0.76328 |
+| SLABIM universal BIM-direct | 0.06263 | 0.10334 | 0.24761 | 0.96320 |
+| SLABIM learned | **0.05601** | **0.09210** | **0.22725** | **0.97759** |
+| Area_1 raw DA3 | 0.30123 | 0.67323 | 0.83485 | 0.26437 |
+| Area_1 universal BIM-direct | 0.07815 | 0.13891 | 0.31350 | 0.93740 |
+| Area_1 learned | **0.06689** | **0.11761** | **0.30823** | **0.94295** |
 
-随后用户确认 `ignore.txt` 是源数据错误清单，应在数据引入时排除。最终 SLABIM 不再按区域
-训练/验证/测试，而是用 exhaustive annotation 做时序分段 pooled split：811 总记录，90 个
-source-data-error，13 个 fused-LiDAR embargo，活动 `496/104/108`。不复制源文件。
+学习模型相对 direct 的 AbsRel 改善为 10.56% 与 14.41%。Area_1 test 的 all/furniture/conflict
+在 pixel/frame/room 三种点估计聚合上都同时改善 AbsRel 与 MAE；但 conflict AbsRel 的
+room-bootstrap 95% CI 为 `[-0.00692, 0.00064]`，跨 0，不能写成显著优势。训练均为单 seed。
 
-### 阶段 E：DA3 部分 E2E
+SLABIM 108 帧三维融合评测同样支持 learned：Chamfer-L1 `0.09109 m`（direct
+`0.10515 m`），F-score@10 cm `0.79622`（direct `0.74003`）。
 
-加入 pinned DA3 Metric Large 的 last-stage 微调，refiner LR 与 DA3 LR 分离。关键公平性修复：
+正式文件：
 
-- E2E 的 anchor 必须由当前 live DA3 计算，不能用 frozen cache 的 direct BIM；
-- loss、validation 和 acceptance 都与 live robust/direct anchor 比较；
-- validation 前重置独立 inference RNG，避免 DA3 内部随机采样使 accepted 与正式评测不一致。
+- `results/slabim/test_summary.json`
+- `results/stanford_area1/val_summary.json`
+- `results/stanford_area1/test_summary.json`
+- `results/manifest.json`
 
-SLABIM E2E 的 AbsRel/MAE 略优 frozen，但 RMSE 稍差，因此两个模型均保留。
+## 3. 对话驱动的关键演化
 
-### 阶段 F：Area_1 + BIMSyn 适配
+1. **复核原项目和位姿**：检查 sensor_data、相机/LiDAR/BIM 变换、时间戳、camera-z 深度，
+   排除由坐标方向错误造成的虚假精度。
+2. **否定 V1/BIM 加权融合**：旧方案只在几个候选间分配权重，不能保证纠正系统误差；V1–V3
+   候选、旧信任网络和版本配置随后退出活动代码。
+3. **建立 coarse-to-fine 残差网络**：先恢复尺度，再学习 frame/low/detail 残差；可靠性和
+   uncertainty 是辅助监督，不作为硬输出门控。
+4. **修复 SLABIM 数据协议**：`ignore.txt` 的 90 帧在引入时排除，另隔离 13 个共享
+   fused-LiDAR 帧；811 条 exhaustive annotation 得到活动 `496/104/108`。
+5. **Area_1 + BIMSyn 适配**：10,327 帧、44 rooms；IFC 过滤家具/proxy/MEP，只保留固定
+   envelope/core prior；按 room/camera UUID 做 `7013/1673/1641` 划分。
+6. **公平评测修复**：所有方法共享固定 GT support；无效预测 fail-fast；E2E 的比较器必须基于
+   live DA3；validation RNG 独立重置；checkpoint 严格绑定数据与配置 provenance。
+7. **统一尺度方法**：发现 SLABIM q45 与 Area_1 robust-cap 不一致后，删除活动 q45 模型路径与
+   Area_1 BIM-direct 网络锚点。两个数据集均重新训练和完整评测。
+8. **公开项目精简**：脚本拆分为 data/model/pipelines/analysis；下载器固定 revision/hash；
+   删除 region-CV、旧消融、未晋级 E2E 权重和过程 checkpoint，只保留两份统一主模型。
 
-下载并核验：
+## 4. 不可破坏的实验约束
 
-- 2D-3D-S Area_1 noXYZ：10,327 个规则视图，44 rooms，186 camera UUID；regular depth 是
-  `uint16/512 m` 的 camera-z，不是 radial range；pose JSON 的 3×4 `[R|t]` 是 Area→camera。
-- BIMSyn：44 个同名 IFC/RVT；IFC 是 mm、IFC2X3，计算只需 IFC。
+1. 所有可比预测使用相同 `gt_valid` 和 `0.2–5.0 m`；不能按方法删无效像素。
+2. estimator 不允许数据集覆盖；修改 `0.05` 等参数必须升级协议并重跑两域。
+3. test 只在参数/checkpoint 由 train/val 冻结后执行；已有 test 结果不能反向用于调参。
+4. SLABIM 保证 fused-LiDAR 跨 split 隔离；Area_1 保证 room/camera UUID 隔离。
+5. furniture/conflict/semantic 只用于训练权重和评测，不进入推理输入。
+6. Area_1 BIM→Area 变换固定，不做逐帧 ICP；当前 semantic-mesh 辅助配准必须披露为
+   scan-calibrated/oracle-style。
+7. source→target 初始化必须显式 opt-in；resume 永远要求同数据、同模型配置。
+8. DA3 revision 固定为 `4010e39f3634a45bc60553321fb49fb760bd594e`。
 
-IFC 原始内容包含家具。固定 prior 只保留 wall/slab-floor/covering-ceiling/column/beam；排除
-door/window、furnishing、proxy、MEP 和 openings。44 个 room BIM 用同一组固定
-`T_area_from_bim` 合入全局 Area BIM，不能逐帧用 test depth ICP。
+## 5. 当前关键文件
 
-当前 alignment 用 Area semantic structural mesh 辅助 4-DoF 配准，且仅在几何近等价候选间
-用 door/window/beam/column 类别重排。这是公开披露的 scan-calibrated/oracle-style 协议，
-不是完全无目标域标定。
+- 配置：`configs/slabim_base.yaml`、`slabim_pretrain.yaml`、`slabim.yaml`、
+  `stanford_area1_transfer.yaml`、`stanford_area1.yaml`
+- 数据协议：`ignore.txt`、`data/annotations/*.jsonl`、`data/provenance/*.json`
+- 主 checkpoint：`outputs/slabim/accepted.pt`、`outputs/stanford_area1/accepted.pt`
+- 数据说明：`docs/DATA_PREPARATION.md`
+- 脚本与命令：`docs/USER_GUIDE.md`
+- 评测设计：`docs/EVALUATION_PROTOCOL.md`
 
-### 阶段 G：robust scale 与 target-domain 模型
+## 6. 新 chatbot 启动清单
 
-Area_1 家具会让 `BIM/base` 产生单侧大比值尾，旧 q45 scale 会出现过尺度。只用 30 个 train
-rooms 注册选择：
+1. 运行 `git status --short`，保留现有用户改动。
+2. 读取上述文档和 `results/metrics.json`，不要从终端日志猜结果。
+3. 运行 `pytest -q`、`ruff check src scripts tests` 和两个 checkpoint 的 SHA 校验。
+4. fresh 数据 fingerprint 改变时使用 `materialize_runtime_config.py`，不把 hash 设为 null。
+5. 解释/诊断任务默认只读；未经用户授权不重训、发布或访问新的 test 数据。
 
-```text
-log s = min(Q45(log(BIM/base)), Q25 + c25, Q10 + c10)
-```
+## 7. 已知限制
 
-固定 48 个候选、leave-one-train-room-out；最终 `c10=∞, c25=0.05`。selector 明确记录
-validation/test opened=0。这个 robust estimator 同时用于模型 anchor、非学习 comparator、loss
-和 acceptance，保证 learned 改进不是仅来自换 quantile。
-
-SLABIM source refiner 在 Area_1 val 上零样本迁移很差：frozen AbsRel `0.16690`，而 robust
-BIM-direct 为 `0.08710`。诊断表明 source frame residual 平均方向与 target 理想方向相反。
-因此 target frozen 初始化严格归零 6 个 multiplicative residual 输出 slice（275 参数），保留
-encoder/fusion，并做 1 epoch heads/adapters warmup；robust anchor 零 residual 时精确等于
-BIM-direct。
-
-12 epochs 后最佳为第 11 个 human epoch：val AbsRel `0.07005`。正式 val 中 all/furniture/
-conflict 的 pixel/frame/room 九格均优于 robust BIM-direct，room bootstrap 结论通过。之后才读取
-blind test，得到 `0.06792`。
-
-Area_1 E2E 从 target frozen 保留 residual heads 初始化，validation AbsRel `0.07019`，比 frozen
-差约 0.193%，因此未晋级、未做 test，权重也从清理后的 `outputs/` 删除。
-
-### 阶段 H：公开复现整理
-
-最后一次整理完成：
-
-- 配置从带 `v4/v5/v6/global_clean/resource` 的过程名收敛为 12 个语义配置；
-- `outputs/` 从约 13 GB 裁到约 1.4 GB，只留 3 个生产 checkpoint、正式结果和 challenger
-  审计摘要；小结果迁入 tracked `results/`；
-- 增加 Area_1/BIMSyn 下载器、固定 88 文件 BIMSyn hash manifest、SLABIM 固定 revision/hash
-  manifest、annotation-aware audit、portable runtime config 生成器；
-- 冻结 alignment receipt 移入 `data/provenance/`；
-- 最终仓库只保留 12 个语义配置和 30 个有手册的 CLI；两个数据 manifest 均进入
-  wheel，全部 273 个测试通过；
-- 30 个 CLI 进一步按责任拆成 `scripts/data/` 15 个、`scripts/model/` 5 个、
-  `scripts/pipelines/` 4 个和 `scripts/analysis/` 6 个；训练前流程独立记录在
-  `docs/DATA_PREPARATION.md`，拆分后全部 275 个测试通过；
-- 训练 history/run-state、正式 summary 和逐帧结果已移入可提交的 `results/`，
-  `outputs/` 仅保留 3 个生产 checkpoint 及必要本机副本；
-- 删除旧 chatlog/archive，以本页代替冗长逐轮对话。
-
-## 3. 不可破坏的实验约束
-
-1. **固定支持集**：所有可比方法用完全相同的 `gt_valid`；预测无效应报错，不能静默删像素。
-2. **测试只读一次**：参数、模型、checkpoint 和 claim 在 val 锁定后才运行 test。
-3. **split 隔离**：SLABIM 保证 fused-LiDAR 不跨 split；Area_1 按 room/camera UUID 隔离。
-4. **训练标签不进推理**：furniture/conflict mask 只用于 loss weighting 和评测，不是模型输入。
-5. **固定 BIM**：Area_1 不做逐帧配准、尺度或 pose 微调；SLABIM 新区域仍需外部位姿。
-6. **严格 provenance**：annotation raw SHA、manifest preparation fingerprint、alignment、scale
-   receipt、checkpoint model config 都必须核验。不要为了“跑起来”关闭这些校验。
-7. **跨数据集边界**：source→target 初始化必须显式允许；resume 永远必须同数据集、同配置。
-8. **DA3 pinned**：不得把 mutable `main` 或无 revision cache 混入正式实验。
-
-## 4. 当前关键文件
-
-### 配置
-
-- SLABIM：`configs/slabim_pretrain.yaml` → `configs/slabim.yaml` →
-  `configs/slabim_e2e.yaml`
-- Area_1 transfer：`configs/stanford_area1_transfer.yaml` / `_e2e.yaml`
-- Area_1 target：`configs/stanford_area1.yaml` / `_e2e.yaml`
-- fresh data：用 `scripts/data/materialize_runtime_config.py` 创建 `configs/local/*.yaml`
-
-### 数据协议
-
-- `ignore.txt`
-- `data/annotations/slabim_clean_global_v1.jsonl`
-- `data/annotations/stanford_area1_room_v1.jsonl`
-- `data/provenance/stanford_area1_bimsyn_alignment.json`
-- `data/provenance/stanford_area1_robust_scale_selection_v1.json`
-
-robust receipt 与历史 checkpoint 密码学绑定，内部三个绝对路径字段只是生成时审计字符串，
-不能在不更新 checkpoint/config 的情况下“美化”文件内容。
-alignment receipt 中的源 IFC/semantic 绝对路径同样只是审计字符串；运行时
-使用配置中的当前数据根目录和回执里的哈希/变换数值。
-
-### checkpoint
-
-- `outputs/slabim/accepted.pt`：SHA `a0e339fe...b719`
-- `outputs/slabim_e2e/accepted.pt`：SHA `5ec9d25f...e583`
-- `outputs/stanford_area1/accepted.pt`：SHA `b651c190...00f4`
-
-完整值、字节数和发布角色见 `results/manifest.json`。
-
-## 5. 新 chatbot 的启动清单
-
-1. `git status --short`，确认现有 dirty worktree；不要覆盖用户修改。
-2. 阅读本页和 `docs/USER_GUIDE.md`。
-3. 读取 `results/metrics.json` 与相关正式 summary，不从训练日志猜指标。
-4. `pytest -q`、`ruff check src scripts tests`；先修复回归，再做新实验。
-5. 若任务是解释/诊断，只读；除非用户明确要求，不自动重训、删除、发布或访问 test。
-6. 若 fresh 数据 fingerprint 改变，生成 local child config；不要把 config hash 设置为 null，
-   不要使用 `--allow-unverified-robust-comparator` 伪装正式结果。
-7. target E2E 只有 val 同时胜 frozen、cached/live robust direct 且 near 不退化时才可晋级。
-
-## 6. 已知限制与下一步
-
-- 当前训练仍是单 seed；不能把小差异解释为多 seed 均值。
-- SLABIM 是同一建筑内 pooled split；Area_1 也只有一个 Area。跨建筑外部效度仍有限。
-- Area_1 alignment 使用发布的目标域结构 mesh；实践版需独立测量变换。
-- 大型 E2E checkpoint 尚未上传公共 release；`results/manifest.json` 需要发布 URL。
-- 仓库所有者尚未选择软件 LICENSE，这是公开发布前最后的治理阻塞项。
-- 上述两项是需要仓库所有者/外部托管权限的发布动作；不应由新 chatbot
-  自行选择许可证或上传权重。
+- 单 seed 结果不能表达训练随机性；bootstrap 只量化房间/帧采样不确定性。
+- SLABIM 与 Area_1 都不是跨多个建筑的大规模外部验证。
+- Area_1 使用目标域 semantic structural mesh 辅助 BIM 配准；部署需测量/定位系统提供变换。
+- checkpoint 尚未上传公共 Release，`results/manifest.json` 的 URL 待所有者填写。
+- 仓库仍需要所有者选择软件 LICENSE；第三方数据许可不能由本项目代授。

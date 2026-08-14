@@ -12,7 +12,7 @@ public raw data
   -> pinned DA3 + fixed BIM rendering
   -> immutable manifest
   -> exhaustive split annotation
-  -> non-learning BIM baseline
+  -> one frozen universal scale + non-learning BIM baseline
   -> train/val model selection
   -> one-time blind test
 ```
@@ -47,14 +47,13 @@ slabim_pretrain.yaml --accepted.pt--> slabim.yaml --accepted.pt--> slabim_e2e.ya
 ```
 
 `slabim_pretrain` 先学习无 near-routing 的多尺度 residual；`slabim` 启用 depth-aware routing
-并用 504²、BS8 微调；E2E 使用 BS4×accum2，只训练 DA3 last-stage，且用 live direct anchor
-参与 loss/acceptance。
+并用 504²、BS8 微调。活动主模型始终以 universal scaled DA3 为 residual anchor；
+`robust/universal BIM-direct` 仅参与 loss/acceptance 公平比较。
 
 ### 产物
 
-- `outputs/slabim/accepted.pt`：frozen 主 checkpoint。
-- `outputs/slabim_e2e/accepted.pt`：E2E 可选 checkpoint。
-- `results/slabim/`：正式 summary、逐帧 CSV、历史 ablation 摘要。
+- `outputs/slabim/accepted.pt`：唯一 SLABIM 生产 checkpoint。
+- `results/slabim/`：正式 summary、逐帧 CSV 和训练审计。
 
 ## 2D-3D-S Area_1 + BIMSyn
 
@@ -81,10 +80,10 @@ data/provenance/stanford_area1_bimsyn_alignment.json
 SHA256 079ff394fbfa9317953e0358d71e0548cd39171278dd16121d6c300c5a23e6d6
 ```
 
-### split 与 robust scale
+### split 与统一尺度
 
 room-disjoint split 为 30/7/7 rooms，7013/1673/1641 frames。robust scale selector 只打开
-train NPZ，固定 48 候选和 leave-one-room-out，最终：
+train NPZ，固定 48 候选和 leave-one-room-out，最终规则被冻结，并原样用于 SLABIM：
 
 ```yaml
 name: log_upper_cap_v1
@@ -103,19 +102,17 @@ annotation/split/alignment/scale receipt；不能把 config
 ### 模型选择
 
 ```text
-SLABIM frozen --cross-dataset init + zero residual heads--> Area_1 frozen
-Area_1 frozen --same-dataset init + preserve heads--------> Area_1 E2E challenger
+SLABIM universal --cross-dataset init + zero residual heads--> Area_1 universal
 ```
 
-source zero-shot val AbsRel 为 0.16690，明显差于 robust direct 0.08710。target frozen 在 val
-达到 0.07005，通过 all/furniture/conflict 多聚合与 room-bootstrap 后才运行 test。E2E challenger
-为 0.07019，未胜 frozen，因此不运行 test。
+当前统一 target 模型 val AbsRel 为 0.07115，优于 universal direct 0.08710；锁定 checkpoint
+后运行 test，得到 0.06689 vs direct 0.07815。旧 E2E challenger 与 BIM-direct 网络锚点不属于
+当前协议，权重和过程结果均已清理。
 
 ### 产物
 
 - `outputs/stanford_area1/accepted.pt`：唯一 Area_1 生产 checkpoint。
-- `outputs/stanford_area1_e2e/`：只留训练记录和 val summary，不留权重。
-- `results/stanford_area1/`：zero-shot、frozen val/test、challenger val 和逐帧 CSV。
+- `results/stanford_area1/`：正式 val/test、逐帧 CSV 和训练审计。
 
 ## 恢复与防错
 

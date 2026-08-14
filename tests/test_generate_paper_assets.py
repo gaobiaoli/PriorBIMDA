@@ -31,15 +31,6 @@ def _history(anchor: float, values: list[float]) -> list[dict[str, Any]]:
     ]
 
 
-def _ablation_row(experiment: str, value: float) -> dict[str, Any]:
-    return {
-        "experiment": experiment,
-        "completed_epochs": 4,
-        "epoch_budget": 5,
-        "accepted": {"epoch_zero_based": 2, "abs_rel": value},
-    }
-
-
 def _make_fixture(root: Path) -> tuple[Path, Path]:
     results = root / "results"
     provenance = root / "data" / "provenance" / "scale.json"
@@ -48,17 +39,15 @@ def _make_fixture(root: Path) -> tuple[Path, Path]:
         "slabim": {
             "methods": {
                 "raw_da3": {"abs_rel": 0.20},
-                "global_scale": {"abs_rel": 0.09},
-                "bim_direct": {"abs_rel": 0.08},
-                "frozen_refiner": {"abs_rel": 0.07},
-                "e2e_refiner": {"abs_rel": 0.06},
+                "universal_global_scale": {"abs_rel": 0.09},
+                "universal_bim_direct": {"abs_rel": 0.08},
+                "learned_refiner": {"abs_rel": 0.07},
             }
         },
         "stanford_area1": {
             "validation": {
-                "frozen_abs_rel": 0.0700,
-                "e2e_challenger_abs_rel": 0.0702,
-                "e2e_promoted": False,
+                "learned_abs_rel": 0.0700,
+                "universal_bim_direct_abs_rel": 0.0900,
             }
         },
     }
@@ -109,7 +98,7 @@ def _make_fixture(root: Path) -> tuple[Path, Path]:
             }
         }
     _write_json(
-        results / "stanford_area1" / "frozen_test_summary.json",
+        results / "stanford_area1" / "test_summary.json",
         {
             "aggregates": aggregates,
             "per_room": per_room,
@@ -117,32 +106,10 @@ def _make_fixture(root: Path) -> tuple[Path, Path]:
         },
     )
 
-    _write_json(results / "slabim" / "frozen_history.json", _history(0.08, [0.075, 0.070]))
-    _write_json(results / "slabim" / "e2e_history.json", _history(0.08, [0.071, 0.069]))
+    _write_json(results / "slabim" / "history.json", _history(0.08, [0.075, 0.070]))
     _write_json(
-        results / "stanford_area1" / "frozen_history.json",
+        results / "stanford_area1" / "history.json",
         _history(0.09, [0.082, 0.070]),
-    )
-    _write_json(
-        results / "stanford_area1" / "e2e_challenger_history.json",
-        _history(0.09, [0.071, 0.0702]),
-    )
-    _write_json(
-        results / "slabim" / "legacy_ablation_summary.json",
-        {
-            "protocol": {"seed": 42, "single_training_seed": True},
-            "direct_bim_validation_baseline": {"abs_rel": 0.126},
-            "first_stage": [
-                _ablation_row("slabim_single_frame_r50_v5_pretrain", 0.102),
-                _ablation_row("slabim_single_frame_r50_v5_no_bim_input", 0.104),
-                _ablation_row("slabim_single_frame_r50_v5_single_residual", 0.099),
-                _ablation_row("slabim_single_frame_r50_v5_no_robust", 0.103),
-            ],
-            "second_stage": [
-                _ablation_row("slabim_single_frame_r50_v5", 0.096),
-                _ablation_row("slabim_single_frame_r50_v5_no_routing", 0.102),
-            ],
-        },
     )
 
     candidates = []
@@ -207,21 +174,18 @@ def test_generate_assets_is_headless_traceable_and_marks_conflict(tmp_path: Path
         dpi=45,
     )
 
-    assert len(manifest["figures"]) == 10
-    assert len(manifest["sources"]) == 8
+    assert len(manifest["figures"]) == 9
+    assert len(manifest["sources"]) == 5
     assert {item["availability"] for item in manifest["figures"]} == {
         "existing_result",
-        "historical_existing_result",
         "design_candidate",
     }
     assert all(len(source["sha256"]) == 64 for source in manifest["sources"])
     assert all(len(figure["files"]) == 1 for figure in manifest["figures"])
     assert all((output / figure["files"][0]["path"]).is_file() for figure in manifest["figures"])
     main = next(item for item in manifest["figures"] if item["id"] == "main_blind_test_absrel")
-    slabim_methods = [
-        row["method"] for row in main["numeric_payload"]["SLABIM"]
-    ]
-    assert slabim_methods[-2:] == ["Frozen refiner", "Partial E2E"]
+    slabim_methods = [row["method"] for row in main["numeric_payload"]["SLABIM"]]
+    assert slabim_methods[-1] == "Learned refiner"
     subsets = next(item for item in manifest["figures"] if item["id"] == "area1_subset_absrel")
     assert subsets["numeric_payload"]["conflict_refined_minus_direct_abs_rel"] == pytest.approx(
         0.002

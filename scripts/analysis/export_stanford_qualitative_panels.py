@@ -361,9 +361,7 @@ def _query_basename(query: str) -> str:
     return _DOMAIN_SUFFIX.sub("", value)
 
 
-def resolve_validation_sample(
-    records: Sequence[Mapping[str, Any]], query: str
-) -> tuple[int, str]:
+def resolve_validation_sample(records: Sequence[Mapping[str, Any]], query: str) -> tuple[int, str]:
     stripped = query.strip().strip("/")
     if not stripped:
         raise ValueError("--sample-id cannot be empty")
@@ -439,7 +437,9 @@ def load_validated_frozen_model(
         allow_inference_calibration=False,
     )
     if model_differences:
-        raise RuntimeError(f"Strict model provenance unexpectedly has differences: {model_differences}")
+        raise RuntimeError(
+            f"Strict model provenance unexpectedly has differences: {model_differences}"
+        )
     model = BIMPriorDA3(cfg)
     if bool(model.e2e_da3_enabled):
         raise ValueError("This exporter accepts only the frozen-DA3 Stanford model")
@@ -456,9 +456,7 @@ def load_validated_frozen_model(
         "epoch": state.get("epoch"),
         "best_metric": state.get("best_metric"),
         "training_config_path": (
-            checkpoint_config.get("config_path")
-            if isinstance(checkpoint_config, Mapping)
-            else None
+            checkpoint_config.get("config_path") if isinstance(checkpoint_config, Mapping) else None
         ),
         "checkpoint_semantic_config_sha256": (
             semantic_config_sha256(dict(checkpoint_config))
@@ -548,12 +546,7 @@ def build_supports(
         raise RuntimeError(f"Prepared Stanford sample lacks required fields: {missing}")
     gt = item_hw(item, "gt_depth")
     gt_valid = item_hw(item, "gt_valid") > 0
-    fixed = (
-        gt_valid
-        & np.isfinite(gt)
-        & (gt >= PROTOCOL_MIN_DEPTH_M)
-        & (gt <= PROTOCOL_MAX_DEPTH_M)
-    )
+    fixed = gt_valid & np.isfinite(gt) & (gt >= PROTOCOL_MIN_DEPTH_M) & (gt <= PROTOCOL_MAX_DEPTH_M)
     if not fixed.any():
         raise RuntimeError("Selected validation frame has no official z-depth in 0.2-5.0 m")
     bim = item_hw(item, "bim_depth")
@@ -659,7 +652,9 @@ def _colorize_scalar(
         )
     else:
         norm = Normalize(vmin=float(spec["vmin"]), vmax=float(spec["vmax"]), clip=True)
-    safe = np.nan_to_num(values, nan=float(spec["vmin"]), posinf=float(spec["vmax"]), neginf=float(spec["vmin"]))
+    safe = np.nan_to_num(
+        values, nan=float(spec["vmin"]), posinf=float(spec["vmax"]), neginf=float(spec["vmin"])
+    )
     rgb = matplotlib.colormaps[str(spec["cmap"])](norm(safe), bytes=True)[..., :3].copy()
     panel_valid = np.isfinite(values)
     if valid is not None:
@@ -767,9 +762,7 @@ def panel_images(arrays: Mapping[str, np.ndarray]) -> dict[str, np.ndarray]:
         "gt": _colorize_scalar(arrays["gt"], scale="depth", valid=fixed),
         "raw_da3": _colorize_scalar(arrays["raw_da3"], scale="depth"),
         "bim_depth": _colorize_scalar(arrays["bim_depth"], scale="depth", valid=bim_valid),
-        "robust_global_scale": _colorize_scalar(
-            arrays["robust_global_scale"], scale="depth"
-        ),
+        "robust_global_scale": _colorize_scalar(arrays["robust_global_scale"], scale="depth"),
         "robust_bim_direct": _colorize_scalar(arrays["robust_bim_direct"], scale="depth"),
         "refined": _colorize_scalar(arrays["refined"], scale="depth"),
         "raw_absrel": _colorize_scalar(arrays["raw_absrel"], scale="absrel"),
@@ -783,15 +776,9 @@ def panel_images(arrays: Mapping[str, np.ndarray]) -> dict[str, np.ndarray]:
         "bim_coverage": _coverage_panel(arrays["bim_coverage"]),
         "reliability": _colorize_scalar(arrays["reliability"], scale="unit_interval"),
         "routing_gate": _colorize_scalar(arrays["routing_gate"], scale="unit_interval"),
-        "total_log_residual": _colorize_scalar(
-            arrays["total_log_residual"], scale="log_residual"
-        ),
-        "frame_log_residual": _colorize_scalar(
-            arrays["frame_log_residual"], scale="log_residual"
-        ),
-        "low_log_residual": _colorize_scalar(
-            arrays["low_log_residual"], scale="log_residual"
-        ),
+        "total_log_residual": _colorize_scalar(arrays["total_log_residual"], scale="log_residual"),
+        "frame_log_residual": _colorize_scalar(arrays["frame_log_residual"], scale="log_residual"),
+        "low_log_residual": _colorize_scalar(arrays["low_log_residual"], scale="log_residual"),
         "detail_log_residual": _colorize_scalar(
             arrays["detail_log_residual"], scale="log_residual"
         ),
@@ -867,9 +854,7 @@ def _validate_preset_row_against_export(
         "furniture_robust_bim_direct_abs_rel": float(
             metrics["methods"]["robust_bim_direct"]["furniture"]["abs_rel"]
         ),
-        "furniture_refined_abs_rel": float(
-            metrics["methods"]["refined"]["furniture"]["abs_rel"]
-        ),
+        "furniture_refined_abs_rel": float(metrics["methods"]["refined"]["furniture"]["abs_rel"]),
     }
     mismatches = {}
     for key, actual in checks.items():
@@ -879,8 +864,7 @@ def _validate_preset_row_against_export(
             mismatches[key] = {"csv": expected, "recomputed": actual}
     if mismatches:
         raise RuntimeError(
-            "Preset CSV does not reproduce with the selected config/checkpoint: "
-            f"{mismatches}"
+            f"Preset CSV does not reproduce with the selected config/checkpoint: {mismatches}"
         )
 
 
@@ -963,7 +947,7 @@ def export_sample_assets(
                 "hit": [89, 161, 79],
             },
             "refined_minus_direct_semantics": (
-                "refined per-pixel AbsRel minus robust BIM-direct per-pixel AbsRel; "
+                "refined per-pixel AbsRel minus universal BIM-direct per-pixel AbsRel; "
                 "negative values mean learned refinement is better"
             ),
             "scales": DISPLAY_SCALES,

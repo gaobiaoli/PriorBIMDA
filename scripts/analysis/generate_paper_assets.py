@@ -192,6 +192,11 @@ def _save_figure(
             facecolor="white",
             metadata=metadata,
         )
+        if extension == "svg":
+            normalized = "\n".join(
+                line.rstrip() for line in path.read_text(encoding="utf-8").splitlines()
+            )
+            path.write_text(normalized + "\n", encoding="utf-8")
         artifacts.append(
             {
                 "path": path.relative_to(output_root).as_posix(),
@@ -230,24 +235,19 @@ def _main_result_values(
     return {
         "SLABIM": [
             {"method": "Raw DA3", "abs_rel": slabim["raw_da3"]["abs_rel"]},
-            {"method": "Scale only", "abs_rel": slabim["global_scale"]["abs_rel"]},
-            {"method": "Direct BIM", "abs_rel": slabim["bim_direct"]["abs_rel"]},
             {
-                "method": "Frozen refiner",
-                "abs_rel": slabim["frozen_refiner"]["abs_rel"],
-                "registered_method": "frozen_refiner",
+                "method": "Scale only",
+                "abs_rel": slabim["universal_global_scale"]["abs_rel"],
             },
-            *(
-                [
-                    {
-                        "method": "Partial E2E",
-                        "abs_rel": slabim["e2e_refiner"]["abs_rel"],
-                        "registered_method": "e2e_refiner",
-                    }
-                ]
-                if "e2e_refiner" in slabim
-                else []
-            ),
+            {
+                "method": "Direct BIM",
+                "abs_rel": slabim["universal_bim_direct"]["abs_rel"],
+            },
+            {
+                "method": "Learned refiner",
+                "abs_rel": slabim["learned_refiner"]["abs_rel"],
+                "registered_method": "learned_refiner",
+            },
         ],
         "2D-3D-S Area 1": [
             {
@@ -338,7 +338,7 @@ def render_area1_subsets(rows: list[dict[str, Any]]) -> Figure:
     width = 0.23
     specifications = (
         ("raw_da3", "Raw DA3", COLORS["raw"]),
-        ("robust_bim_direct", "Robust direct BIM", COLORS["bim"]),
+        ("robust_bim_direct", "Universal direct BIM", COLORS["bim"]),
         ("refined", "Learned refiner", COLORS["learned"]),
     )
     for offset, (method, label, color) in zip((-width, 0.0, width), specifications):
@@ -359,8 +359,7 @@ def render_area1_subsets(rows: list[dict[str, Any]]) -> Figure:
     axis.text(
         0.99,
         0.70,
-        "Conflict subset is not hidden:\n"
-        f"learned − direct = {difference:+.4f} ({direction})",
+        f"Conflict subset is not hidden:\nlearned − direct = {difference:+.4f} ({direction})",
         transform=axis.transAxes,
         ha="right",
         va="top",
@@ -569,9 +568,7 @@ def render_scale_heatmap(
     q25_values = sorted({float(row["q25_log_cap"]) for row in candidates})
     matrix = np.full((len(q25_values), len(q10_values)), np.nan, dtype=np.float64)
     lookup = {
-        (float(row["q25_log_cap"]), float(row["q10_log_cap"])): float(
-            row["room_macro_abs_rel"]
-        )
+        (float(row["q25_log_cap"]), float(row["q10_log_cap"])): float(row["room_macro_abs_rel"])
         for row in candidates
     }
     for row_index, q25 in enumerate(q25_values):
@@ -685,8 +682,7 @@ def render_scale_pareto(
     selected_index = next(
         index
         for index, row in enumerate(candidates)
-        if float(row["q10_log_cap"]) == selected_q10
-        and float(row["q25_log_cap"]) == selected_q25
+        if float(row["q10_log_cap"]) == selected_q10 and float(row["q25_log_cap"]) == selected_q25
     )
     selected_point = points[selected_index]
     axis.scatter(
@@ -732,14 +728,11 @@ def _history_points(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def render_training_curves(
     histories: dict[str, dict[str, list[dict[str, Any]]]],
-    area1_e2e_promoted: bool | None,
+    _area1_e2e_promoted: bool | None = None,
 ) -> Figure:
     figure, axes = plt.subplots(1, 2, figsize=(12.0, 4.7))
     for axis, (dataset, runs) in zip(axes, histories.items()):
-        for run_name, color, marker in (
-            ("frozen", COLORS["scale"], "o"),
-            ("e2e", COLORS["violet"], "s"),
-        ):
+        for run_name, color, marker in (("frozen", COLORS["scale"], "o"),):
             points = runs[run_name]
             axis.plot(
                 [point["epoch"] for point in points],
@@ -748,7 +741,7 @@ def render_training_curves(
                 marker=marker,
                 markersize=4,
                 linewidth=1.8,
-                label="Frozen DA3" if run_name == "frozen" else "E2E / decoder challenger",
+                label="Universal learned refiner",
             )
             best = min(points, key=lambda point: point["val_refined_abs_rel"])
             axis.scatter(
@@ -768,108 +761,13 @@ def render_training_curves(
             linewidth=1.4,
             label="Direct BIM validation baseline",
         )
-        axis.set_xlabel("Local epoch (separate registered histories)")
+        axis.set_xlabel("Epoch")
         axis.set_title(dataset)
         axis.grid(color="#D8DEE9", linewidth=0.7, alpha=0.8)
     axes[0].set_ylabel("Validation AbsRel ↓")
     axes[0].legend(frameon=False, fontsize=8.5)
-    if area1_e2e_promoted is False:
-        axes[1].text(
-            0.98,
-            0.95,
-            "E2E challenger not promoted\nby the locked validation gate",
-            transform=axes[1].transAxes,
-            ha="right",
-            va="top",
-            fontsize=8.8,
-            color=COLORS["worse"],
-        )
-    figure.suptitle("Registered validation trajectories (no test-set model selection)", y=1.02)
+    figure.suptitle("Universal-model validation trajectories (no test-set selection)", y=1.02)
     figure.tight_layout()
-    return figure
-
-
-def _ablation_values(ablation: dict[str, Any]) -> dict[str, Any]:
-    def compact(row: dict[str, Any]) -> dict[str, Any]:
-        accepted = row["accepted"]
-        return {
-            "experiment": row["experiment"],
-            "abs_rel": accepted["abs_rel"],
-            "epoch_zero_based": accepted["epoch_zero_based"],
-            "completed_epochs": row["completed_epochs"],
-            "epoch_budget": row["epoch_budget"],
-        }
-
-    return {
-        "direct_bim_validation_baseline": ablation["direct_bim_validation_baseline"][
-            "abs_rel"
-        ],
-        "first_stage": [compact(row) for row in ablation["first_stage"]],
-        "second_stage": [compact(row) for row in ablation["second_stage"]],
-        "protocol": ablation["protocol"],
-    }
-
-
-def _short_ablation_name(experiment: str) -> str:
-    for prefix in ("slabim_single_frame_r50_v5_", "slabim_single_frame_r50_v5"):
-        if experiment.startswith(prefix):
-            experiment = experiment[len(prefix) :]
-            break
-    names = {
-        "pretrain": "Full multiscale",
-        "no_bim_input": "No BIM input",
-        "single_residual": "Single residual",
-        "no_robust": "No robust loss",
-        "": "Full + routing",
-        "no_routing": "No routing",
-    }
-    return names.get(experiment, experiment.replace("_", " ").title())
-
-
-def render_legacy_ablation(values: dict[str, Any]) -> Figure:
-    figure, axes = plt.subplots(1, 2, figsize=(12.2, 5.5))
-    for axis, stage, title in (
-        (axes[0], "first_stage", "Stage 1: common fresh-training budget"),
-        (axes[1], "second_stage", "Stage 2: common frozen initialization"),
-    ):
-        rows = values[stage]
-        labels = [_short_ablation_name(str(row["experiment"])) for row in rows]
-        heights = [float(row["abs_rel"]) for row in rows]
-        colors = [
-            COLORS["learned"] if "Full" in label else COLORS["raw"] for label in labels
-        ]
-        bars = axis.bar(range(len(rows)), heights, color=colors, width=0.68)
-        _annotate_bars(axis, bars, digits=4)
-        axis.set_xticks(range(len(rows)), labels, rotation=18)
-        axis.set_title(title)
-        axis.set_ylabel("Validation AbsRel ↓")
-        axis.grid(axis="y", color="#D8DEE9", linewidth=0.7)
-        if stage == "first_stage":
-            baseline = float(values["direct_bim_validation_baseline"])
-            axis.axhline(
-                baseline,
-                color=COLORS["bim"],
-                linestyle="--",
-                linewidth=1.5,
-                label=f"Direct BIM reference: {baseline:.4f}",
-            )
-            axis.legend(frameon=False, fontsize=8.5)
-    figure.suptitle(
-        "HISTORICAL VALIDATION ABLATION • SINGLE SEED • NOT THE FINAL TEST PROTOCOL",
-        color="#A23E48",
-        fontsize=12,
-        fontweight="bold",
-        y=1.02,
-    )
-    figure.text(
-        0.5,
-        0.01,
-        "Point estimates only (seed 42); no uncertainty claim. Compare bars only within a stage.",
-        ha="center",
-        fontsize=8.7,
-        color=COLORS["muted"],
-    )
-    figure.tight_layout(rect=(0, 0.04, 1, 1))
     return figure
 
 
@@ -1223,15 +1121,10 @@ def generate_assets(
 
     paths = {
         "metrics": results_root / "metrics.json",
-        "area1_test": results_root / "stanford_area1" / "frozen_test_summary.json",
+        "area1_test": results_root / "stanford_area1" / "test_summary.json",
         "scale_selection": scale_selection_path.resolve(),
-        "slabim_frozen_history": results_root / "slabim" / "frozen_history.json",
-        "slabim_e2e_history": results_root / "slabim" / "e2e_history.json",
-        "area1_frozen_history": results_root / "stanford_area1" / "frozen_history.json",
-        "area1_e2e_history": (
-            results_root / "stanford_area1" / "e2e_challenger_history.json"
-        ),
-        "legacy_ablation": results_root / "slabim" / "legacy_ablation_summary.json",
+        "slabim_history": results_root / "slabim" / "history.json",
+        "area1_history": results_root / "stanford_area1" / "history.json",
     }
     loaded = {name: registry.load_json(path) for name, path in paths.items()}
     references = {name: registry.reference(path) for name, path in paths.items()}
@@ -1281,10 +1174,7 @@ def generate_assets(
                 dpi,
             ),
             cautions=(
-                (
-                    "The learned result is slightly worse than robust direct BIM on the "
-                    "pixel-micro BIM-foreground-conflict subset; this is shown explicitly."
-                ),
+                "Conflict point estimates improve, but the paired-room AbsRel CI crosses zero.",
                 "Pixel-micro bars do not carry room-bootstrap intervals.",
             ),
         )
@@ -1384,67 +1274,33 @@ def generate_assets(
 
     histories = {
         "SLABIM": {
-            "frozen": _history_points(loaded["slabim_frozen_history"]),
-            "e2e": _history_points(loaded["slabim_e2e_history"]),
+            "frozen": _history_points(loaded["slabim_history"]),
         },
         "2D-3D-S Area 1": {
-            "frozen": _history_points(loaded["area1_frozen_history"]),
-            "e2e": _history_points(loaded["area1_e2e_history"]),
+            "frozen": _history_points(loaded["area1_history"]),
         },
     }
-    area1_validation = loaded["metrics"]["stanford_area1"].get("validation", {})
-    area1_promoted = area1_validation.get("e2e_promoted")
     figures.append(
         _figure_record(
             figure_id="registered_training_curves",
-            title="Frozen and E2E registered validation trajectories",
+            title="Universal-model validation trajectories",
             availability="existing_result",
             evidence_scope="validation_histories_no_test_selection",
             source_paths=(
                 references["metrics"],
-                references["slabim_frozen_history"],
-                references["slabim_e2e_history"],
-                references["area1_frozen_history"],
-                references["area1_e2e_history"],
+                references["slabim_history"],
+                references["area1_history"],
             ),
-            numeric_payload={
-                "histories": histories,
-                "area1_validation_promotion": area1_validation,
-            },
+            numeric_payload={"histories": histories},
             files=_save_figure(
-                render_training_curves(histories, area1_promoted),
+                render_training_curves(histories),
                 output_root,
                 "quantitative/registered_training_curves",
                 formats,
                 dpi,
             ),
             cautions=(
-                "Frozen and E2E x-axes are local epochs from separate registered histories.",
-                "The Area 1 E2E challenger was not promoted by validation.",
-            ),
-        )
-    )
-
-    ablation_values = _ablation_values(loaded["legacy_ablation"])
-    figures.append(
-        _figure_record(
-            figure_id="historical_slabim_validation_ablation",
-            title="Historical single-seed SLABIM validation ablation",
-            availability="historical_existing_result",
-            evidence_scope="historical_validation_single_seed_nonfinal_protocol",
-            source_paths=(references["legacy_ablation"],),
-            numeric_payload=ablation_values,
-            files=_save_figure(
-                render_legacy_ablation(ablation_values),
-                output_root,
-                "quantitative/historical_slabim_validation_ablation",
-                formats,
-                dpi,
-            ),
-            cautions=(
-                "Historical validation, seed 42 only; do not present as final-test evidence.",
-                "Only within-stage comparisons share initialization and budget.",
-                "A current-protocol multi-seed ablation remains planned.",
+                "Each curve is one deterministic training run; this is not a seed variance plot.",
             ),
         )
     )

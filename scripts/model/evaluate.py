@@ -12,7 +12,10 @@ from typing import Any
 import numpy as np
 import torch
 
-from bim_priorda3.baselines import PREVIOUS_FIXED_PARAMETERS, previous_scale_baselines
+from bim_priorda3.baselines import (
+    configured_scale_and_local_features,
+    resolve_scale_estimator_config,
+)
 from bim_priorda3.checkpoints import (
     validate_checkpoint_evaluation_dataset_provenance,
     validate_checkpoint_model_config,
@@ -22,6 +25,7 @@ from bim_priorda3.data import BIMDepthDataset
 from bim_priorda3.engine import build_loader, move_batch
 from bim_priorda3.metrics import depth_metrics
 from bim_priorda3.models import BIMPriorDA3
+from bim_priorda3.scale_protocol import validate_universal_scale_protocol
 
 
 class MetricAccumulator:
@@ -255,6 +259,7 @@ def main() -> None:
     args = parse_args()
     validate_quality_filter_scope(args.split, args.ignore_file)
     cfg = load_config(args.config)
+    universal_scale_protocol = validate_universal_scale_protocol(cfg)
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     dataset = BIMDepthDataset(cfg, args.split, augment=False)
     original_ordered_ids = [str(record["id"]) for record in dataset.records]
@@ -293,23 +298,25 @@ def main() -> None:
     )
     model.load_state_dict(state["model"], strict=True)
     model.eval()
+    scale_estimator = resolve_scale_estimator_config(cfg.model.get("scale_estimator"))
 
     e2e_enabled = model.e2e_da3_enabled
     methods = (
         (
             "base",
-            "global_scale",
-            "previous_scale_local",
+            "universal_global_scale",
+            "universal_bim_direct",
             "live_da3",
-            "live_scale",
+            "live_universal_scale",
+            "live_universal_bim_direct",
             "coarse",
             "refined",
         )
         if e2e_enabled
         else (
             "base",
-            "global_scale",
-            "previous_scale_local",
+            "universal_global_scale",
+            "universal_bim_direct",
             "coarse",
             "refined",
         )
@@ -330,6 +337,8 @@ def main() -> None:
             image_timestamps = batch["image_timestamp"]
             frame_indices = batch["frame_index"]
             batch = move_batch(batch, device)
+            if e2e_enabled:
+                batch["request_live_bim_direct"] = True
             output = model(batch)
             if e2e_enabled and output.get("uses_live_da3") is not True:
                 raise RuntimeError(
@@ -344,13 +353,16 @@ def main() -> None:
                 "frame_index": int(frame_indices[0]),
                 "valid_pixels": int(valid.sum()),
             }
-            scaled_np, local_np, scale = previous_scale_baselines(
+            scaled_np, local_np, _, _, scale_receipt = configured_scale_and_local_features(
                 batch["base_depth"][0, 0].cpu().numpy(),
                 batch["bim_depth"][0, 0].cpu().numpy(),
+                scale_estimator,
             )
             scaled = torch.from_numpy(scaled_np)[None, None].to(device)
             previous_local = torch.from_numpy(local_np)[None, None].to(device)
-            row["previous_bim_scale"] = scale
+            row["universal_bim_scale"] = float(scale_receipt.scale)
+            row["universal_bim_scale_support"] = int(scale_receipt.support_count)
+            row["universal_bim_scale_fallback"] = bool(scale_receipt.fallback)
             row["learned_frame_trust"] = float(
                 torch.sigmoid(output["frame_trust_logits"]).mean().cpu()
             )
@@ -370,14 +382,18 @@ def main() -> None:
                     row[f"learned_mean_abs_{name}"] = float(output[name].abs().mean().cpu())
             predictions = [
                 ("base", batch["base_depth"]),
-                ("global_scale", scaled),
-                ("previous_scale_local", previous_local),
+                ("universal_global_scale", scaled),
+                ("universal_bim_direct", previous_local),
             ]
             if e2e_enabled:
                 predictions.extend(
                     [
                         ("live_da3", output["base_depth"]),
-                        ("live_scale", output["scaled_depth"]),
+                        ("live_universal_scale", output["scaled_depth"]),
+                        (
+                            "live_universal_bim_direct",
+                            output["live_robust_bim_direct"],
+                        ),
                     ]
                 )
             predictions.extend(
@@ -441,20 +457,24 @@ def main() -> None:
             },
         },
         "regions": sorted({str(record["region"]) for record in dataset.records}),
-        "previous_scale_parameters": PREVIOUS_FIXED_PARAMETERS,
+        "universal_scale_protocol": universal_scale_protocol,
+        "scale_estimator": scale_estimator,
         "stage_definitions": {
             "base": {
                 "source": "dataset cached frozen DA3",
                 "learned_in_this_run": False,
                 "uses_bim": False,
             },
-            "global_scale": {
-                "source": "fixed BIM scale applied to cached frozen DA3",
+            "universal_global_scale": {
+                "source": "universal robust BIM scale applied to cached frozen DA3",
                 "learned_in_this_run": False,
                 "uses_bim": True,
             },
-            "previous_scale_local": {
-                "source": ("fixed BIM scale and local correction applied to cached frozen DA3"),
+            "universal_bim_direct": {
+                "source": (
+                    "universal robust BIM scale and fixed local correction "
+                    "applied to cached frozen DA3"
+                ),
                 "learned_in_this_run": False,
                 "uses_bim": True,
                 "primary_non_learning_bim_baseline": True,
@@ -478,9 +498,14 @@ def main() -> None:
                         "learned_in_this_run": True,
                         "uses_bim": False,
                     },
-                    "live_scale": {
-                        "source": "live DA3 plus detached BIM scale",
+                    "live_universal_scale": {
+                        "source": "live DA3 plus detached universal robust BIM scale",
                         "learned_in_this_run": True,
+                        "uses_bim": True,
+                    },
+                    "live_universal_bim_direct": {
+                        "source": "live DA3 plus the same universal BIM-direct correction",
+                        "learned_in_this_run": False,
                         "uses_bim": True,
                     },
                 }
@@ -488,7 +513,7 @@ def main() -> None:
                 else {}
             ),
         },
-        "metric_aliases": ({"coarse": "live_scale"} if e2e_enabled else {}),
+        "metric_aliases": ({"coarse": "live_universal_scale"} if e2e_enabled else {}),
         "overall": {
             method: accumulator.compute() for method, accumulator in overall_accumulators.items()
         },
@@ -518,7 +543,7 @@ def main() -> None:
     summary["abs_rel_relative_improvement"] = (
         (base_abs_rel - refined_abs_rel) / base_abs_rel if base_abs_rel > 0 else np.nan
     )
-    direct_abs_rel = summary["overall"]["previous_scale_local"]["abs_rel"]
+    direct_abs_rel = summary["overall"]["universal_bim_direct"]["abs_rel"]
     summary["abs_rel_improvement_over_direct_bim"] = (
         (direct_abs_rel - refined_abs_rel) / direct_abs_rel if direct_abs_rel > 0 else np.nan
     )

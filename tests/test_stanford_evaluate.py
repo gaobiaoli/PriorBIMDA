@@ -744,6 +744,11 @@ def test_batch_two_preserves_per_frame_and_aggregate_results(
         "validate_checkpoint_model_config",
         lambda *_args, **_kwargs: {},
     )
+    monkeypatch.setattr(
+        stanford_evaluator,
+        "validate_universal_scale_protocol",
+        lambda *_args, **_kwargs: {"status": "fake"},
+    )
 
     summaries = []
     csv_payloads = []

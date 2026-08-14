@@ -36,6 +36,7 @@ from bim_priorda3.engine import (
 from bim_priorda3.losses import BIMPriorLoss
 from bim_priorda3.models import BIMPriorDA3
 from bim_priorda3.models.refiner import ScaleAnchoredDepthRefiner
+from bim_priorda3.scale_protocol import validate_universal_scale_protocol
 
 TRAINING_ARTIFACT_NAMES = frozenset(
     {
@@ -728,6 +729,7 @@ def main() -> None:
                 f"Resume does not allow runtime overrides: {sorted(forbidden_resume_overrides)}"
             )
     cfg = load_config(args.config)
+    universal_scale_protocol = validate_universal_scale_protocol(cfg)
     init_checkpoint_policy = resolve_init_checkpoint_policy(cfg)
     if (
         init_checkpoint_policy != INIT_POLICY_PRESERVE
@@ -828,6 +830,7 @@ def main() -> None:
         "training_source_sha256": training_source_sha256(Path(cfg.project_root)),
         "deterministic_algorithms": torch.are_deterministic_algorithms_enabled(),
         "dataset": dataset_provenance,
+        "universal_scale_protocol": universal_scale_protocol,
         "configured_init_checkpoint_policy": init_checkpoint_policy,
     }
     if args.init_checkpoint:

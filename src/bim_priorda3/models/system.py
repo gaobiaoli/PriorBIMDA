@@ -10,9 +10,7 @@ from torch.nn import functional
 
 from bim_priorda3.baselines import (
     BIM_INVALID_DEPTH_ATOL,
-    LEGACY_SCALE_ESTIMATOR,
     ROBUST_LOG_CAP_SCALE_ESTIMATOR,
-    previous_scale_baselines,
     resolve_scale_estimator_config,
     robust_scale_and_local_features,
 )
@@ -34,7 +32,6 @@ class BIMPriorDA3(nn.Module):
     GEOMETRY_CHANNELS = 4
     BIM_CHANNELS = 8
     RESIDUAL_ANCHOR_SCALED = "scaled_depth"
-    RESIDUAL_ANCHOR_ROBUST_DIRECT = "robust_bim_direct"
     RESIDUAL_ROUTING_FRAME_AND_LOW = "frame_and_low"
     RESIDUAL_ROUTING_FRAME_ONLY = "frame_only"
 
@@ -74,68 +71,31 @@ class BIMPriorDA3(nn.Module):
         self.e2e_da3_enabled = bool(self.e2e_da3_config.get("enabled", False))
         self.da3: nn.Module | None = None
         self._da3_trainable_module_names: tuple[str, ...] = ()
-        legacy_e2e_scale_defaults = {
-            "scale_quantile": 0.45,
-            "scale_ratio_min": 0.2,
-            "scale_ratio_max": 5.0,
-            "scale_min_samples": 100,
-        }
-        legacy_e2e_scale_keys = set(legacy_e2e_scale_defaults)
         configured_scale = model.get("scale_estimator")
-        present_legacy_keys = legacy_e2e_scale_keys.intersection(self.e2e_da3_config)
-        if configured_scale is not None and present_legacy_keys:
-            missing_legacy_keys = legacy_e2e_scale_keys - present_legacy_keys
-            mismatched_legacy_values = {
-                key: self.e2e_da3_config[key]
-                for key in present_legacy_keys
-                if self.e2e_da3_config[key] != legacy_e2e_scale_defaults[key]
-            }
-            if missing_legacy_keys or mismatched_legacy_values:
-                raise ValueError(
-                    "model.scale_estimator may coexist with deprecated "
-                    "model.e2e_da3 scale fields only when all four fields "
-                    "equal their historical defaults; "
-                    f"missing={sorted(missing_legacy_keys)}, "
-                    f"non_default={mismatched_legacy_values}"
-                )
-            self.deprecated_e2e_scale_fields_ignored = dict(legacy_e2e_scale_defaults)
-        else:
-            self.deprecated_e2e_scale_fields_ignored = {}
-        if configured_scale is None and present_legacy_keys:
-            legacy_quantile = float(self.e2e_da3_config.get("scale_quantile", 0.45))
-            if legacy_quantile != 0.45:
-                raise ValueError(
-                    "Deprecated model.e2e_da3.scale_quantile is supported only "
-                    "at its historical value 0.45; use model.scale_estimator"
-                )
-            configured_scale = {
-                "name": LEGACY_SCALE_ESTIMATOR,
-                "ratio_min": float(self.e2e_da3_config.get("scale_ratio_min", 0.2)),
-                "ratio_max": float(self.e2e_da3_config.get("scale_ratio_max", 5.0)),
-                "min_samples": int(self.e2e_da3_config.get("scale_min_samples", 100)),
-            }
+        deprecated_scale_fields = {
+            "scale_quantile",
+            "scale_ratio_min",
+            "scale_ratio_max",
+            "scale_min_samples",
+        }.intersection(self.e2e_da3_config)
+        if deprecated_scale_fields:
+            raise ValueError(
+                "Deprecated model.e2e_da3 scale fields were removed; configure the "
+                "single shared model.scale_estimator instead: "
+                f"{sorted(deprecated_scale_fields)}"
+            )
         self.scale_estimator_config = resolve_scale_estimator_config(configured_scale)
-        self.residual_anchor_mode = str(
-            model.get("residual_anchor_mode", self.RESIDUAL_ANCHOR_SCALED)
-        )
-        if self.residual_anchor_mode not in {
-            self.RESIDUAL_ANCHOR_SCALED,
-            self.RESIDUAL_ANCHOR_ROBUST_DIRECT,
-        }:
+        if self.scale_estimator_config["name"] != ROBUST_LOG_CAP_SCALE_ESTIMATOR:
             raise ValueError(
-                "model.residual_anchor_mode must be 'scaled_depth' or 'robust_bim_direct'"
+                "The public model uses one universal scale estimator; "
+                "model.scale_estimator.name must be log_upper_cap_v1"
             )
-        if (
-            self.residual_anchor_mode == self.RESIDUAL_ANCHOR_ROBUST_DIRECT
-            and self.scale_estimator_config["name"] != ROBUST_LOG_CAP_SCALE_ESTIMATOR
-        ):
+        if "residual_anchor_mode" in model:
             raise ValueError(
-                "model.residual_anchor_mode=robust_bim_direct requires "
-                "model.scale_estimator.name=log_upper_cap_v1"
+                "model.residual_anchor_mode was removed: learned residuals always "
+                "refine the universally scaled DA3 depth; BIM-direct is a baseline"
             )
-        # Compatibility attributes for downstream diagnostics.  The canonical
-        # configuration is model.scale_estimator and q=.45 remains immutable.
-        self.da3_scale_quantile = 0.45
+        self.residual_anchor_mode = self.RESIDUAL_ANCHOR_SCALED
         self.da3_scale_ratio_min = float(self.scale_estimator_config["ratio_min"])
         self.da3_scale_ratio_max = float(self.scale_estimator_config["ratio_max"])
         self.da3_scale_min_samples = int(self.scale_estimator_config["min_samples"])
@@ -176,23 +136,14 @@ class BIMPriorDA3(nn.Module):
         if not isinstance(request_live_bim_direct, bool):
             raise TypeError("batch['request_live_bim_direct'] must be a non-tensor bool")
         live_batch, da3_receipt = self._build_live_da3_batch(batch)
-        live_direct: torch.Tensor | None = None
-        if self.residual_anchor_mode == self.RESIDUAL_ANCHOR_ROBUST_DIRECT:
+        output = self._forward_scale_refinement(live_batch)
+        output.update(da3_receipt)
+        if self.training or request_live_bim_direct:
             live_direct = self._configured_fixed_bim_direct(
-                live_batch["base_depth"],
+                output["base_depth"],
                 batch["bim_depth"],
                 batch["bim_valid"],
             )
-            live_batch["anchor_depth"] = live_direct
-        output = self._forward_scale_refinement(live_batch)
-        output.update(da3_receipt)
-        if live_direct is not None or self.training or request_live_bim_direct:
-            if live_direct is None:
-                live_direct = self._configured_fixed_bim_direct(
-                    output["base_depth"],
-                    batch["bim_depth"],
-                    batch["bim_valid"],
-                )
             output["live_bim_direct"] = live_direct
             if self.scale_estimator_config["name"] == ROBUST_LOG_CAP_SCALE_ESTIMATOR:
                 output["live_robust_bim_direct"] = live_direct
@@ -515,51 +466,6 @@ class BIMPriorDA3(nn.Module):
         cap_tensor = torch.stack(cap_receipts)
         return scale_tensor, support_tensor, quantile_tensor, cap_tensor
 
-    @staticmethod
-    @torch.no_grad()
-    def _fixed_bim_direct(
-        base_depth: torch.Tensor,
-        bim_depth: torch.Tensor,
-    ) -> torch.Tensor:
-        """Apply the authoritative OpenCV fixed BIM-direct baseline.
-
-        The local correction contains OpenCV Sobel and large-sigma Gaussian
-        operations whose border and kernel semantics define the published
-        baseline.  Keeping this detached CPU reference avoids silently changing
-        that comparator while the online DA3 decoder is being fine-tuned.
-        """
-        if base_depth.shape != bim_depth.shape or base_depth.ndim != 4:
-            raise ValueError(
-                "Fixed BIM-direct expects equal [B, 1, H, W] depth tensors; "
-                f"base={tuple(base_depth.shape)}, bim={tuple(bim_depth.shape)}"
-            )
-        if base_depth.shape[1] != 1:
-            raise ValueError("Fixed BIM-direct requires one depth channel")
-
-        base_cpu = base_depth.detach().float().cpu().contiguous()
-        bim_cpu = bim_depth.detach().float().cpu().contiguous()
-
-        def compute_sample(sample_index: int) -> torch.Tensor:
-            _, direct, _ = previous_scale_baselines(
-                base_cpu[sample_index, 0].numpy(),
-                bim_cpu[sample_index, 0].numpy(),
-            )
-            return torch.from_numpy(direct)
-
-        sample_count = base_cpu.shape[0]
-        if sample_count > 1:
-            with ThreadPoolExecutor(max_workers=min(sample_count, 8)) as executor:
-                direct_samples = list(executor.map(compute_sample, range(sample_count)))
-        else:
-            direct_samples = [compute_sample(0)] if sample_count else []
-        if not direct_samples:
-            return torch.empty_like(base_depth)
-        direct_batch = torch.stack(direct_samples, dim=0).unsqueeze(1)
-        return direct_batch.to(
-            device=base_depth.device,
-            dtype=base_depth.dtype,
-        )
-
     @torch.no_grad()
     def _configured_fixed_bim_direct(
         self,
@@ -580,8 +486,6 @@ class BIMPriorDA3(nn.Module):
                 bim_depth,
                 torch.zeros_like(bim_depth),
             )
-        if self.scale_estimator_config["name"] == LEGACY_SCALE_ESTIMATOR:
-            return self._fixed_bim_direct(base_depth, bim_depth)
         if base_depth.shape != bim_depth.shape or base_depth.ndim != 4:
             raise ValueError(
                 "Configured BIM-direct expects equal [B, 1, H, W] tensors; "
@@ -660,30 +564,11 @@ class BIMPriorDA3(nn.Module):
         bim = batch["bim_depth"]
         valid = batch["bim_valid"].clamp(0.0, 1.0)
         residual_anchor = scaled
-        if self.residual_anchor_mode == self.RESIDUAL_ANCHOR_ROBUST_DIRECT:
-            if "anchor_depth" not in batch:
-                raise KeyError(
-                    "robust_bim_direct residual anchoring requires batch['anchor_depth']"
-                )
-            residual_anchor = batch["anchor_depth"]
-            if residual_anchor.shape != scaled.shape:
-                raise ValueError(
-                    "Residual anchor shape differs from scaled depth: "
-                    f"{tuple(residual_anchor.shape)} != {tuple(scaled.shape)}"
-                )
-            if not bool(torch.all(torch.isfinite(residual_anchor) & (residual_anchor > 0)).item()):
-                raise ValueError("robust_bim_direct residual anchor must be finite and positive")
 
         log_base = safe_log(base)
         log_scaled = safe_log(scaled)
-        if self.residual_anchor_mode == self.RESIDUAL_ANCHOR_ROBUST_DIRECT:
-            geometry_scale_channel = ((safe_log(residual_anchor) - log_scaled) / 0.5).clamp(
-                -2.0, 2.0
-            )
-            geometry_scale_channel_semantics = "log(anchor/scaled)/0.5"
-        else:
-            geometry_scale_channel = ((log_scaled - log_base) / 0.5).clamp(-2.0, 2.0)
-            geometry_scale_channel_semantics = "log(scaled/base)/0.5"
+        geometry_scale_channel = ((log_scaled - log_base) / 0.5).clamp(-2.0, 2.0)
+        geometry_scale_channel_semantics = "log(scaled/base)/0.5"
         safe_bim = torch.where(valid > 0, bim, scaled)
         log_bim = safe_log(safe_bim)
         signed_disagreement = (log_bim - log_scaled) * valid
@@ -719,11 +604,7 @@ class BIMPriorDA3(nn.Module):
             raw_frame_residual = torch.zeros_like(raw_frame_residual)
         if not self.use_low_residual:
             raw_low_residual = torch.zeros_like(raw_low_residual)
-        residual_routing_depth = (
-            residual_anchor
-            if self.residual_anchor_mode == self.RESIDUAL_ANCHOR_ROBUST_DIRECT
-            else scaled
-        )
+        residual_routing_depth = scaled
         if self.depth_aware_residual_routing:
             residual_routing_gate = torch.sigmoid(
                 (residual_routing_depth - self.residual_routing_depth)
@@ -743,8 +624,7 @@ class BIMPriorDA3(nn.Module):
             float(self.refiner.max_total_log_residual),
         )
         refined = residual_anchor * torch.exp(log_residual)
-        if self.residual_anchor_mode == self.RESIDUAL_ANCHOR_SCALED:
-            refined = refined.clamp(1e-3, self.max_depth * 2.0)
+        refined = refined.clamp(1e-3, self.max_depth * 2.0)
         reliability_logits = prediction["bim_reliability_logits"]
         reliability = torch.sigmoid(reliability_logits) * valid
         local_scale = scaled / base.clamp_min(1e-3)
@@ -776,11 +656,7 @@ class BIMPriorDA3(nn.Module):
             "detail_log_residual": prediction["detail_log_residual"],
             "residual_routing_gate": residual_routing_gate,
             "residual_routing_depth": residual_routing_depth,
-            "residual_routing_depth_semantics": (
-                "refinement_anchor_depth"
-                if self.residual_anchor_mode == self.RESIDUAL_ANCHOR_ROBUST_DIRECT
-                else "scaled_depth"
-            ),
+            "residual_routing_depth_semantics": "scaled_depth",
             "residual_routing_scope": self.residual_routing_scope,
             "log_variance": prediction["log_variance"],
         }

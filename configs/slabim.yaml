@@ -8,6 +8,7 @@ model:
   depth_aware_residual_routing: true
   residual_routing_depth: 1.0
   residual_routing_temperature: 0.05
+  residual_routing_scope: frame_only
 
 loss:
   warmup_epochs: 0

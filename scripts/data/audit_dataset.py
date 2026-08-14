@@ -10,7 +10,7 @@ from typing import Any
 
 import numpy as np
 
-from bim_priorda3.baselines import bim_scale_and_local_features
+from bim_priorda3.baselines import configured_scale_and_local_features
 from bim_priorda3.config import (
     Config,
     load_config,
@@ -311,7 +311,10 @@ def _resolve_dataset_splits(
     return records_by_split, None, population
 
 
-def _depth_statistics(records: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
+def _depth_statistics(
+    records: list[dict[str, Any]],
+    scale_estimator: dict[str, Any],
+) -> dict[str, dict[str, float]]:
     region_stats: dict[str, dict[str, float]] = defaultdict(
         lambda: {
             "samples": 0,
@@ -328,11 +331,11 @@ def _depth_statistics(records: list[dict[str, Any]]) -> dict[str, dict[str, floa
         with np.load(record["sample"]) as sample:
             base = sample["base_depth"].astype(np.float32)
             bim = sample["bim_depth"].astype(np.float32)
-            scaled = (
-                sample["scaled_depth"].astype(np.float32)
-                if "scaled_depth" in sample
-                else bim_scale_and_local_features(base, bim)[0]
-            )
+            scaled = configured_scale_and_local_features(
+                base,
+                bim,
+                scale_estimator,
+            )[0]
             gt = sample["gt_depth"].astype(np.float32)
             gt_valid = sample["gt_valid"] > 0
             bim_valid = sample["bim_valid"] > 0
@@ -391,7 +394,10 @@ def build_audit_report(
         resolution,
         ignore_file,
     )
-    region_stats = _depth_statistics(active_records)
+    region_stats = _depth_statistics(
+        active_records,
+        dict(cfg.model.get("scale_estimator", {})),
+    )
 
     configured_regions = {
         split: sorted(str(region) for region in cfg.data.get(f"{split}_regions", []))

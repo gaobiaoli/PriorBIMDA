@@ -59,7 +59,7 @@ def test_inference_preparation_does_not_require_pcd_or_gt(
         ),
     )
 
-    cfg = load_config("configs/slabim_cv.yaml")
+    cfg = load_config("configs/slabim.yaml")
     cfg.project_root = str(tmp_path)
     cfg.data.slabim_root = str(slabim)
     cfg.data.processed_root = "processed"

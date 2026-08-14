@@ -31,6 +31,7 @@ from bim_priorda3.config import load_config, resolve_project_path
 from bim_priorda3.data import BIMDepthDataset
 from bim_priorda3.engine import build_loader, move_batch, seed_everything
 from bim_priorda3.models import BIMPriorDA3
+from bim_priorda3.scale_protocol import validate_universal_scale_protocol
 
 METRIC_NAMES = ("abs_rel", "rmse", "mae", "delta1", "delta2", "delta3")
 _BASELINE_MAX_WORKERS = 8
@@ -1033,6 +1034,7 @@ def main() -> None:
     if args.batch_size < 1:
         raise ValueError("--batch-size must be positive")
     cfg = load_config(args.config)
+    universal_scale_protocol = validate_universal_scale_protocol(cfg)
     inference_seed = (
         int(args.inference_seed)
         if args.inference_seed is not None
@@ -1601,6 +1603,7 @@ def main() -> None:
             "cross_dataset_checkpoint_opt_in": args.allow_cross_dataset_checkpoint,
         },
         "model_config_overrides": model_overrides,
+        "universal_scale_protocol": universal_scale_protocol,
         "scale_estimators": {
             "model_input": model_scale_estimator,
             "robust_comparator": {

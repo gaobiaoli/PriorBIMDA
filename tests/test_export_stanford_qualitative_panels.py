@@ -38,9 +38,7 @@ def test_parse_args_supports_repeated_explicit_validation_ids() -> None:
     assert args.sample_id == ["office_1/frame_1", "office_2/frame_2"]
     assert args.preset is None
     with pytest.raises(SystemExit):
-        exporter.parse_args(
-            ["--sample-id", "office_1/frame_1", "--preset", "three-options"]
-        )
+        exporter.parse_args(["--sample-id", "office_1/frame_1", "--preset", "three-options"])
 
 
 def test_three_option_rules_are_predeclared_and_deterministic() -> None:
@@ -99,9 +97,7 @@ def test_three_option_rules_are_predeclared_and_deterministic() -> None:
         ("option_b_furniture_conflict_success", "room/furniture"),
         ("option_c_failure", "room/failure"),
     ]
-    assert selections[0].rule["eligible_population_median_all_absrel_gain"] == pytest.approx(
-        0.01
-    )
+    assert selections[0].rule["eligible_population_median_all_absrel_gain"] == pytest.approx(0.01)
     assert selections[1].rule["furniture_fraction_times_gain"] == pytest.approx(0.1)
 
 

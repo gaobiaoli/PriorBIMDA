@@ -12,10 +12,6 @@ model:
     local_files_only: true
     trainable_scope: last_stage
     train_sky_head: false
-    scale_quantile: 0.45
-    scale_ratio_min: 0.2
-    scale_ratio_max: 5.0
-    scale_min_samples: 100
 
 train:
   epochs: 8

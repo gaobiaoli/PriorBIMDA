@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from matplotlib.colors import Normalize, TwoSlopeNorm
 
-from bim_priorda3.baselines import bim_scale_and_local_features
+from bim_priorda3.baselines import configured_scale_and_local_features
 from bim_priorda3.checkpoints import validate_checkpoint_model_config
 from bim_priorda3.config import load_config, resolve_project_path
 from bim_priorda3.data import BIMDepthDataset
@@ -332,7 +332,12 @@ def main() -> None:
         (item_array("gt_valid") > 0) & np.isfinite(gt) & (gt >= depth_min) & (gt <= depth_max)
     )
     bim_valid = item_array("bim_valid") > 0
-    global_scale, direct, _, _, fixed_scale = bim_scale_and_local_features(base, bim)
+    global_scale, direct, _, _, scale_estimate = configured_scale_and_local_features(
+        base,
+        bim,
+        e2e_cfg.model.get("scale_estimator"),
+    )
+    fixed_scale = scale_estimate.scale
     frozen = np.asarray(frozen_output["depth"])
     e2e = np.asarray(e2e_output["depth"])
     live_da3 = np.asarray(e2e_output["base_depth"])

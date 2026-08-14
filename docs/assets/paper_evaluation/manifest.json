@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generator": "scripts/analysis/generate_paper_assets.py",
-  "generator_sha256": "ed80e47a6c1844ae7134349c4498a8c9ab7cd5bef8e7ccc18fbda03e138af82f",
+  "generator_sha256": "83723451b3f9ce76eddf3b36ea880fc90602148ac29ef77ed74331415c457a3d",
   "output_formats": [
     "png",
     "svg",
@@ -25,38 +25,23 @@
     },
     {
       "path": "results/metrics.json",
-      "sha256": "68460339c0636a1f668ccc2d3eef407c868c4eecf2bdc0d6a35463a82ff631f7",
-      "bytes": 1994
+      "sha256": "2b89cb15ef35af5e79c06a766e4981ee8eb2d44c406edcd685802fa694c941ce",
+      "bytes": 2228
     },
     {
-      "path": "results/slabim/e2e_history.json",
-      "sha256": "6785d4f2c66553b234232bf2a1609a75b822f08a744f530260f567ad67c5a366",
-      "bytes": 27013
+      "path": "results/slabim/history.json",
+      "sha256": "384ad577e7f3cd68d61428ac0967ff8601324ab8fc41f63fb373557095422aa0",
+      "bytes": 149482
     },
     {
-      "path": "results/slabim/frozen_history.json",
-      "sha256": "47467ce59de0b9b80afb59ace00273050dd5bf89e3d6f1b724ceeaf70972d834",
-      "bytes": 29469
+      "path": "results/stanford_area1/history.json",
+      "sha256": "54bd56f9a1e0b796b38a4b9ddb0ac43a67511040037413538ad03e3b4b896c28",
+      "bytes": 154593
     },
     {
-      "path": "results/slabim/legacy_ablation_summary.json",
-      "sha256": "f04257b74475870c84e8ed775fd35bb46e9e846762cbf549a30990bbb7932497",
-      "bytes": 8690
-    },
-    {
-      "path": "results/stanford_area1/e2e_challenger_history.json",
-      "sha256": "dd64ad786dfeae3224777a6d2ce8d4402865d91a75083152bb950cd3b9dc9847",
-      "bytes": 75113
-    },
-    {
-      "path": "results/stanford_area1/frozen_history.json",
-      "sha256": "e76aec318264e9f81daa17ef845f8e1f745939ac540f3bafa81d0d0cd87af3fd",
-      "bytes": 154586
-    },
-    {
-      "path": "results/stanford_area1/frozen_test_summary.json",
-      "sha256": "a9a69ecf3b6d032164e7c869399e7fedfefc488c84a3aa18b9a95d09abb963ab",
-      "bytes": 304903
+      "path": "results/stanford_area1/test_summary.json",
+      "sha256": "8e2690d6ea44fed3913d32e7b9a7371cc566ab70a9004062ae4058bf84b20853",
+      "bytes": 306207
     }
   ],
   "figures": [
@@ -68,7 +53,7 @@
       "evidence_scope": "blind_test_pixel_micro_fixed_0.2_5.0_m",
       "source_paths": [
         "results/metrics.json",
-        "results/stanford_area1/frozen_test_summary.json"
+        "results/stanford_area1/test_summary.json"
       ],
       "numeric_payload": {
         "SLABIM": [
@@ -78,21 +63,16 @@
           },
           {
             "method": "Scale only",
-            "abs_rel": 0.0820081308
+            "abs_rel": 0.063614795
           },
           {
             "method": "Direct BIM",
-            "abs_rel": 0.0814473364
+            "abs_rel": 0.0626251115
           },
           {
-            "method": "Frozen refiner",
-            "abs_rel": 0.0621128504,
-            "registered_method": "frozen_refiner"
-          },
-          {
-            "method": "Partial E2E",
-            "abs_rel": 0.061331453,
-            "registered_method": "e2e_refiner"
+            "method": "Learned refiner",
+            "abs_rel": 0.0560130226,
+            "registered_method": "learned_refiner"
           }
         ],
         "2D-3D-S Area 1": [
@@ -110,7 +90,7 @@
           },
           {
             "method": "Learned refiner",
-            "abs_rel": 0.06792385687412283,
+            "abs_rel": 0.06688867640359614,
             "registered_method": "refined"
           }
         ]
@@ -120,20 +100,20 @@
         {
           "path": "quantitative/main_blind_test_absrel.png",
           "format": "png",
-          "sha256": "a98925cf43e292885ad0ad88e49be6a0427c682ca7aeca4d38cd8866a9cb75e6",
-          "bytes": 219256
+          "sha256": "bd6c5ec0cd92f841662abc465530a1c7c99858225efd5b7e409151a6d38ac9ae",
+          "bytes": 210973
         },
         {
           "path": "quantitative/main_blind_test_absrel.svg",
           "format": "svg",
-          "sha256": "4c37e2c2504dda06ad92089c235c477e4ba297e7337a9f3be44c3355c2e0e8d5",
-          "bytes": 20291
+          "sha256": "732c75af9f433277797c08cb2052b548c314186225234ba80ad78e492ed5c69b",
+          "bytes": 19459
         },
         {
           "path": "quantitative/main_blind_test_absrel.pdf",
           "format": "pdf",
-          "sha256": "9556efde953237678496178949cbd694c999391b2f6ff74a9035436bc6645048",
-          "bytes": 20626
+          "sha256": "5ced70da98025848f51b88c267941047ca6afa6b4724b2ced50439332344e86e",
+          "bytes": 19985
         }
       ]
     },
@@ -144,7 +124,7 @@
       "planned": false,
       "evidence_scope": "blind_test_pixel_micro_fixed_support",
       "source_paths": [
-        "results/stanford_area1/frozen_test_summary.json"
+        "results/stanford_area1/test_summary.json"
       ],
       "numeric_payload": {
         "subsets": [
@@ -161,7 +141,7 @@
                 "count": 404367334
               },
               "refined": {
-                "abs_rel": 0.06792385687412283,
+                "abs_rel": 0.06688867640359614,
                 "count": 404367334
               }
             }
@@ -179,7 +159,7 @@
                 "count": 59841152
               },
               "refined": {
-                "abs_rel": 0.0858841153145217,
+                "abs_rel": 0.08573413975314302,
                 "count": 59841152
               }
             }
@@ -197,36 +177,36 @@
                 "count": 115362205
               },
               "refined": {
-                "abs_rel": 0.14172525679458065,
+                "abs_rel": 0.137719703992524,
                 "count": 115362205
               }
             }
           }
         ],
-        "conflict_refined_minus_direct_abs_rel": 0.0010861511159664383
+        "conflict_refined_minus_direct_abs_rel": -0.0029194016860902006
       },
       "cautions": [
-        "The learned result is slightly worse than robust direct BIM on the pixel-micro BIM-foreground-conflict subset; this is shown explicitly.",
+        "Conflict point estimates improve, but the paired-room AbsRel CI crosses zero.",
         "Pixel-micro bars do not carry room-bootstrap intervals."
       ],
       "files": [
         {
           "path": "quantitative/area1_subset_absrel.png",
           "format": "png",
-          "sha256": "f7f7c226ca154f279bc535bb4115a38dd5a2b4d3612cb76e553f3bbe56e2e1be",
-          "bytes": 170260
+          "sha256": "69e4879f999c92aca32af865156782ceba6a9fcf275130dcea1fde29cd5ef511",
+          "bytes": 171327
         },
         {
           "path": "quantitative/area1_subset_absrel.svg",
           "format": "svg",
-          "sha256": "9213adc5610247af96236e5faf496a324e62978f9ca129fa79387daf11e32664",
-          "bytes": 15129
+          "sha256": "eabc2d4c3bc87df741e0012ac310e2ecc7c91bcbe34d718ede05877008fc9d12",
+          "bytes": 15045
         },
         {
           "path": "quantitative/area1_subset_absrel.pdf",
           "format": "pdf",
-          "sha256": "b37fef913468ef24e92467be1fcefd8943a96f3566efa453cfd37a7ce88de1f7",
-          "bytes": 20631
+          "sha256": "bb526e76bac32af6fdc7a65b45f745c65b8b867c14dad34caccdeac7c4927fc2",
+          "bytes": 20673
         }
       ]
     },
@@ -237,92 +217,92 @@
       "planned": false,
       "evidence_scope": "room_disjoint_blind_test_room_macro",
       "source_paths": [
-        "results/stanford_area1/frozen_test_summary.json"
+        "results/stanford_area1/test_summary.json"
       ],
       "numeric_payload": {
         "room_pairs": [
           {
             "room": "conferenceRoom_1",
             "robust_bim_direct_abs_rel": 0.047434730397530024,
-            "refined_abs_rel": 0.04879991250250655,
-            "difference": 0.001365182104976527
+            "refined_abs_rel": 0.0459906771944332,
+            "difference": -0.0014440532030968248
           },
           {
             "room": "hallway_8",
             "robust_bim_direct_abs_rel": 0.19724076266941615,
-            "refined_abs_rel": 0.18558151142444862,
-            "difference": -0.011659251244967528
+            "refined_abs_rel": 0.18036248216598164,
+            "difference": -0.016878280503434512
           },
           {
             "room": "office_16",
             "robust_bim_direct_abs_rel": 0.0645166643290571,
-            "refined_abs_rel": 0.05364637122394283,
-            "difference": -0.010870293105114275
+            "refined_abs_rel": 0.05293076565914332,
+            "difference": -0.011585898669913781
           },
           {
             "room": "office_20",
             "robust_bim_direct_abs_rel": 0.06041750836881287,
-            "refined_abs_rel": 0.043752272165258274,
-            "difference": -0.016665236203554597
+            "refined_abs_rel": 0.04308605168406373,
+            "difference": -0.01733145668474914
           },
           {
             "room": "office_22",
             "robust_bim_direct_abs_rel": 0.10313571302344282,
-            "refined_abs_rel": 0.0813514681631801,
-            "difference": -0.021784244860262716
+            "refined_abs_rel": 0.08272686111428418,
+            "difference": -0.020408851909158643
           },
           {
             "room": "office_23",
             "robust_bim_direct_abs_rel": 0.08218176713944918,
-            "refined_abs_rel": 0.06336729824942039,
-            "difference": -0.018814468890028788
+            "refined_abs_rel": 0.0646383048230471,
+            "difference": -0.01754346231640208
           },
           {
             "room": "office_30",
             "robust_bim_direct_abs_rel": 0.08209339842740897,
-            "refined_abs_rel": 0.07613400715325644,
-            "difference": -0.0059593912741525285
+            "refined_abs_rel": 0.07465118054434114,
+            "difference": -0.007442217883067828
           }
         ],
         "paired_bootstrap": [
           {
             "subset": "all",
             "label": "All pixels",
-            "mean_difference": -0.012055386210443416,
+            "mean_difference": -0.013233460167117544,
             "confidence_interval_95": [
-              -0.017295448927993087,
-              -0.006284767439204687
+              -0.01754241327486399,
+              -0.008224287621493676
             ],
             "rooms": 7,
             "bootstrap_repetitions": 10000,
             "seed": 42,
-            "candidate_better_room_fraction": 0.8571428571428571
+            "candidate_better_room_fraction": 1.0
           },
           {
             "subset": "furniture",
             "label": "Furniture",
-            "mean_difference": -0.004030701245886566,
+            "mean_difference": -0.0033611285646154726,
             "confidence_interval_95": [
-              -0.006577801074638234,
-              -0.0015811375553423286
+              -0.005437980626780951,
+              -0.00184926921041625
             ],
             "rooms": 6,
             "bootstrap_repetitions": 10000,
             "seed": 42,
-            "candidate_better_room_fraction": 0.8333333333333334
+            "candidate_better_room_fraction": 1.0
           },
           {
             "subset": "bim_foreground_conflict",
             "label": "BIM–foreground conflict",
-            "mean_difference": 0.005890758201360173,
+            "mean_difference": -0.0027259245484879285,
             "confidence_interval_95": [
-              -0.006883731825091967,
-              0.02250941353137723
+              -0.00691601765884059,
+              0.0006405548527651358
             ],
             "rooms": 7,
             "bootstrap_repetitions": 10000,
             "seed": 42,
-            "candidate_better_room_fraction": 0.42857142857142855
+            "candidate_better_room_fraction": 0.7142857142857143
           }
         ]
       },
@@ -334,20 +314,20 @@
         {
           "path": "quantitative/area1_room_pairs_and_bootstrap.png",
           "format": "png",
-          "sha256": "967279a7049894991b11069697cb9341401d833f2d5b8ae4d688d1d9e88b76a9",
-          "bytes": 252742
+          "sha256": "9f6f7dbf700273690ef23ce40dec0dfab36b27e38c7d30345fa17eb2fbba6f8c",
+          "bytes": 253794
         },
         {
           "path": "quantitative/area1_room_pairs_and_bootstrap.svg",
           "format": "svg",
-          "sha256": "91bb41e8773935467310038a585eec06bf4230f70f52457d7a6238ec3f67ded0",
-          "bytes": 28975
+          "sha256": "9e39a073eaf33506402251ece1b0e13a9b9e0109ab630feb4f3821f266ab020c",
+          "bytes": 28221
         },
         {
           "path": "quantitative/area1_room_pairs_and_bootstrap.pdf",
           "format": "pdf",
-          "sha256": "5ef63db6f76e9f2328cba4d5a11f538cc322eac62447888fc19eb77a1153d564",
-          "bytes": 23550
+          "sha256": "3fa56f7bc07010ff4eb42d8f567a8eba399f69b0da4786f425440acd90a9d60e",
+          "bytes": 23498
         }
       ]
     },
@@ -913,8 +893,8 @@
         {
           "path": "quantitative/area1_train_only_scale_heatmap.svg",
           "format": "svg",
-          "sha256": "0b06b789bf00c93a87513d9638ada2ecfc464431625f27978c1146771aaeedb6",
-          "bytes": 51870
+          "sha256": "10694d74cc2beefca8a44b4f6e2a2a92fda20d1262ee40c00355ddd9463f8a28",
+          "bytes": 51810
         },
         {
           "path": "quantitative/area1_train_only_scale_heatmap.pdf",
@@ -1490,8 +1470,8 @@
         {
           "path": "quantitative/area1_train_only_scale_pareto.svg",
           "format": "svg",
-          "sha256": "a9a18ac3a95acc1789365ada6cef37c5312f0c35bd20f941c40d0228e96973bf",
-          "bytes": 36025
+          "sha256": "dc4acc925a73545b8422d23d0c158eafc0947e3baf89f6b07781e7baeefd4530",
+          "bytes": 35936
         },
         {
           "path": "quantitative/area1_train_only_scale_pareto.pdf",
@@ -1503,16 +1483,14 @@
     },
     {
       "id": "registered_training_curves",
-      "title": "Frozen and E2E registered validation trajectories",
+      "title": "Universal-model validation trajectories",
       "availability": "existing_result",
       "planned": false,
       "evidence_scope": "validation_histories_no_test_selection",
       "source_paths": [
         "results/metrics.json",
-        "results/slabim/frozen_history.json",
-        "results/slabim/e2e_history.json",
-        "results/stanford_area1/frozen_history.json",
-        "results/stanford_area1/e2e_challenger_history.json"
+        "results/slabim/history.json",
+        "results/stanford_area1/history.json"
       ],
       "numeric_payload": {
         "histories": {
@@ -1520,118 +1498,68 @@
             "frozen": [
               {
                 "epoch": 0,
-                "val_refined_abs_rel": 0.07709236043752427,
-                "val_anchor_abs_rel": 0.08476461544820257,
+                "val_refined_abs_rel": 0.07114796350374447,
+                "val_anchor_abs_rel": 0.07848316813426287,
                 "accepted": true
               },
               {
                 "epoch": 1,
-                "val_refined_abs_rel": 0.07635264138858039,
-                "val_anchor_abs_rel": 0.08476461544820257,
+                "val_refined_abs_rel": 0.07162843967601035,
+                "val_anchor_abs_rel": 0.07848316813426287,
                 "accepted": true
               },
               {
                 "epoch": 2,
-                "val_refined_abs_rel": 0.07621135615543577,
-                "val_anchor_abs_rel": 0.08476461544820257,
+                "val_refined_abs_rel": 0.07199219680348153,
+                "val_anchor_abs_rel": 0.07848316813426287,
                 "accepted": true
               },
               {
                 "epoch": 3,
-                "val_refined_abs_rel": 0.07517730237311385,
-                "val_anchor_abs_rel": 0.08476461544820257,
+                "val_refined_abs_rel": 0.07130722043343163,
+                "val_anchor_abs_rel": 0.07848316813426287,
                 "accepted": true
               },
               {
                 "epoch": 4,
-                "val_refined_abs_rel": 0.07530541747186256,
-                "val_anchor_abs_rel": 0.08476461544820257,
+                "val_refined_abs_rel": 0.07186887134577426,
+                "val_anchor_abs_rel": 0.07848316813426287,
                 "accepted": true
               },
               {
                 "epoch": 5,
-                "val_refined_abs_rel": 0.07469955858705062,
-                "val_anchor_abs_rel": 0.08476461544820257,
+                "val_refined_abs_rel": 0.07097291974379923,
+                "val_anchor_abs_rel": 0.07848316813426287,
                 "accepted": true
               },
               {
                 "epoch": 6,
-                "val_refined_abs_rel": 0.07503899226987269,
-                "val_anchor_abs_rel": 0.08476461544820257,
+                "val_refined_abs_rel": 0.07147482259367646,
+                "val_anchor_abs_rel": 0.07848316813426287,
                 "accepted": true
               },
               {
                 "epoch": 7,
-                "val_refined_abs_rel": 0.07512073063157737,
-                "val_anchor_abs_rel": 0.08476461544820257,
+                "val_refined_abs_rel": 0.07170595752338073,
+                "val_anchor_abs_rel": 0.07848316813426287,
                 "accepted": true
               },
               {
                 "epoch": 8,
-                "val_refined_abs_rel": 0.07554334828506135,
-                "val_anchor_abs_rel": 0.08476461544820257,
+                "val_refined_abs_rel": 0.07238160191772054,
+                "val_anchor_abs_rel": 0.07848316813426287,
                 "accepted": true
               },
               {
                 "epoch": 9,
-                "val_refined_abs_rel": 0.07471084120260452,
-                "val_anchor_abs_rel": 0.08476461544820257,
+                "val_refined_abs_rel": 0.07152898125516334,
+                "val_anchor_abs_rel": 0.07848316813426287,
                 "accepted": true
               },
               {
                 "epoch": 10,
-                "val_refined_abs_rel": 0.07474854570668639,
-                "val_anchor_abs_rel": 0.08476461544820257,
-                "accepted": true
-              }
-            ],
-            "e2e": [
-              {
-                "epoch": 0,
-                "val_refined_abs_rel": 0.07484920408825853,
-                "val_anchor_abs_rel": 0.08476461544820257,
-                "accepted": true
-              },
-              {
-                "epoch": 1,
-                "val_refined_abs_rel": 0.07541912132766594,
-                "val_anchor_abs_rel": 0.08476461544820257,
-                "accepted": true
-              },
-              {
-                "epoch": 2,
-                "val_refined_abs_rel": 0.07551261783937936,
-                "val_anchor_abs_rel": 0.08476461544820257,
-                "accepted": true
-              },
-              {
-                "epoch": 3,
-                "val_refined_abs_rel": 0.07495186369859165,
-                "val_anchor_abs_rel": 0.08476461544820257,
-                "accepted": true
-              },
-              {
-                "epoch": 4,
-                "val_refined_abs_rel": 0.07482337823680137,
-                "val_anchor_abs_rel": 0.08476461544820257,
-                "accepted": true
-              },
-              {
-                "epoch": 5,
-                "val_refined_abs_rel": 0.07507461201750587,
-                "val_anchor_abs_rel": 0.08476461544820257,
-                "accepted": true
-              },
-              {
-                "epoch": 6,
-                "val_refined_abs_rel": 0.07500466571608777,
-                "val_anchor_abs_rel": 0.08476461544820257,
-                "accepted": true
-              },
-              {
-                "epoch": 7,
-                "val_refined_abs_rel": 0.07496699595177368,
-                "val_anchor_abs_rel": 0.08476461544820257,
+                "val_refined_abs_rel": 0.07159928568815144,
+                "val_anchor_abs_rel": 0.07848316813426287,
                 "accepted": true
               }
             ]
@@ -1640,232 +1568,101 @@
             "frozen": [
               {
                 "epoch": 0,
-                "val_refined_abs_rel": 0.08151877240624997,
+                "val_refined_abs_rel": 0.08099202366407922,
                 "val_anchor_abs_rel": 0.08710038559868573,
                 "accepted": true
               },
               {
                 "epoch": 1,
-                "val_refined_abs_rel": 0.07775741936005186,
+                "val_refined_abs_rel": 0.07540275475754861,
                 "val_anchor_abs_rel": 0.08710038559868573,
                 "accepted": true
               },
               {
                 "epoch": 2,
-                "val_refined_abs_rel": 0.07675382764710713,
+                "val_refined_abs_rel": 0.07470198027343582,
                 "val_anchor_abs_rel": 0.08710038559868573,
                 "accepted": true
               },
               {
                 "epoch": 3,
-                "val_refined_abs_rel": 0.0737593212698129,
+                "val_refined_abs_rel": 0.0738005920614802,
                 "val_anchor_abs_rel": 0.08710038559868573,
                 "accepted": true
               },
               {
                 "epoch": 4,
-                "val_refined_abs_rel": 0.07527325918453855,
+                "val_refined_abs_rel": 0.07289164540245383,
                 "val_anchor_abs_rel": 0.08710038559868573,
                 "accepted": true
               },
               {
                 "epoch": 5,
-                "val_refined_abs_rel": 0.07143577908895099,
+                "val_refined_abs_rel": 0.07204162547601763,
                 "val_anchor_abs_rel": 0.08710038559868573,
                 "accepted": true
               },
               {
                 "epoch": 6,
-                "val_refined_abs_rel": 0.07164657481876348,
+                "val_refined_abs_rel": 0.07212700063907311,
                 "val_anchor_abs_rel": 0.08710038559868573,
                 "accepted": true
               },
               {
                 "epoch": 7,
-                "val_refined_abs_rel": 0.07012362909073362,
+                "val_refined_abs_rel": 0.07162680864472691,
                 "val_anchor_abs_rel": 0.08710038559868573,
                 "accepted": true
               },
               {
                 "epoch": 8,
-                "val_refined_abs_rel": 0.07230321098162017,
+                "val_refined_abs_rel": 0.07311120355787833,
                 "val_anchor_abs_rel": 0.08710038559868573,
                 "accepted": true
               },
               {
                 "epoch": 9,
-                "val_refined_abs_rel": 0.07007717645257777,
+                "val_refined_abs_rel": 0.07115397576747268,
                 "val_anchor_abs_rel": 0.08710038559868573,
                 "accepted": true
               },
               {
                 "epoch": 10,
-                "val_refined_abs_rel": 0.0700511324637905,
+                "val_refined_abs_rel": 0.07135035973221276,
                 "val_anchor_abs_rel": 0.08710038559868573,
                 "accepted": true
               },
               {
                 "epoch": 11,
-                "val_refined_abs_rel": 0.07039045837383111,
-                "val_anchor_abs_rel": 0.08710038559868573,
-                "accepted": true
-              }
-            ],
-            "e2e": [
-              {
-                "epoch": 0,
-                "val_refined_abs_rel": 0.07040458962112447,
-                "val_anchor_abs_rel": 0.08710038559868573,
-                "accepted": true
-              },
-              {
-                "epoch": 1,
-                "val_refined_abs_rel": 0.0701857275945597,
-                "val_anchor_abs_rel": 0.08710038559868573,
-                "accepted": true
-              },
-              {
-                "epoch": 2,
-                "val_refined_abs_rel": 0.07110625068054757,
-                "val_anchor_abs_rel": 0.08710038559868573,
-                "accepted": true
-              },
-              {
-                "epoch": 3,
-                "val_refined_abs_rel": 0.07348877889887223,
-                "val_anchor_abs_rel": 0.08710038559868573,
-                "accepted": true
-              },
-              {
-                "epoch": 4,
-                "val_refined_abs_rel": 0.07254746107278104,
+                "val_refined_abs_rel": 0.0712672297231037,
                 "val_anchor_abs_rel": 0.08710038559868573,
                 "accepted": true
               }
             ]
           }
-        },
-        "area1_validation_promotion": {
-          "frozen_abs_rel": 0.070050263,
-          "e2e_challenger_abs_rel": 0.07018539,
-          "e2e_promoted": false
         }
       },
       "cautions": [
-        "Frozen and E2E x-axes are local epochs from separate registered histories.",
-        "The Area 1 E2E challenger was not promoted by validation."
+        "Each curve is one deterministic training run; this is not a seed variance plot."
       ],
       "files": [
         {
           "path": "quantitative/registered_training_curves.png",
           "format": "png",
-          "sha256": "863d8c150f196d63eb1b9e67c074809937c49e1578cee8d3438ec29e196c2d38",
-          "bytes": 261950
+          "sha256": "537f4304456c8e6054879ce643f2d90f903a23c24e20ff764e145603149fcc55",
+          "bytes": 206909
         },
         {
           "path": "quantitative/registered_training_curves.svg",
           "format": "svg",
-          "sha256": "8988dd82e9dc2f7da5fed420e6d3b42acb364f03b40fff8d2a04596c630ecdbd",
-          "bytes": 32559
+          "sha256": "4846cd25e7791464195c8bde1b324ab87b80226aa962a1d67f25c5f264719ecd",
+          "bytes": 29330
         },
         {
           "path": "quantitative/registered_training_curves.pdf",
           "format": "pdf",
-          "sha256": "7f4736692f7851f1af7e79c45795fc284d0fdb4a892388b6ecf8b59172269108",
-          "bytes": 18040
-        }
-      ]
-    },
-    {
-      "id": "historical_slabim_validation_ablation",
-      "title": "Historical single-seed SLABIM validation ablation",
-      "availability": "historical_existing_result",
-      "planned": false,
-      "evidence_scope": "historical_validation_single_seed_nonfinal_protocol",
-      "source_paths": [
-        "results/slabim/legacy_ablation_summary.json"
-      ],
-      "numeric_payload": {
-        "direct_bim_validation_baseline": 0.1266711468096988,
-        "first_stage": [
-          {
-            "experiment": "slabim_single_frame_r50_v5_pretrain",
-            "abs_rel": 0.10233455866818678,
-            "epoch_zero_based": 6,
-            "completed_epochs": 13,
-            "epoch_budget": 18
-          },
-          {
-            "experiment": "slabim_single_frame_r50_v5_no_bim_input",
-            "abs_rel": 0.10411096696968354,
-            "epoch_zero_based": 6,
-            "completed_epochs": 13,
-            "epoch_budget": 18
-          },
-          {
-            "experiment": "slabim_single_frame_r50_v5_single_residual",
-            "abs_rel": 0.09913863936696118,
-            "epoch_zero_based": 3,
-            "completed_epochs": 10,
-            "epoch_budget": 18
-          },
-          {
-            "experiment": "slabim_single_frame_r50_v5_no_robust",
-            "abs_rel": 0.10311993993961324,
-            "epoch_zero_based": 5,
-            "completed_epochs": 12,
-            "epoch_budget": 18
-          }
-        ],
-        "second_stage": [
-          {
-            "experiment": "slabim_single_frame_r50_v5",
-            "abs_rel": 0.09647512253905453,
-            "epoch_zero_based": 6,
-            "completed_epochs": 12,
-            "epoch_budget": 12
-          },
-          {
-            "experiment": "slabim_single_frame_r50_v5_no_routing",
-            "abs_rel": 0.1018301295845976,
-            "epoch_zero_based": 6,
-            "completed_epochs": 12,
-            "epoch_budget": 12
-          }
-        ],
-        "protocol": {
-          "seed": 42,
-          "selection_split": "5F_Region3",
-          "single_training_seed": true,
-          "training_source_sha256": "f2030855d05efba20fbe6fe1dd7a8bda5118cbda9a7249fd8e28f0400cd61145",
-          "first_stage_comparison": "fresh training with a common 18-epoch budget",
-          "second_stage_comparison": "same frozen initialization and 12-epoch budget",
-          "second_stage_initialization_sha256": "b804a1143df861f817a7f7ac9f8c8a22d9c4ff55a7c4bafd91c3e2f6001e531a"
-        }
-      },
-      "cautions": [
-        "Historical validation, seed 42 only; do not present as final-test evidence.",
-        "Only within-stage comparisons share initialization and budget.",
-        "A current-protocol multi-seed ablation remains planned."
-      ],
-      "files": [
-        {
-          "path": "quantitative/historical_slabim_validation_ablation.png",
-          "format": "png",
-          "sha256": "4359ec43b34401fef038b82e9cb139b107365ade827b78399260446dab1d6fdc",
-          "bytes": 229683
-        },
-        {
-          "path": "quantitative/historical_slabim_validation_ablation.svg",
-          "format": "svg",
-          "sha256": "c76d82033e62eeb98c5dca7ac18ac429ede95d4ea4896afc9c1eac9315d4d1fd",
-          "bytes": 18234
-        },
-        {
-          "path": "quantitative/historical_slabim_validation_ablation.pdf",
-          "format": "pdf",
-          "sha256": "eca55974156c4004b6e7411d6de6645d74c8b64c3c04284fa7ff8afe9effc876",
-          "bytes": 23444
+          "sha256": "f3602e9b9f7dc63e14306ffee45e576f9f9de59e3f6df8b89ab3afa4e118cf63",
+          "bytes": 19379
         }
       ]
     },
@@ -1890,8 +1687,8 @@
         {
           "path": "process/candidate_a_method_pipeline.svg",
           "format": "svg",
-          "sha256": "7838f80fdb092f588b15e0d2c5d272453244dc2924c3bdbfa509f1e77301f837",
-          "bytes": 10558
+          "sha256": "d0601623936dded968d2728bfbfdd8f3810311d8582a81d2230eb14033f8292d",
+          "bytes": 10442
         },
         {
           "path": "process/candidate_a_method_pipeline.pdf",
@@ -1922,8 +1719,8 @@
         {
           "path": "process/candidate_b_dual_stream_architecture.svg",
           "format": "svg",
-          "sha256": "9247f46bafd0e29fb8458be8b0e49c94beba41a3f7f39abe2893077479a3a6bc",
-          "bytes": 14342
+          "sha256": "a0f275ef0437e0d419356ee656679c3254c827f591c91bdfb538e857c5ce9f5b",
+          "bytes": 14175
         },
         {
           "path": "process/candidate_b_dual_stream_architecture.pdf",
@@ -1954,8 +1751,8 @@
         {
           "path": "process/candidate_c_evaluation_protocol.svg",
           "format": "svg",
-          "sha256": "2d1e3960d2bfb44df5646ba7bc08c06607c3e2c33d05303cfaeda8666d347a02",
-          "bytes": 15237
+          "sha256": "59f1a9f820985b82c4cfa225620dc2f001cd67ad1e9f4c8fcea5cef429648c37",
+          "bytes": 15075
         },
         {
           "path": "process/candidate_c_evaluation_protocol.pdf",

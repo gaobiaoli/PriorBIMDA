@@ -55,7 +55,7 @@ def test_model_config_differences_reports_behavioral_overrides() -> None:
     }
 
 
-def test_stanford_target_only_anchor_and_init_policies_do_not_leak_to_source() -> None:
+def test_slabim_and_stanford_share_scale_and_anchor_semantics() -> None:
     frozen_source = load_config("configs/stanford_area1_transfer.yaml")
     e2e_source = load_config("configs/stanford_area1_transfer_e2e.yaml")
     frozen_target = load_config("configs/stanford_area1.yaml")
@@ -63,12 +63,16 @@ def test_stanford_target_only_anchor_and_init_policies_do_not_leak_to_source() -
 
     for source in (frozen_source, e2e_source):
         assert "residual_anchor_mode" not in source.model
-        assert "residual_routing_scope" not in source.model
         assert "init_checkpoint_policy" not in source.train
         assert "refiner_head_warmup_epochs" not in source.train
-    for target in (frozen_target, e2e_target):
-        assert target.model.residual_anchor_mode == "robust_bim_direct"
-        assert target.model.residual_routing_scope == "frame_only"
+    all_configs = (frozen_source, e2e_source, frozen_target, e2e_target)
+    for config in all_configs:
+        assert "residual_anchor_mode" not in config.model
+        assert config.model.residual_routing_scope == "frame_only"
+        assert config.model.scale_estimator == frozen_source.model.scale_estimator
+        assert config.model.scale_estimator.name == "log_upper_cap_v1"
+        assert config.model.scale_estimator.q10_log_cap == "inf"
+        assert config.model.scale_estimator.q25_log_cap == 0.05
     assert frozen_target.train.init_checkpoint_policy == "zero_multiplicative_residual_heads"
     assert e2e_target.train.init_checkpoint_policy == "preserve"
     assert frozen_target.train.refiner_head_warmup_epochs == 1

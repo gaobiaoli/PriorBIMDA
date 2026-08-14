@@ -1,95 +1,38 @@
 {
-  "schema_version": 1,
-  "note": "outputs/ is intentionally gitignored. Publish checkpoints as release assets and verify them against this manifest.",
+  "schema_version": 2,
+  "note": "Only the two universal frozen models are retained. outputs/ is gitignored; publish these checkpoints as release assets.",
+  "universal_scale_protocol": {
+    "path": "data/provenance/universal_scale_estimator_v1.json",
+    "sha256": "361fc2c97ffca9dde1a3a1b6b97fcd1d894003809a01935205f16cb4043c3ba1"
+  },
   "checkpoints": [
     {
-      "role": "slabim_frozen_primary",
+      "role": "slabim_universal_primary",
       "path": "outputs/slabim/accepted.pt",
-      "bytes": 30515809,
-      "sha256": "a0e339fe96652e30d9a685bce2ae5c9197005b2508379176cef3d47d76d9b719",
+      "bytes": 30551521,
+      "sha256": "a130a7acc511f6728fcf6fe3e20bdc4d548274f846634a35ca117835069aa6f4",
       "download_url": null,
       "publish": true
     },
     {
-      "role": "slabim_e2e_optional",
-      "path": "outputs/slabim_e2e/accepted.pt",
-      "bytes": 1389475613,
-      "sha256": "5ec9d25f58d16ff9e790c9a5763fd25a816392d3025c3d5c381baf6e9501e583",
-      "download_url": null,
-      "publish": true
-    },
-    {
-      "role": "stanford_area1_frozen_primary",
+      "role": "stanford_area1_universal_primary",
       "path": "outputs/stanford_area1/accepted.pt",
-      "bytes": 30546465,
-      "sha256": "b651c1908fd3ebc9415471c3e1d96bada0b9e22b69602fdde29b138345fc00f4",
+      "bytes": 30547361,
+      "sha256": "ffc69e51bfca6e0619d19c1665f2748d35b24c48c33f67303f646ae74cdcc711",
       "download_url": null,
       "publish": true
-    },
-    {
-      "role": "stanford_area1_e2e_challenger",
-      "path": null,
-      "bytes": 1389499357,
-      "sha256": "c60f4375df354066fa82e7c7e67cee821dbfb73341d883184228c2cad429d5a6",
-      "download_url": null,
-      "publish": false,
-      "reason": "Validation AbsRel was 0.193% worse than the frozen target model."
     }
   ],
   "primary_results": [
-    {
-      "path": "results/slabim/frozen_test_summary.json",
-      "sha256": "e2f062b1bba8c9f63f775a59d05c046d84538911a23d557002e64b0428eb8460"
-    },
-    {
-      "path": "results/slabim/e2e_test_summary.json",
-      "sha256": "999fb88425cbdb3bfbb1851e5a359333cff09a6df79b244b76a7b75b9384f677"
-    },
-    {
-      "path": "results/stanford_area1/frozen_val_summary.json",
-      "sha256": "1e79bc938a6828fd763735ec051b7c10762c3350af74035ccdffda0e43ceb872"
-    },
-    {
-      "path": "results/stanford_area1/frozen_test_summary.json",
-      "sha256": "a9a69ecf3b6d032164e7c869399e7fedfefc488c84a3aa18b9a95d09abb963ab"
-    },
-    {
-      "path": "results/stanford_area1/e2e_challenger_val_summary.json",
-      "sha256": "8760626f8cb4db7b47f3936e37c6b1deb97faa72f7ef405d20a6e0ad130c0f60"
-    }
+    {"path": "results/slabim/test_summary.json", "sha256": "1ef45d21e626e16198a0d325d2a492129d46e2cfe21b00c9ed9201dc0626199d"},
+    {"path": "results/slabim/reconstruction_test/summary.json", "sha256": "82fd4a4ce264867f6a2563b469be0d131d5561524cc4da5a37e0c6ae938c0cf6"},
+    {"path": "results/stanford_area1/val_summary.json", "sha256": "46f76ac70f31314a225982934bf2dfaf3378f91fdea565be44a93928189e87d5"},
+    {"path": "results/stanford_area1/test_summary.json", "sha256": "8e2690d6ea44fed3913d32e7b9a7371cc566ab70a9004062ae4058bf84b20853"}
   ],
   "training_audits": [
-    {
-      "path": "results/slabim/frozen_history.json",
-      "sha256": "47467ce59de0b9b80afb59ace00273050dd5bf89e3d6f1b724ceeaf70972d834"
-    },
-    {
-      "path": "results/slabim/frozen_run_state.json",
-      "sha256": "76f9a22c7af56c415ec917879c60062e3b00b2fc08375c302fc1cdf9cec80d40"
-    },
-    {
-      "path": "results/slabim/e2e_history.json",
-      "sha256": "6785d4f2c66553b234232bf2a1609a75b822f08a744f530260f567ad67c5a366"
-    },
-    {
-      "path": "results/slabim/e2e_run_state.json",
-      "sha256": "b2072a3e3fc52c3a7b6e72e65d4a308b3414a739957b564ae721ff6b5bd7ab32"
-    },
-    {
-      "path": "results/stanford_area1/frozen_history.json",
-      "sha256": "e76aec318264e9f81daa17ef845f8e1f745939ac540f3bafa81d0d0cd87af3fd"
-    },
-    {
-      "path": "results/stanford_area1/frozen_run_state.json",
-      "sha256": "b47401dc7a76854666209e799d068836632db3bf56645e3fe5028563b5cf9036"
-    },
-    {
-      "path": "results/stanford_area1/e2e_challenger_history.json",
-      "sha256": "dd64ad786dfeae3224777a6d2ce8d4402865d91a75083152bb950cd3b9dc9847"
-    },
-    {
-      "path": "results/stanford_area1/e2e_challenger_run_state.json",
-      "sha256": "679ba65f6553ed8d0430b6b90225b160979d452d227e5954d4d8673ef69419f2"
-    }
+    {"path": "results/slabim/history.json", "sha256": "384ad577e7f3cd68d61428ac0967ff8601324ab8fc41f63fb373557095422aa0"},
+    {"path": "results/slabim/run_state.json", "sha256": "7d646a646cede6e90cfbfb59e9da1e5444178815b50bc07ce04abbe1482dc0a6"},
+    {"path": "results/stanford_area1/history.json", "sha256": "54bd56f9a1e0b796b38a4b9ddb0ac43a67511040037413538ad03e3b4b896c28"},
+    {"path": "results/stanford_area1/run_state.json", "sha256": "16782b5eafa1078402851f880305a74552e865dd55bc89b2e61b23edfa1a3087"}
   ]
 }

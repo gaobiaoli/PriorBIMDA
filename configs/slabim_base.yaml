@@ -40,6 +40,9 @@ data:
   local_files_only: false
   da3_require_pinned_revision: true
   da3_process_res: 504
+  # Cached historical baselines used q45.  Always rebuild model inputs from
+  # base_depth + BIM with the single public estimator below.
+  recompute_cached_baselines: true
 
 model:
   # Serialized compatibility token used by existing V5 checkpoints.
@@ -53,6 +56,15 @@ model:
   max_low_log_residual: 0.25
   max_detail_log_residual: 0.15
   max_total_log_residual: 0.45
+  # One fixed estimator is shared by SLABIM and Area_1.  It uses only DA3 and
+  # BIM at runtime; no target GT, room-specific tuning, or test-time fitting.
+  scale_estimator:
+    name: log_upper_cap_v1
+    q10_log_cap: "inf"
+    q25_log_cap: 0.05
+    ratio_min: 0.2
+    ratio_max: 5.0
+    min_samples: 100
 
 loss:
   depth: 1.0
@@ -105,3 +117,5 @@ train:
 evaluation:
   distance_bins: [0.2, 1.0, 2.0, 3.0, 5.0]
   min_valid_points: 50
+  universal_scale_protocol: data/provenance/universal_scale_estimator_v1.json
+  universal_scale_protocol_sha256: 361fc2c97ffca9dde1a3a1b6b97fcd1d894003809a01935205f16cb4043c3ba1

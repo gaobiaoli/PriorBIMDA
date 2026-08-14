@@ -718,8 +718,17 @@ def prepare_region(
                 *target_shape,
                 float(cfg.data.max_depth),
             )
-            bim_valid = np.isfinite(bim_depth) & (bim_depth >= float(cfg.data.min_depth))
+            bim_valid = (
+                np.isfinite(bim_depth)
+                & (bim_depth >= float(cfg.data.min_depth))
+                & (bim_depth <= float(cfg.data.max_depth))
+            )
             bim_edge = depth_edges(bim_depth, bim_valid)
+            # A single support contract is shared with the Stanford adapter and
+            # every CPU/tensor scale estimator: invalid BIM is represented by
+            # exact zero depth and zero normals, never by a positive hidden hit.
+            bim_depth = np.where(bim_valid, bim_depth, 0.0).astype(np.float32)
+            bim_normals = np.where(bim_valid[None], bim_normals, 0.0).astype(np.float32)
             payload = {
                 "base_depth": _store_depth(base_depth),
                 "base_confidence": np.nan_to_num(base_confidence).astype(np.float16),

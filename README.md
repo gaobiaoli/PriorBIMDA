@@ -5,16 +5,17 @@ BIM-PriorDA3 用固定 BIM 几何先验细化单帧度量深度。仓库目前�
 位姿/配准、DA3 缓存、样本制备、训练和固定支持集评测均有脚本。
 
 ```text
-RGB ──> pinned DA3 metric depth ──> global/robust scale
-                         BIM ─────> direct local BIM anchor
+RGB ──> pinned DA3 metric depth ──> one frozen universal scale ──> depth anchor
+                         BIM ─────> geometry condition + deterministic comparator
 RGB + DA3 geometry + BIM features ─> bounded multi-scale residual ─> depth
 ```
 
-当前主模型不是旧版 BIM/V1 加权融合。网络以非学习 BIM-direct 结果为安全锚点，学习帧级、
-低频和细节 log-residual；Area_1 模型还使用 train-only 选出的 robust scale cap，并在初始化时
-把跨域残差头归零。推理不读取 GT、语义标签或家具 mask。
+当前主模型不是旧版 BIM/V1 加权融合。SLABIM 与 Area_1 使用完全相同的尺度规则，网络以
+尺度矫正后的 DA3 为锚点，学习帧级、低频和细节 log-residual；BIM-direct 只作为共享的强
+非学习比较器。Area_1 跨域初始化会把残差头归零。推理不读取 GT、语义标签或家具 mask。
+公式、参数来源与适用边界见[统一尺度协议](docs/UNIVERSAL_SCALE_PROTOCOL.md)。
 
-## 已冻结结果
+## 统一协议结果
 
 统一深度协议为 `0.2–5.0 m`，下表是 pixel-micro 指标。原始 DA3 的 AbsRel 在 SLABIM
 test 为 `0.19935`，在 Area_1 blind test 为 `0.30123`。
@@ -22,16 +23,21 @@ test 为 `0.19935`，在 Area_1 blind test 为 `0.30123`。
 | 数据集 / 方法 | 帧数 | AbsRel | MAE (m) | RMSE (m) | δ1 |
 |---|---:|---:|---:|---:|---:|
 | SLABIM raw DA3 | 108 | 0.19935 | 0.31109 | 0.42167 | 0.76328 |
-| SLABIM direct BIM | 108 | 0.08145 | 0.12939 | 0.28306 | 0.92385 |
-| SLABIM frozen refiner | 108 | **0.06211** | **0.09689** | **0.23257** | **0.96429** |
-| SLABIM E2E | 108 | **0.06133** | **0.09626** | 0.23771 | **0.96617** |
+| SLABIM universal scale | 108 | 0.06361 | 0.10316 | 0.24305 | 0.96457 |
+| SLABIM universal BIM-direct | 108 | 0.06263 | 0.10334 | 0.24761 | 0.96320 |
+| SLABIM learned refiner | 108 | **0.05601** | **0.09210** | **0.22725** | **0.97759** |
 | Area_1 raw DA3 | 1641 | 0.30123 | 0.67323 | 0.83485 | 0.26437 |
-| Area_1 robust BIM-direct | 1641 | 0.07815 | 0.13891 | 0.31350 | 0.93740 |
-| Area_1 frozen refiner | 1641 | **0.06792** | **0.11748** | **0.30419** | **0.94042** |
+| Area_1 universal scale | 1641 | 0.07752 | 0.13938 | 0.31541 | 0.93710 |
+| Area_1 universal BIM-direct | 1641 | 0.07815 | 0.13891 | 0.31350 | 0.93740 |
+| Area_1 learned refiner | 1641 | **0.06689** | **0.11761** | **0.30823** | **0.94295** |
 
-Area_1 E2E challenger 的 validation AbsRel 为 `0.07019`，略差于 frozen 模型的 `0.07005`，
-因此没有晋级，也没有读取 blind test。机器可读汇总见 [results/metrics.json](results/metrics.json)，
-完整 summary、逐帧 CSV、区域交叉验证和图表均在 [results/](results/)。
+相对同一 `universal BIM-direct`，学习模型在 SLABIM/Area_1 test 的 AbsRel 分别改善
+`10.56%/14.41%`。Area_1 家具子集也改善；BIM 冲突子集的点估计改善，但其房间级 AbsRel
+bootstrap 95% CI 跨 0，不能宣称该子集已有显著优势。机器可读汇总、逐帧结果和训练审计见
+[results/](results/)。
+
+SLABIM 的 108 帧三维融合评测也优于 direct：Chamfer-L1 0.09109 m vs. 0.10515 m，
+F-score@10 cm 0.79622 vs. 0.74003。
 
 ## 安装
 
@@ -73,7 +79,7 @@ pip install -e /path/to/depth-anything-3
   --slabim-root ../SLABIM --stages all
 ```
 
-流程依次执行 download → poses → verify → prepare → audit → baselines → pretrain →
+流程依次执行 download → poses → verify → prepare → audit → pretrain →
 finetune → evaluate → reconstruct；状态写入 `outputs/pipeline_state_slabim.json`。固定 annotation
 在引入数据时排除 `ignore.txt` 的 90 个坏帧，并额外隔离 13 个共享 fused-LiDAR 帧；有效
 train/val/test 为 `496/104/108`。
@@ -118,11 +124,9 @@ IFC 已足够计算；RVT 仅用于来源审计，可用 `--include-rvt` 下载�
 | 配置 | 用途 |
 |---|---|
 | `slabim_base.yaml` | 公共模型与数据默认值 |
-| `slabim_cv_pretrain.yaml` / `slabim_cv.yaml` | 区域 CV 两阶段模板 |
 | `slabim_pretrain.yaml` / `slabim.yaml` | pooled-clean frozen 两阶段训练 |
 | `slabim_e2e.yaml` | SLABIM DA3 decoder/last-stage 联合微调 |
 | `slabim_inference_example.yaml` | 新区域、无 GT 输入示例 |
-| `slabim_region_cv.yaml` | 六区域交叉验证协议 |
 | `stanford_area1_transfer*.yaml` | SLABIM checkpoint 零样本迁移评测 |
 | `stanford_area1.yaml` | Area_1 最终 frozen target 模型 |
 | `stanford_area1_e2e.yaml` | 未晋级的 E2E challenger 协议 |
@@ -164,10 +168,10 @@ E2E 权重应放 GitHub Release 或 Hugging Face，不应直接提交 Git 历史
 - [训练前数据操作手册](docs/DATA_PREPARATION.md)
 - [实验与数据流水线](docs/EXPERIMENT_PIPELINE.md)
 - [三种深度改进方法](docs/THREE_DEPTH_REFINEMENT_METHODS.md)
+- [统一尺度估计与模型锚点协议](docs/UNIVERSAL_SCALE_PROTOCOL.md)
 - [Area_1 + BIMSyn 技术与结果](docs/STANFORD_BIMSYNC_EVALUATION.md)
 - [科研评测协议、消融与敏感性设计](docs/EVALUATION_PROTOCOL.md)
 - [论文与 PPT 素材目录](docs/assets/paper_evaluation/README.md)
-- [区域误差分析](docs/REGION_ERROR_ANALYSIS.md)
 - [Codex 对话要点与项目演化](docs/CODEX_WORKFLOW.md)
 
 ## 许可与研究边界

@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from bim_priorda3.baselines import previous_scale_baselines
+from bim_priorda3.baselines import configured_scale_and_local_features
 from bim_priorda3.checkpoints import validate_checkpoint_model_config
 from bim_priorda3.config import load_config, resolve_project_path, resolve_slabim_root
 from bim_priorda3.data import BIMDepthDataset
@@ -22,11 +22,12 @@ from bim_priorda3.reconstruction import (
     save_point_cloud,
     voxel_downsample,
 )
+from bim_priorda3.scale_protocol import validate_universal_scale_protocol
 
 METHOD_COLORS = {
     "base": (0.20, 0.55, 0.95),
-    "global_scale": (0.35, 0.75, 0.35),
-    "previous_scale_local": (0.95, 0.65, 0.20),
+    "universal_global_scale": (0.35, 0.75, 0.35),
+    "universal_bim_direct": (0.95, 0.65, 0.20),
     "coarse": (0.65, 0.35, 0.85),
     "refined": (0.95, 0.30, 0.25),
     "gt": (0.70, 0.70, 0.70),
@@ -46,7 +47,7 @@ def parse_args() -> argparse.Namespace:
         "--methods",
         nargs="+",
         choices=tuple(name for name in METHOD_COLORS if name != "gt"),
-        default=("base", "previous_scale_local", "refined"),
+        default=("base", "universal_bim_direct", "refined"),
     )
     parser.add_argument("--pixel-stride", type=int, default=4)
     parser.add_argument("--voxel-size", type=float, default=0.05)
@@ -72,6 +73,7 @@ def _batch(sample: dict, device: torch.device) -> dict:
 def main() -> None:
     args = parse_args()
     cfg = load_config(args.config)
+    scale_protocol = validate_universal_scale_protocol(cfg)
     slabim = resolve_slabim_root(cfg)
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     dataset = BIMDepthDataset(cfg, args.split, augment=False)
@@ -108,11 +110,15 @@ def main() -> None:
             output_prediction = model(batch)
             base = batch["base_depth"][0, 0].float().cpu().numpy()
             bim = batch["bim_depth"][0, 0].float().cpu().numpy()
-            scaled, previous, _ = previous_scale_baselines(base, bim)
+            scaled, direct, _, _, _ = configured_scale_and_local_features(
+                base,
+                bim,
+                cfg.model.scale_estimator,
+            )
             predictions = {
                 "base": base,
-                "global_scale": scaled,
-                "previous_scale_local": previous,
+                "universal_global_scale": scaled,
+                "universal_bim_direct": direct,
                 "coarse": output_prediction["coarse_depth"][0, 0].float().cpu().numpy(),
                 "refined": output_prediction["depth"][0, 0].float().cpu().numpy(),
             }
@@ -207,6 +213,7 @@ def main() -> None:
         "voxel_size_m": args.voxel_size,
         "depth_range_m": [float(cfg.data.min_depth), float(cfg.data.max_depth)],
         "thresholds_m": args.thresholds,
+        "universal_scale_protocol": scale_protocol,
         "aggregate": aggregate,
         "per_region": per_region,
     }

@@ -64,10 +64,13 @@ def test_inference_dataset_does_not_require_ground_truth(tmp_path: Path) -> None
         encoding="utf-8",
     )
 
-    cfg = load_config("configs/slabim_cv.yaml")
+    cfg = load_config("configs/slabim.yaml")
     cfg.project_root = str(tmp_path)
     cfg.data.processed_root = "processed"
     cfg.data.regions = ["new_region"]
+    cfg.data.split_annotation = None
+    cfg.data.split_annotation_sha256 = None
+    cfg.data.split_fingerprint_sha256 = None
     dataset = BIMDepthDataset(
         cfg,
         split=None,
@@ -80,21 +83,6 @@ def test_inference_dataset_does_not_require_ground_truth(tmp_path: Path) -> None
     assert "trust_target" not in item
     assert "anchor_depth" not in item
     assert np.isclose(float(item["scaled_depth"].mean()), 2.2)
-
-    cfg.model.scale_estimator = {
-        "name": "log_upper_cap_v1",
-        "q10_log_cap": 0.20,
-        "q25_log_cap": 0.05,
-    }
-    cfg.model.residual_anchor_mode = "robust_bim_direct"
-    anchored_item = BIMDepthDataset(
-        cfg,
-        split=None,
-        augment=False,
-        require_ground_truth=False,
-    )[0]
-    assert "anchor_depth" in anchored_item
-    assert np.isclose(float(anchored_item["anchor_depth"].mean()), 2.2)
 
     supervised = BIMDepthDataset(
         cfg,
@@ -147,10 +135,13 @@ def test_supervised_dataset_can_recompute_float32_baselines(
         encoding="utf-8",
     )
 
-    cfg = load_config("configs/slabim_cv_pretrain.yaml")
+    cfg = load_config("configs/slabim_pretrain.yaml")
     cfg.project_root = str(tmp_path)
     cfg.data.processed_root = "processed"
     cfg.data.regions = ["new_region"]
+    cfg.data.split_annotation = None
+    cfg.data.split_annotation_sha256 = None
+    cfg.data.split_fingerprint_sha256 = None
     dataset = BIMDepthDataset(
         cfg,
         split=None,
@@ -208,10 +199,13 @@ def test_dataset_uses_configured_robust_scale_for_scaled_anchor_and_trust(
         + "\n",
         encoding="utf-8",
     )
-    cfg = load_config("configs/slabim_cv.yaml")
+    cfg = load_config("configs/slabim.yaml")
     cfg.project_root = str(tmp_path)
     cfg.data.processed_root = "processed"
     cfg.data.regions = ["new_region"]
+    cfg.data.split_annotation = None
+    cfg.data.split_annotation_sha256 = None
+    cfg.data.split_fingerprint_sha256 = None
     cfg.data.recompute_cached_baselines = False
     cfg.model.scale_estimator = {
         "name": "log_upper_cap_v1",
@@ -269,7 +263,7 @@ def test_dataset_uses_exhaustive_annotation_without_copying_records(
         encoding="utf-8",
     )
 
-    cfg = load_config("configs/slabim_cv.yaml")
+    cfg = load_config("configs/slabim.yaml")
     cfg.project_root = str(tmp_path)
     cfg.data.processed_root = "processed"
     cfg.data.regions = ["RegionA"]
@@ -278,6 +272,8 @@ def test_dataset_uses_exhaustive_annotation_without_copying_records(
     cfg.data.test_regions = []
     cfg.data.record_stride_by_region = {}
     cfg.data.split_annotation = str(annotation_path)
+    cfg.data.split_annotation_sha256 = None
+    cfg.data.split_fingerprint_sha256 = None
 
     train = BIMDepthDataset(cfg, "train", augment=False)
     val = BIMDepthDataset(cfg, "val", augment=False)

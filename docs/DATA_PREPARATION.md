@@ -89,15 +89,6 @@ SLABIM BIM、相机/雷达标定、RGB、SLAM PCD 和用于恢复位姿的 rosba
 fused-LiDAR embargo），活动 train/val/test = `496/104/108`。审计必须确认
 fused-LiDAR 在活动 split 间无交集。
 
-### 3.5 缓存非学习基线
-
-```bash
-.venv/bin/python scripts/data/cache_bim_baselines.py --config configs/slabim.yaml
-```
-
-这一步在样本中固定 global scale 与 direct BIM anchor。完成后才进入
-`scripts/model/train.py`。
-
 ## 4. Area_1 + BIMSyn：从授权下载到训练就绪
 
 ### 4.1 获取与逐文件校验

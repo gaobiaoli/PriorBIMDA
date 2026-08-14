@@ -56,11 +56,10 @@ workspace/
 4. `prepare`：运行 pinned DA3，渲染 BIM，生成 NPZ + manifest。
 5. `audit`：验证 811 条 exhaustive annotation、90 个坏帧、13 个 LiDAR embargo，以及
    `496/104/108` train/val/test。
-6. `baselines`：缓存 global scale 与 direct BIM 非学习基线。
-7. `pretrain`：使用 `configs/slabim_pretrain.yaml`。
-8. `finetune`：从 pretrain checkpoint 初始化 `configs/slabim.yaml`。
-9. `evaluate`：固定 test support 评测 raw DA3、scale、BIM-direct、refined。
-10. `reconstruct`：将预测反投影到 BIM 坐标并进行 3D 评测。
+6. `pretrain`：使用 `configs/slabim_pretrain.yaml`。
+7. `finetune`：从 pretrain checkpoint 初始化 `configs/slabim.yaml`。
+8. `evaluate`：固定 test support 评测 raw DA3、scale、BIM-direct、refined。
+9. `reconstruct`：将预测反投影到 BIM 坐标并进行 3D 评测。
 
 运行状态写到 `outputs/pipeline_state_slabim.json`。默认跳过已验证阶段；`--force` 只应在确认
 对应原始输入仍完整时使用。删除 rosbag 后不要强制重算 poses。
@@ -88,9 +87,6 @@ workspace/
 .venv/bin/python scripts/data/audit_dataset.py \
   --config configs/slabim.yaml \
   --ignore-file ignore.txt
-
-.venv/bin/python scripts/data/cache_bim_baselines.py \
-  --config configs/slabim.yaml
 
 .venv/bin/python scripts/model/train.py \
   --config configs/slabim_pretrain.yaml --device cuda
@@ -137,25 +133,6 @@ E2E 是可选第三阶段；它加载当前 frozen checkpoint，并只微调 DA3
 ```
 
 该路径不加载 LiDAR GT，但仍需要可靠的相机到 BIM 位姿。
-
-### 2.4 区域交叉验证
-
-```bash
-.venv/bin/python scripts/pipelines/run_region_cv.py \
-  --protocol configs/slabim_region_cv.yaml
-
-# 先用单个 fold/seed 确认资源与输出，再扩展到完整协议
-.venv/bin/python scripts/pipelines/run_region_cv.py \
-  --protocol configs/slabim_region_cv.yaml \
-  --fold 0 --seed 42 \
-  --stage all
-
-.venv/bin/python scripts/pipelines/summarize_region_cv.py \
-  outputs/slabim_region_cv
-```
-
-主 pooled 模型不需要交叉验证；此协议只用于区域稳定性报告。
-省略 `--fold` 和 `--seed` 会执行协议中注册的全部 6×3 个运行。
 
 ## 3. Area_1 + BIMSyn 完整流程
 
@@ -306,7 +283,8 @@ direct audit，并记录 val/test opened=0：
   --device cuda
 ```
 
-训练会对跨域 residual heads 精确归零，以 robust BIM-direct 为乘法锚点。先在 val 锁定
+训练会对跨域 residual heads 精确归零，以统一尺度化 DA3 为乘法锚点；BIM-direct 只作
+确定性基线和验收对照。先在 val 锁定
 checkpoint；只在模型、配置和 claim 全部冻结后运行一次 test：
 
 ```bash
@@ -354,7 +332,6 @@ Area_1 主 claim 应同时检查 `all`、`furniture` 和 `bim_foreground_conflic
 | `data/prepare_dataset.py` | 制备 SLABIM supervised 或 inference-only NPZ/manifest |
 | `data/build_global_split.py` | 构建 SLABIM pooled annotation，不复制源文件 |
 | `data/audit_dataset.py` | 审计 manifest、annotation、ignore、stride 和 LiDAR 隔离 |
-| `data/cache_bim_baselines.py` | 在已制备样本中缓存 scale/direct BIM 基线 |
 | `data/download_stanford_area1.py` | 下载/解压 Area_1，并从 BIMSyn 发布目录下载 IFC/RVT |
 | `data/verify_stanford_bimsyn_sources.py` | 按固定清单验证 Area_1 和 BIMSyn 并写 receipt |
 | `data/register_stanford_bimsyn.py` | 估计固定 BIM room → Area 4-DoF 变换 |
@@ -382,8 +359,6 @@ Area_1 主 claim 应同时检查 `all`、`furniture` 和 `bim_foreground_conflic
 | 脚本 | 作用 |
 |---|---|
 | `pipelines/run_slabim_experiments.py` | SLABIM 可续跑主流程 |
-| `pipelines/run_region_cv.py` | 生成/执行注册的 region-CV folds |
-| `pipelines/summarize_region_cv.py` | 验证并汇总 region-CV 产物 |
 | `pipelines/verify_cloud_setup.py` | 搬迁后做配置、checkpoint、前向与 GT 独立性 smoke check |
 
 ### `scripts/analysis/`：分析与可视化
@@ -391,8 +366,6 @@ Area_1 主 claim 应同时检查 `all`、`furniture` 和 `bim_foreground_conflic
 | 脚本 | 作用 |
 |---|---|
 | `analysis/paired_bootstrap.py` | 从 SLABIM 逐帧 CSV 做配对 bootstrap |
-| `analysis/analyze_region_error_factors.py` | 分析 region 间误差与几何/尺度/覆盖因素 |
-| `analysis/render_region_error_examples.py` | 生成区域代表性预测图 |
 | `analysis/visualize_sample.py` | 检查一个已制备 SLABIM 样本 |
 | `analysis/visualize_prediction_sample.py` | 可视化指定 SLABIM 帧的多方法预测 |
 | `analysis/visualize_stanford_sample.py` | 可视化 Area_1 帧、家具/冲突 mask 与预测 |
@@ -413,7 +386,7 @@ Area_1 主 claim 应同时检查 `all`、`furniture` 和 `bim_foreground_conflic
    sha256sum -c results/checkpoints.sha256
    ```
 
-5. `outputs/` 不进入 Git。把三个生产 checkpoint 上传到 Release/Hugging Face，并将真实 URL
+5. `outputs/` 不进入 Git。把两份统一主 checkpoint 上传到 Release/Hugging Face，并将真实 URL
    补入 `results/manifest.json`；大型 E2E checkpoint 不应直接提交 Git。
 6. 所有者必须在公开发布前选择软件 `LICENSE`；第三方数据许可需单独遵守，不能随代码
    LICENSE 自动继承。
