@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generator": "scripts/analysis/generate_paper_assets.py",
-  "generator_sha256": "83723451b3f9ce76eddf3b36ea880fc90602148ac29ef77ed74331415c457a3d",
+  "generator_sha256": "535885a6598b78ef3a5aaa1cd39532be1a8b7bbf36cd590daeb6f5b53f3c4530",
   "output_formats": [
     "png",
     "svg",
@@ -13,6 +13,7 @@
   ],
   "status_legend": {
     "existing_result": "Measured registered result under the stated evidence scope.",
+    "diagnostic_existing_result": "Measured post-hoc validation diagnostic; not a registered blind-test result.",
     "historical_existing_result": "Measured historical result that is not the current final protocol.",
     "design_candidate": "Editable visual candidate; not quantitative evidence.",
     "planned": "Experiment is proposed and has no numeric result in this manifest."
@@ -22,6 +23,11 @@
       "path": "data/provenance/stanford_area1_robust_scale_selection_v1.json",
       "sha256": "c78bcea75c5387f3fabef466505624f1ea815595511576a96c4af9282d661d2d",
       "bytes": 1221672
+    },
+    {
+      "path": "results/deterministic_baseline_ablation/summary.json",
+      "sha256": "069e1cb5434fd5fb6826070b75b256dbf72772d741a8e61e0110041b7f84dc51",
+      "bytes": 132199
     },
     {
       "path": "results/metrics.json",
@@ -114,6 +120,228 @@
           "format": "pdf",
           "sha256": "5ced70da98025848f51b88c267941047ca6afa6b4724b2ced50439332344e86e",
           "bytes": 19985
+        }
+      ]
+    },
+    {
+      "id": "deterministic_bim_direct_factor_ablation",
+      "title": "Deterministic BIM-direct leave-one-factor-out ablation",
+      "availability": "diagnostic_existing_result",
+      "planned": false,
+      "evidence_scope": "post_hoc_validation_group_bootstrap",
+      "source_paths": [
+        "results/deterministic_baseline_ablation/summary.json"
+      ],
+      "numeric_payload": {
+        "datasets": {
+          "SLABIM validation": [
+            {
+              "variant": "scale_only",
+              "label": "Remove local stage",
+              "mean_difference": 0.0032322323789461135,
+              "confidence_interval_95": [
+                -0.002290163977070324,
+                0.010124005255885962
+              ],
+              "groups": 6
+            },
+            {
+              "variant": "no_q25_cap",
+              "label": "Remove Q25 cap",
+              "mean_difference": 0.007691778111667033,
+              "confidence_interval_95": [
+                -0.0023124056292426055,
+                0.018402193725247807
+              ],
+              "groups": 6
+            },
+            {
+              "variant": "wide_ratio_bounds",
+              "label": "Widen ratio bounds",
+              "mean_difference": 4.671344612447448e-05,
+              "confidence_interval_95": [
+                -4.550882649859607e-06,
+                0.0001384806943394365
+              ],
+              "groups": 6
+            },
+            {
+              "variant": "min_samples_1",
+              "label": "Min support: 1",
+              "mean_difference": 0.0,
+              "confidence_interval_95": [
+                0.0,
+                0.0
+              ],
+              "groups": 6
+            },
+            {
+              "variant": "no_consistency_gate",
+              "label": "Remove consistency gate",
+              "mean_difference": 0.02256734412702476,
+              "confidence_interval_95": [
+                0.015002548994518234,
+                0.03386564606027259
+              ],
+              "groups": 6
+            },
+            {
+              "variant": "no_edge_gate",
+              "label": "Remove Sobel edge gate",
+              "mean_difference": -4.4288273576946945e-05,
+              "confidence_interval_95": [
+                -0.00029704199104061026,
+                0.00026721522254204735
+              ],
+              "groups": 6
+            },
+            {
+              "variant": "no_gaussian_propagation",
+              "label": "Remove Gaussian propagation",
+              "mean_difference": 0.003437015290439261,
+              "confidence_interval_95": [
+                0.00015227025712337186,
+                0.006739381310469664
+              ],
+              "groups": 6
+            },
+            {
+              "variant": "no_support_cutoff",
+              "label": "Remove support cutoff",
+              "mean_difference": 0.0027266892869137645,
+              "confidence_interval_95": [
+                -3.8891734484393835e-05,
+                0.007456585241649507
+              ],
+              "groups": 6
+            },
+            {
+              "variant": "alpha_1_0",
+              "label": "Local multiplier: 1.0",
+              "mean_difference": -0.0005636655325059447,
+              "confidence_interval_95": [
+                -0.00118182013717139,
+                0.00027049296191051603
+              ],
+              "groups": 6
+            }
+          ],
+          "Area 1 validation": [
+            {
+              "variant": "scale_only",
+              "label": "Remove local stage",
+              "mean_difference": -0.001051215718172153,
+              "confidence_interval_95": [
+                -0.002605073773397751,
+                0.0008073747926390393
+              ],
+              "groups": 7
+            },
+            {
+              "variant": "no_q25_cap",
+              "label": "Remove Q25 cap",
+              "mean_difference": 0.004601594925646054,
+              "confidence_interval_95": [
+                -0.0015767527896359962,
+                0.010754173507205976
+              ],
+              "groups": 7
+            },
+            {
+              "variant": "wide_ratio_bounds",
+              "label": "Widen ratio bounds",
+              "mean_difference": -0.00010015952958985259,
+              "confidence_interval_95": [
+                -0.00030671434750001447,
+                4.9236659073551805e-05
+              ],
+              "groups": 7
+            },
+            {
+              "variant": "min_samples_1",
+              "label": "Min support: 1",
+              "mean_difference": 0.0,
+              "confidence_interval_95": [
+                0.0,
+                0.0
+              ],
+              "groups": 7
+            },
+            {
+              "variant": "no_consistency_gate",
+              "label": "Remove consistency gate",
+              "mean_difference": 0.010025390258725156,
+              "confidence_interval_95": [
+                0.0017736234180807664,
+                0.01709721729645314
+              ],
+              "groups": 7
+            },
+            {
+              "variant": "no_edge_gate",
+              "label": "Remove Sobel edge gate",
+              "mean_difference": -0.0001620178580744492,
+              "confidence_interval_95": [
+                -0.0002997531522566,
+                -3.976575086853713e-05
+              ],
+              "groups": 7
+            },
+            {
+              "variant": "no_gaussian_propagation",
+              "label": "Remove Gaussian propagation",
+              "mean_difference": 0.00257889790604083,
+              "confidence_interval_95": [
+                0.0018691852836718137,
+                0.003409494792435912
+              ],
+              "groups": 7
+            },
+            {
+              "variant": "no_support_cutoff",
+              "label": "Remove support cutoff",
+              "mean_difference": 2.652828488911812e-05,
+              "confidence_interval_95": [
+                -0.0004710970073629373,
+                0.0005664924309816906
+              ],
+              "groups": 7
+            },
+            {
+              "variant": "alpha_1_0",
+              "label": "Local multiplier: 1.0",
+              "mean_difference": -0.001071739422111447,
+              "confidence_interval_95": [
+                -0.0014599797024857344,
+                -0.0005383528230113435
+              ],
+              "groups": 7
+            }
+          ]
+        }
+      },
+      "cautions": [
+        "Post-hoc validation diagnostic produced after the registered blind tests.",
+        "It must not be used to rewrite the frozen v1 test claim without a new protocol."
+      ],
+      "files": [
+        {
+          "path": "quantitative/deterministic_bim_direct_factor_ablation.png",
+          "format": "png",
+          "sha256": "a70c0def3655b4fb0ede7807f12bd3e2588cf1fa470f23ecb8b0cc348f132e86",
+          "bytes": 251161
+        },
+        {
+          "path": "quantitative/deterministic_bim_direct_factor_ablation.svg",
+          "format": "svg",
+          "sha256": "c508b106fb8902debcfff3d292e841d107121ab1647f04eed30c90651480b1da",
+          "bytes": 35707
+        },
+        {
+          "path": "quantitative/deterministic_bim_direct_factor_ablation.pdf",
+          "format": "pdf",
+          "sha256": "b9284417a770c33d82253609a273196e485c39dadd3fc69c7fd07d7cb8951353",
+          "bytes": 23271
         }
       ]
     },

@@ -111,6 +111,40 @@ def _make_fixture(root: Path) -> tuple[Path, Path]:
         results / "stanford_area1" / "history.json",
         _history(0.09, [0.082, 0.070]),
     )
+    factor_variants = (
+        "scale_only",
+        "no_q25_cap",
+        "wide_ratio_bounds",
+        "min_samples_1",
+        "no_consistency_gate",
+        "no_edge_gate",
+        "no_gaussian_propagation",
+        "no_support_cutoff",
+        "alpha_1_0",
+    )
+    _write_json(
+        results / "deterministic_baseline_ablation" / "summary.json",
+        {
+            "datasets": {
+                dataset: {
+                    "paired_group_bootstrap_abs_rel": {
+                        "all": {
+                            variant: {
+                                "mean_difference": 0.001 * (index - 3),
+                                "confidence_interval_95": [
+                                    0.001 * (index - 4),
+                                    0.001 * (index - 2),
+                                ],
+                                "groups": 6 if dataset == "slabim" else 7,
+                            }
+                            for index, variant in enumerate(factor_variants)
+                        }
+                    }
+                }
+                for dataset in ("slabim", "stanford_area1")
+            }
+        },
+    )
 
     candidates = []
     objectives = {
@@ -174,10 +208,11 @@ def test_generate_assets_is_headless_traceable_and_marks_conflict(tmp_path: Path
         dpi=45,
     )
 
-    assert len(manifest["figures"]) == 9
-    assert len(manifest["sources"]) == 5
+    assert len(manifest["figures"]) == 10
+    assert len(manifest["sources"]) == 6
     assert {item["availability"] for item in manifest["figures"]} == {
         "existing_result",
+        "diagnostic_existing_result",
         "design_candidate",
     }
     assert all(len(source["sha256"]) == 64 for source in manifest["sources"])
@@ -198,6 +233,12 @@ def test_generate_assets_is_headless_traceable_and_marks_conflict(tmp_path: Path
         "validation_samples_opened": 0,
         "test_samples_opened": 0,
     }
+    diagnostic = next(
+        item
+        for item in manifest["figures"]
+        if item["id"] == "deterministic_bim_direct_factor_ablation"
+    )
+    assert diagnostic["availability"] == "diagnostic_existing_result"
     assert all(item["planned"] for item in manifest["planned_evaluations_not_plotted"])
     on_disk = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
     assert on_disk["schema_version"] == 1

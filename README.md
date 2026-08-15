@@ -171,6 +171,7 @@ E2E 权重应放 GitHub Release 或 Hugging Face，不应直接提交 Git 历史
 - [统一尺度估计与模型锚点协议](docs/UNIVERSAL_SCALE_PROTOCOL.md)
 - [Area_1 + BIMSyn 技术与结果](docs/STANFORD_BIMSYNC_EVALUATION.md)
 - [科研评测协议、消融与敏感性设计](docs/EVALUATION_PROTOCOL.md)
+- [非学习 BIM-direct 逐因素消融](docs/DETERMINISTIC_BASELINE_ABLATION.md)
 - [论文与 PPT 素材目录](docs/assets/paper_evaluation/README.md)
 - [Codex 对话要点与项目演化](docs/CODEX_WORKFLOW.md)
 

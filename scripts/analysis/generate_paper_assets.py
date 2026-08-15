@@ -519,6 +519,70 @@ def render_room_pairs_and_bootstrap(
     return figure
 
 
+def _deterministic_ablation_rows(ablation: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    labels = {
+        "scale_only": "Remove local stage",
+        "no_q25_cap": "Remove Q25 cap",
+        "wide_ratio_bounds": "Widen ratio bounds",
+        "min_samples_1": "Min support: 1",
+        "no_consistency_gate": "Remove consistency gate",
+        "no_edge_gate": "Remove Sobel edge gate",
+        "no_gaussian_propagation": "Remove Gaussian propagation",
+        "no_support_cutoff": "Remove support cutoff",
+        "alpha_1_0": "Local multiplier: 1.0",
+    }
+    rows: dict[str, list[dict[str, Any]]] = {}
+    for dataset_key, dataset_label in (
+        ("slabim", "SLABIM validation"),
+        ("stanford_area1", "Area 1 validation"),
+    ):
+        bootstrap = ablation["datasets"][dataset_key]["paired_group_bootstrap_abs_rel"]["all"]
+        rows[dataset_label] = [
+            {
+                "variant": variant,
+                "label": labels[variant],
+                "mean_difference": bootstrap[variant]["mean_difference"],
+                "confidence_interval_95": bootstrap[variant]["confidence_interval_95"],
+                "groups": bootstrap[variant]["groups"],
+            }
+            for variant in labels
+        ]
+    return rows
+
+
+def render_deterministic_ablation(rows: dict[str, list[dict[str, Any]]]) -> Figure:
+    figure, axes = plt.subplots(1, 2, figsize=(13.2, 6.0), sharey=True)
+    for axis, (dataset, dataset_rows) in zip(axes, rows.items()):
+        y = np.arange(len(dataset_rows), dtype=np.float64)
+        for index, row in enumerate(dataset_rows):
+            mean = float(row["mean_difference"])
+            low, high = (float(value) for value in row["confidence_interval_95"])
+            color = COLORS["learned"] if mean > 0 else COLORS["worse"]
+            axis.errorbar(
+                mean,
+                index,
+                xerr=np.asarray([[mean - low], [high - mean]]),
+                fmt="o",
+                color=color,
+                ecolor=color,
+                capsize=3,
+                markersize=6,
+                linewidth=1.8,
+            )
+        axis.axvline(0.0, color=COLORS["ink"], linestyle="--", linewidth=1)
+        axis.set_yticks(y, [str(row["label"]) for row in dataset_rows])
+        axis.invert_yaxis()
+        axis.set_xlabel("Variant − full group AbsRel (positive: factor helped)")
+        axis.set_title(dataset)
+        axis.grid(axis="x", color="#D8DEE9", linewidth=0.7)
+    figure.suptitle(
+        "Post-hoc deterministic BIM-direct factor ablation (validation only, 95% group bootstrap CI)",
+        y=1.01,
+    )
+    figure.tight_layout()
+    return figure
+
+
 def _cap_number(value: Any) -> float:
     if isinstance(value, str) and value.lower() in {"inf", "+inf", "infinity"}:
         return float("inf")
@@ -1122,6 +1186,9 @@ def generate_assets(
     paths = {
         "metrics": results_root / "metrics.json",
         "area1_test": results_root / "stanford_area1" / "test_summary.json",
+        "deterministic_ablation": (
+            results_root / "deterministic_baseline_ablation" / "summary.json"
+        ),
         "scale_selection": scale_selection_path.resolve(),
         "slabim_history": results_root / "slabim" / "history.json",
         "area1_history": results_root / "stanford_area1" / "history.json",
@@ -1146,6 +1213,29 @@ def generate_assets(
                 "quantitative/main_blind_test_absrel",
                 formats,
                 dpi,
+            ),
+        )
+    )
+
+    deterministic_rows = _deterministic_ablation_rows(loaded["deterministic_ablation"])
+    figures.append(
+        _figure_record(
+            figure_id="deterministic_bim_direct_factor_ablation",
+            title="Deterministic BIM-direct leave-one-factor-out ablation",
+            availability="diagnostic_existing_result",
+            evidence_scope="post_hoc_validation_group_bootstrap",
+            source_paths=(references["deterministic_ablation"],),
+            numeric_payload={"datasets": deterministic_rows},
+            files=_save_figure(
+                render_deterministic_ablation(deterministic_rows),
+                output_root,
+                "quantitative/deterministic_bim_direct_factor_ablation",
+                formats,
+                dpi,
+            ),
+            cautions=(
+                "Post-hoc validation diagnostic produced after the registered blind tests.",
+                "It must not be used to rewrite the frozen v1 test claim without a new protocol.",
             ),
         )
     )
@@ -1354,6 +1444,9 @@ def generate_assets(
         "depth_protocol_m": loaded["metrics"].get("depth_protocol_m", [0.2, 5.0]),
         "status_legend": {
             "existing_result": "Measured registered result under the stated evidence scope.",
+            "diagnostic_existing_result": (
+                "Measured post-hoc validation diagnostic; not a registered blind-test result."
+            ),
             "historical_existing_result": (
                 "Measured historical result that is not the current final protocol."
             ),

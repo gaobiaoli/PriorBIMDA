@@ -217,6 +217,10 @@ validation/test 样本数均为 0。热图应直接读取
 
 ## 6. 建议补跑：最小可发表消融
 
+非学习 BIM-direct 的逐因素 validation 消融已经完成，见
+[DETERMINISTIC_BASELINE_ABLATION.md](DETERMINISTIC_BASELINE_ABLATION.md)。本节以下项目主要
+针对学习网络，仍属于建议补跑。
+
 所有新增结构比较只在冻结 validation 上完成；看过现有 test 后产生的新结构不再具有原来
 “一次盲测”的身份。若未来需要最终确认，应使用新的外部建筑或预先冻结的新 test。
 

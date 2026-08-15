@@ -9,6 +9,8 @@ PNG、SVG 和 PDF；SVG/PDF 适合后续在 PPT 或论文中重新排版。
 - `quantitative/main_blind_test_absrel.*`：两域主结果；
 - `quantitative/area1_subset_absrel.*`：家具/冲突子集；
 - `quantitative/area1_room_pairs_and_bootstrap.*`：房间配对与区间；
+- `quantitative/deterministic_bim_direct_factor_ablation.*`：非学习 BIM-direct 的逐因素
+  validation 消融（post-hoc）；
 - `quantitative/area1_train_only_scale_{heatmap,pareto}.*`：train-only 尺度敏感性；
 - `quantitative/registered_training_curves.*`：两域单次训练验证曲线。
 

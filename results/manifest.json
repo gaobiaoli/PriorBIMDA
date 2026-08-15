@@ -34,5 +34,12 @@
     {"path": "results/slabim/run_state.json", "sha256": "7d646a646cede6e90cfbfb59e9da1e5444178815b50bc07ce04abbe1482dc0a6"},
     {"path": "results/stanford_area1/history.json", "sha256": "54bd56f9a1e0b796b38a4b9ddb0ac43a67511040037413538ad03e3b4b896c28"},
     {"path": "results/stanford_area1/run_state.json", "sha256": "16782b5eafa1078402851f880305a74552e865dd55bc89b2e61b23edfa1a3087"}
+  ],
+  "diagnostic_results": [
+    {
+      "path": "results/deterministic_baseline_ablation/summary.json",
+      "sha256": "069e1cb5434fd5fb6826070b75b256dbf72772d741a8e61e0110041b7f84dc51",
+      "scope": "post_hoc_validation_leave_one_factor_out_v1"
+    }
   ]
 }

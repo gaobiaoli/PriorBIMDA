@@ -7,6 +7,8 @@
 - `slabim/`：108 帧 pooled-clean test 的 summary、逐帧 CSV、三维重建 summary、history 与
   run-state；
 - `stanford_area1/`：room-disjoint validation/test 的 summary、逐帧 CSV、history 与 run-state。
+- `deterministic_baseline_ablation/`：两个 validation split 上的非学习 BIM-direct 逐因素
+  post-hoc 消融；不属于 blind-test 主结果。
 
 旧 q45-only SLABIM、BIM-direct 网络锚点、E2E challenger、region-CV、旧消融和事后区域分析
 均已从活动项目删除，避免与当前公共方法混用。历史 summary 内的绝对路径只是审计字段；公开
