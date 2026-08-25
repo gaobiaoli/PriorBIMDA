@@ -1,0 +1,2455 @@
+{
+  "checkpoint": {
+    "dataset_validation": {
+      "accepted": true,
+      "checkpoint_split_identity": {
+        "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+        "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+        "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+        "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+        "manifest_preparation": {
+          "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+          "status": "verified"
+        },
+        "mode": "annotations",
+        "selected_regions": [
+          "WC_1",
+          "conferenceRoom_1",
+          "conferenceRoom_2",
+          "copyRoom_1",
+          "hallway_1",
+          "hallway_2",
+          "hallway_3",
+          "hallway_4",
+          "hallway_5",
+          "hallway_6",
+          "hallway_7",
+          "hallway_8",
+          "office_1",
+          "office_10",
+          "office_11",
+          "office_12",
+          "office_13",
+          "office_14",
+          "office_15",
+          "office_16",
+          "office_17",
+          "office_18",
+          "office_19",
+          "office_2",
+          "office_20",
+          "office_21",
+          "office_22",
+          "office_23",
+          "office_24",
+          "office_25",
+          "office_26",
+          "office_27",
+          "office_28",
+          "office_29",
+          "office_3",
+          "office_30",
+          "office_31",
+          "office_4",
+          "office_5",
+          "office_6",
+          "office_7",
+          "office_8",
+          "office_9",
+          "pantry_1"
+        ]
+      },
+      "cross_dataset": false,
+      "dataset_match": true,
+      "explicit_cross_dataset_opt_in": false,
+      "runtime_split_identity": {
+        "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+        "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+        "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+        "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+        "manifest_preparation": {
+          "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+          "status": "verified"
+        },
+        "mode": "annotations",
+        "selected_regions": [
+          "WC_1",
+          "conferenceRoom_1",
+          "conferenceRoom_2",
+          "copyRoom_1",
+          "hallway_1",
+          "hallway_2",
+          "hallway_3",
+          "hallway_4",
+          "hallway_5",
+          "hallway_6",
+          "hallway_7",
+          "hallway_8",
+          "office_1",
+          "office_10",
+          "office_11",
+          "office_12",
+          "office_13",
+          "office_14",
+          "office_15",
+          "office_16",
+          "office_17",
+          "office_18",
+          "office_19",
+          "office_2",
+          "office_20",
+          "office_21",
+          "office_22",
+          "office_23",
+          "office_24",
+          "office_25",
+          "office_26",
+          "office_27",
+          "office_28",
+          "office_29",
+          "office_3",
+          "office_30",
+          "office_31",
+          "office_4",
+          "office_5",
+          "office_6",
+          "office_7",
+          "office_8",
+          "office_9",
+          "pantry_1"
+        ]
+      },
+      "source": {
+        "dataset_provenance": {
+          "schema_version": 1,
+          "split_identities": {
+            "train": {
+              "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+              "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+              "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+              "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+              "manifest_preparation": {
+                "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+                "status": "verified"
+              },
+              "mode": "annotations",
+              "selected_regions": [
+                "WC_1",
+                "conferenceRoom_1",
+                "conferenceRoom_2",
+                "copyRoom_1",
+                "hallway_1",
+                "hallway_2",
+                "hallway_3",
+                "hallway_4",
+                "hallway_5",
+                "hallway_6",
+                "hallway_7",
+                "hallway_8",
+                "office_1",
+                "office_10",
+                "office_11",
+                "office_12",
+                "office_13",
+                "office_14",
+                "office_15",
+                "office_16",
+                "office_17",
+                "office_18",
+                "office_19",
+                "office_2",
+                "office_20",
+                "office_21",
+                "office_22",
+                "office_23",
+                "office_24",
+                "office_25",
+                "office_26",
+                "office_27",
+                "office_28",
+                "office_29",
+                "office_3",
+                "office_30",
+                "office_31",
+                "office_4",
+                "office_5",
+                "office_6",
+                "office_7",
+                "office_8",
+                "office_9",
+                "pantry_1"
+              ]
+            },
+            "val": {
+              "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+              "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+              "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+              "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+              "manifest_preparation": {
+                "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+                "status": "verified"
+              },
+              "mode": "annotations",
+              "selected_regions": [
+                "WC_1",
+                "conferenceRoom_1",
+                "conferenceRoom_2",
+                "copyRoom_1",
+                "hallway_1",
+                "hallway_2",
+                "hallway_3",
+                "hallway_4",
+                "hallway_5",
+                "hallway_6",
+                "hallway_7",
+                "hallway_8",
+                "office_1",
+                "office_10",
+                "office_11",
+                "office_12",
+                "office_13",
+                "office_14",
+                "office_15",
+                "office_16",
+                "office_17",
+                "office_18",
+                "office_19",
+                "office_2",
+                "office_20",
+                "office_21",
+                "office_22",
+                "office_23",
+                "office_24",
+                "office_25",
+                "office_26",
+                "office_27",
+                "office_28",
+                "office_29",
+                "office_3",
+                "office_30",
+                "office_31",
+                "office_4",
+                "office_5",
+                "office_6",
+                "office_7",
+                "office_8",
+                "office_9",
+                "pantry_1"
+              ]
+            }
+          },
+          "split_provenance": {
+            "train": {
+              "annotation_file": "/home/bgao491/PriorBIMDA/data/annotations/stanford_area1_room_v1.jsonl",
+              "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+              "annotation_record_count": 10327,
+              "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+              "excluded_reasons": {},
+              "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+              "fused_lidar_validation": {
+                "disjoint": true,
+                "unique_source_counts": {
+                  "test": 0,
+                  "train": 0,
+                  "val": 0
+                }
+              },
+              "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+              "manifest_preparation_fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+              "manifest_preparation_fingerprint_status": "verified",
+              "manifest_record_count": 10327,
+              "mode": "annotations",
+              "ordered_ids_sha256": {
+                "excluded": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "test": "b7d6d7ea4fbd3a15ef74494cda16532fdf284b050618064e206317e30316404f",
+                "train": "b2aec61d770b08e32eb920d76cc40c77031fb1f58ecd525c402aa3fbeb7d543f",
+                "val": "cf475a95336872579aad4c7a1762f781c7ec3146474fed119d955b92e3d35bfc"
+              },
+              "schema_version": 1,
+              "selected_regions": [
+                "WC_1",
+                "conferenceRoom_1",
+                "conferenceRoom_2",
+                "copyRoom_1",
+                "hallway_1",
+                "hallway_2",
+                "hallway_3",
+                "hallway_4",
+                "hallway_5",
+                "hallway_6",
+                "hallway_7",
+                "hallway_8",
+                "office_1",
+                "office_10",
+                "office_11",
+                "office_12",
+                "office_13",
+                "office_14",
+                "office_15",
+                "office_16",
+                "office_17",
+                "office_18",
+                "office_19",
+                "office_2",
+                "office_20",
+                "office_21",
+                "office_22",
+                "office_23",
+                "office_24",
+                "office_25",
+                "office_26",
+                "office_27",
+                "office_28",
+                "office_29",
+                "office_3",
+                "office_30",
+                "office_31",
+                "office_4",
+                "office_5",
+                "office_6",
+                "office_7",
+                "office_8",
+                "office_9",
+                "pantry_1"
+              ],
+              "split_counts": {
+                "excluded": 0,
+                "test": 1641,
+                "train": 7013,
+                "val": 1673
+              },
+              "split_region_counts": {
+                "excluded": {
+                  "WC_1": 0,
+                  "conferenceRoom_1": 0,
+                  "conferenceRoom_2": 0,
+                  "copyRoom_1": 0,
+                  "hallway_1": 0,
+                  "hallway_2": 0,
+                  "hallway_3": 0,
+                  "hallway_4": 0,
+                  "hallway_5": 0,
+                  "hallway_6": 0,
+                  "hallway_7": 0,
+                  "hallway_8": 0,
+                  "office_1": 0,
+                  "office_10": 0,
+                  "office_11": 0,
+                  "office_12": 0,
+                  "office_13": 0,
+                  "office_14": 0,
+                  "office_15": 0,
+                  "office_16": 0,
+                  "office_17": 0,
+                  "office_18": 0,
+                  "office_19": 0,
+                  "office_2": 0,
+                  "office_20": 0,
+                  "office_21": 0,
+                  "office_22": 0,
+                  "office_23": 0,
+                  "office_24": 0,
+                  "office_25": 0,
+                  "office_26": 0,
+                  "office_27": 0,
+                  "office_28": 0,
+                  "office_29": 0,
+                  "office_3": 0,
+                  "office_30": 0,
+                  "office_31": 0,
+                  "office_4": 0,
+                  "office_5": 0,
+                  "office_6": 0,
+                  "office_7": 0,
+                  "office_8": 0,
+                  "office_9": 0,
+                  "pantry_1": 0
+                },
+                "test": {
+                  "WC_1": 0,
+                  "conferenceRoom_1": 280,
+                  "conferenceRoom_2": 0,
+                  "copyRoom_1": 0,
+                  "hallway_1": 0,
+                  "hallway_2": 0,
+                  "hallway_3": 0,
+                  "hallway_4": 0,
+                  "hallway_5": 0,
+                  "hallway_6": 0,
+                  "hallway_7": 0,
+                  "hallway_8": 72,
+                  "office_1": 0,
+                  "office_10": 0,
+                  "office_11": 0,
+                  "office_12": 0,
+                  "office_13": 0,
+                  "office_14": 0,
+                  "office_15": 0,
+                  "office_16": 289,
+                  "office_17": 0,
+                  "office_18": 0,
+                  "office_19": 0,
+                  "office_2": 0,
+                  "office_20": 190,
+                  "office_21": 0,
+                  "office_22": 200,
+                  "office_23": 152,
+                  "office_24": 0,
+                  "office_25": 0,
+                  "office_26": 0,
+                  "office_27": 0,
+                  "office_28": 0,
+                  "office_29": 0,
+                  "office_3": 0,
+                  "office_30": 458,
+                  "office_31": 0,
+                  "office_4": 0,
+                  "office_5": 0,
+                  "office_6": 0,
+                  "office_7": 0,
+                  "office_8": 0,
+                  "office_9": 0,
+                  "pantry_1": 0
+                },
+                "train": {
+                  "WC_1": 298,
+                  "conferenceRoom_1": 0,
+                  "conferenceRoom_2": 361,
+                  "copyRoom_1": 127,
+                  "hallway_1": 64,
+                  "hallway_2": 0,
+                  "hallway_3": 118,
+                  "hallway_4": 17,
+                  "hallway_5": 0,
+                  "hallway_6": 1411,
+                  "hallway_7": 1553,
+                  "hallway_8": 0,
+                  "office_1": 167,
+                  "office_10": 112,
+                  "office_11": 112,
+                  "office_12": 115,
+                  "office_13": 120,
+                  "office_14": 0,
+                  "office_15": 85,
+                  "office_16": 0,
+                  "office_17": 175,
+                  "office_18": 182,
+                  "office_19": 141,
+                  "office_2": 139,
+                  "office_20": 0,
+                  "office_21": 186,
+                  "office_22": 0,
+                  "office_23": 0,
+                  "office_24": 0,
+                  "office_25": 114,
+                  "office_26": 221,
+                  "office_27": 229,
+                  "office_28": 0,
+                  "office_29": 101,
+                  "office_3": 172,
+                  "office_30": 0,
+                  "office_31": 0,
+                  "office_4": 116,
+                  "office_5": 123,
+                  "office_6": 0,
+                  "office_7": 110,
+                  "office_8": 99,
+                  "office_9": 121,
+                  "pantry_1": 124
+                },
+                "val": {
+                  "WC_1": 0,
+                  "conferenceRoom_1": 0,
+                  "conferenceRoom_2": 0,
+                  "copyRoom_1": 0,
+                  "hallway_1": 0,
+                  "hallway_2": 97,
+                  "hallway_3": 0,
+                  "hallway_4": 0,
+                  "hallway_5": 77,
+                  "hallway_6": 0,
+                  "hallway_7": 0,
+                  "hallway_8": 0,
+                  "office_1": 0,
+                  "office_10": 0,
+                  "office_11": 0,
+                  "office_12": 0,
+                  "office_13": 0,
+                  "office_14": 93,
+                  "office_15": 0,
+                  "office_16": 0,
+                  "office_17": 0,
+                  "office_18": 0,
+                  "office_19": 0,
+                  "office_2": 0,
+                  "office_20": 0,
+                  "office_21": 0,
+                  "office_22": 0,
+                  "office_23": 0,
+                  "office_24": 161,
+                  "office_25": 0,
+                  "office_26": 0,
+                  "office_27": 0,
+                  "office_28": 233,
+                  "office_29": 0,
+                  "office_3": 0,
+                  "office_30": 0,
+                  "office_31": 901,
+                  "office_4": 0,
+                  "office_5": 0,
+                  "office_6": 111,
+                  "office_7": 0,
+                  "office_8": 0,
+                  "office_9": 0,
+                  "pantry_1": 0
+                }
+              }
+            },
+            "val": {
+              "annotation_file": "/home/bgao491/PriorBIMDA/data/annotations/stanford_area1_room_v1.jsonl",
+              "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+              "annotation_record_count": 10327,
+              "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+              "excluded_reasons": {},
+              "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+              "fused_lidar_validation": {
+                "disjoint": true,
+                "unique_source_counts": {
+                  "test": 0,
+                  "train": 0,
+                  "val": 0
+                }
+              },
+              "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+              "manifest_preparation_fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+              "manifest_preparation_fingerprint_status": "verified",
+              "manifest_record_count": 10327,
+              "mode": "annotations",
+              "ordered_ids_sha256": {
+                "excluded": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "test": "b7d6d7ea4fbd3a15ef74494cda16532fdf284b050618064e206317e30316404f",
+                "train": "b2aec61d770b08e32eb920d76cc40c77031fb1f58ecd525c402aa3fbeb7d543f",
+                "val": "cf475a95336872579aad4c7a1762f781c7ec3146474fed119d955b92e3d35bfc"
+              },
+              "schema_version": 1,
+              "selected_regions": [
+                "WC_1",
+                "conferenceRoom_1",
+                "conferenceRoom_2",
+                "copyRoom_1",
+                "hallway_1",
+                "hallway_2",
+                "hallway_3",
+                "hallway_4",
+                "hallway_5",
+                "hallway_6",
+                "hallway_7",
+                "hallway_8",
+                "office_1",
+                "office_10",
+                "office_11",
+                "office_12",
+                "office_13",
+                "office_14",
+                "office_15",
+                "office_16",
+                "office_17",
+                "office_18",
+                "office_19",
+                "office_2",
+                "office_20",
+                "office_21",
+                "office_22",
+                "office_23",
+                "office_24",
+                "office_25",
+                "office_26",
+                "office_27",
+                "office_28",
+                "office_29",
+                "office_3",
+                "office_30",
+                "office_31",
+                "office_4",
+                "office_5",
+                "office_6",
+                "office_7",
+                "office_8",
+                "office_9",
+                "pantry_1"
+              ],
+              "split_counts": {
+                "excluded": 0,
+                "test": 1641,
+                "train": 7013,
+                "val": 1673
+              },
+              "split_region_counts": {
+                "excluded": {
+                  "WC_1": 0,
+                  "conferenceRoom_1": 0,
+                  "conferenceRoom_2": 0,
+                  "copyRoom_1": 0,
+                  "hallway_1": 0,
+                  "hallway_2": 0,
+                  "hallway_3": 0,
+                  "hallway_4": 0,
+                  "hallway_5": 0,
+                  "hallway_6": 0,
+                  "hallway_7": 0,
+                  "hallway_8": 0,
+                  "office_1": 0,
+                  "office_10": 0,
+                  "office_11": 0,
+                  "office_12": 0,
+                  "office_13": 0,
+                  "office_14": 0,
+                  "office_15": 0,
+                  "office_16": 0,
+                  "office_17": 0,
+                  "office_18": 0,
+                  "office_19": 0,
+                  "office_2": 0,
+                  "office_20": 0,
+                  "office_21": 0,
+                  "office_22": 0,
+                  "office_23": 0,
+                  "office_24": 0,
+                  "office_25": 0,
+                  "office_26": 0,
+                  "office_27": 0,
+                  "office_28": 0,
+                  "office_29": 0,
+                  "office_3": 0,
+                  "office_30": 0,
+                  "office_31": 0,
+                  "office_4": 0,
+                  "office_5": 0,
+                  "office_6": 0,
+                  "office_7": 0,
+                  "office_8": 0,
+                  "office_9": 0,
+                  "pantry_1": 0
+                },
+                "test": {
+                  "WC_1": 0,
+                  "conferenceRoom_1": 280,
+                  "conferenceRoom_2": 0,
+                  "copyRoom_1": 0,
+                  "hallway_1": 0,
+                  "hallway_2": 0,
+                  "hallway_3": 0,
+                  "hallway_4": 0,
+                  "hallway_5": 0,
+                  "hallway_6": 0,
+                  "hallway_7": 0,
+                  "hallway_8": 72,
+                  "office_1": 0,
+                  "office_10": 0,
+                  "office_11": 0,
+                  "office_12": 0,
+                  "office_13": 0,
+                  "office_14": 0,
+                  "office_15": 0,
+                  "office_16": 289,
+                  "office_17": 0,
+                  "office_18": 0,
+                  "office_19": 0,
+                  "office_2": 0,
+                  "office_20": 190,
+                  "office_21": 0,
+                  "office_22": 200,
+                  "office_23": 152,
+                  "office_24": 0,
+                  "office_25": 0,
+                  "office_26": 0,
+                  "office_27": 0,
+                  "office_28": 0,
+                  "office_29": 0,
+                  "office_3": 0,
+                  "office_30": 458,
+                  "office_31": 0,
+                  "office_4": 0,
+                  "office_5": 0,
+                  "office_6": 0,
+                  "office_7": 0,
+                  "office_8": 0,
+                  "office_9": 0,
+                  "pantry_1": 0
+                },
+                "train": {
+                  "WC_1": 298,
+                  "conferenceRoom_1": 0,
+                  "conferenceRoom_2": 361,
+                  "copyRoom_1": 127,
+                  "hallway_1": 64,
+                  "hallway_2": 0,
+                  "hallway_3": 118,
+                  "hallway_4": 17,
+                  "hallway_5": 0,
+                  "hallway_6": 1411,
+                  "hallway_7": 1553,
+                  "hallway_8": 0,
+                  "office_1": 167,
+                  "office_10": 112,
+                  "office_11": 112,
+                  "office_12": 115,
+                  "office_13": 120,
+                  "office_14": 0,
+                  "office_15": 85,
+                  "office_16": 0,
+                  "office_17": 175,
+                  "office_18": 182,
+                  "office_19": 141,
+                  "office_2": 139,
+                  "office_20": 0,
+                  "office_21": 186,
+                  "office_22": 0,
+                  "office_23": 0,
+                  "office_24": 0,
+                  "office_25": 114,
+                  "office_26": 221,
+                  "office_27": 229,
+                  "office_28": 0,
+                  "office_29": 101,
+                  "office_3": 172,
+                  "office_30": 0,
+                  "office_31": 0,
+                  "office_4": 116,
+                  "office_5": 123,
+                  "office_6": 0,
+                  "office_7": 110,
+                  "office_8": 99,
+                  "office_9": 121,
+                  "pantry_1": 124
+                },
+                "val": {
+                  "WC_1": 0,
+                  "conferenceRoom_1": 0,
+                  "conferenceRoom_2": 0,
+                  "copyRoom_1": 0,
+                  "hallway_1": 0,
+                  "hallway_2": 97,
+                  "hallway_3": 0,
+                  "hallway_4": 0,
+                  "hallway_5": 77,
+                  "hallway_6": 0,
+                  "hallway_7": 0,
+                  "hallway_8": 0,
+                  "office_1": 0,
+                  "office_10": 0,
+                  "office_11": 0,
+                  "office_12": 0,
+                  "office_13": 0,
+                  "office_14": 93,
+                  "office_15": 0,
+                  "office_16": 0,
+                  "office_17": 0,
+                  "office_18": 0,
+                  "office_19": 0,
+                  "office_2": 0,
+                  "office_20": 0,
+                  "office_21": 0,
+                  "office_22": 0,
+                  "office_23": 0,
+                  "office_24": 161,
+                  "office_25": 0,
+                  "office_26": 0,
+                  "office_27": 0,
+                  "office_28": 233,
+                  "office_29": 0,
+                  "office_3": 0,
+                  "office_30": 0,
+                  "office_31": 901,
+                  "office_4": 0,
+                  "office_5": 0,
+                  "office_6": 111,
+                  "office_7": 0,
+                  "office_8": 0,
+                  "office_9": 0,
+                  "pantry_1": 0
+                }
+              }
+            }
+          }
+        },
+        "expected_evaluation_split_identity": {
+          "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+          "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+          "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+          "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+          "manifest_preparation": {
+            "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+            "status": "verified"
+          },
+          "mode": "annotations",
+          "selected_regions": [
+            "WC_1",
+            "conferenceRoom_1",
+            "conferenceRoom_2",
+            "copyRoom_1",
+            "hallway_1",
+            "hallway_2",
+            "hallway_3",
+            "hallway_4",
+            "hallway_5",
+            "hallway_6",
+            "hallway_7",
+            "hallway_8",
+            "office_1",
+            "office_10",
+            "office_11",
+            "office_12",
+            "office_13",
+            "office_14",
+            "office_15",
+            "office_16",
+            "office_17",
+            "office_18",
+            "office_19",
+            "office_2",
+            "office_20",
+            "office_21",
+            "office_22",
+            "office_23",
+            "office_24",
+            "office_25",
+            "office_26",
+            "office_27",
+            "office_28",
+            "office_29",
+            "office_3",
+            "office_30",
+            "office_31",
+            "office_4",
+            "office_5",
+            "office_6",
+            "office_7",
+            "office_8",
+            "office_9",
+            "pantry_1"
+          ]
+        },
+        "kind": "checkpoint_training_dataset",
+        "training_split_identities": {
+          "train": {
+            "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+            "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+            "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+            "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+            "manifest_preparation": {
+              "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+              "status": "verified"
+            },
+            "mode": "annotations",
+            "selected_regions": [
+              "WC_1",
+              "conferenceRoom_1",
+              "conferenceRoom_2",
+              "copyRoom_1",
+              "hallway_1",
+              "hallway_2",
+              "hallway_3",
+              "hallway_4",
+              "hallway_5",
+              "hallway_6",
+              "hallway_7",
+              "hallway_8",
+              "office_1",
+              "office_10",
+              "office_11",
+              "office_12",
+              "office_13",
+              "office_14",
+              "office_15",
+              "office_16",
+              "office_17",
+              "office_18",
+              "office_19",
+              "office_2",
+              "office_20",
+              "office_21",
+              "office_22",
+              "office_23",
+              "office_24",
+              "office_25",
+              "office_26",
+              "office_27",
+              "office_28",
+              "office_29",
+              "office_3",
+              "office_30",
+              "office_31",
+              "office_4",
+              "office_5",
+              "office_6",
+              "office_7",
+              "office_8",
+              "office_9",
+              "pantry_1"
+            ]
+          },
+          "val": {
+            "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+            "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+            "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+            "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+            "manifest_preparation": {
+              "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+              "status": "verified"
+            },
+            "mode": "annotations",
+            "selected_regions": [
+              "WC_1",
+              "conferenceRoom_1",
+              "conferenceRoom_2",
+              "copyRoom_1",
+              "hallway_1",
+              "hallway_2",
+              "hallway_3",
+              "hallway_4",
+              "hallway_5",
+              "hallway_6",
+              "hallway_7",
+              "hallway_8",
+              "office_1",
+              "office_10",
+              "office_11",
+              "office_12",
+              "office_13",
+              "office_14",
+              "office_15",
+              "office_16",
+              "office_17",
+              "office_18",
+              "office_19",
+              "office_2",
+              "office_20",
+              "office_21",
+              "office_22",
+              "office_23",
+              "office_24",
+              "office_25",
+              "office_26",
+              "office_27",
+              "office_28",
+              "office_29",
+              "office_3",
+              "office_30",
+              "office_31",
+              "office_4",
+              "office_5",
+              "office_6",
+              "office_7",
+              "office_8",
+              "office_9",
+              "pantry_1"
+            ]
+          }
+        }
+      },
+      "split": "test",
+      "status": "verified",
+      "target": {
+        "kind": "runtime_evaluation_dataset",
+        "split": "test",
+        "split_identity": {
+          "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+          "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+          "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+          "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+          "manifest_preparation": {
+            "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+            "status": "verified"
+          },
+          "mode": "annotations",
+          "selected_regions": [
+            "WC_1",
+            "conferenceRoom_1",
+            "conferenceRoom_2",
+            "copyRoom_1",
+            "hallway_1",
+            "hallway_2",
+            "hallway_3",
+            "hallway_4",
+            "hallway_5",
+            "hallway_6",
+            "hallway_7",
+            "hallway_8",
+            "office_1",
+            "office_10",
+            "office_11",
+            "office_12",
+            "office_13",
+            "office_14",
+            "office_15",
+            "office_16",
+            "office_17",
+            "office_18",
+            "office_19",
+            "office_2",
+            "office_20",
+            "office_21",
+            "office_22",
+            "office_23",
+            "office_24",
+            "office_25",
+            "office_26",
+            "office_27",
+            "office_28",
+            "office_29",
+            "office_3",
+            "office_30",
+            "office_31",
+            "office_4",
+            "office_5",
+            "office_6",
+            "office_7",
+            "office_8",
+            "office_9",
+            "pantry_1"
+          ]
+        },
+        "split_provenance": {
+          "annotation_file": "/home/bgao491/PriorBIMDA/data/annotations/stanford_area1_room_v1.jsonl",
+          "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+          "annotation_record_count": 10327,
+          "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+          "excluded_reasons": {},
+          "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+          "fused_lidar_validation": {
+            "disjoint": true,
+            "unique_source_counts": {
+              "test": 0,
+              "train": 0,
+              "val": 0
+            }
+          },
+          "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+          "manifest_preparation_fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+          "manifest_preparation_fingerprint_status": "verified",
+          "manifest_record_count": 10327,
+          "mode": "annotations",
+          "ordered_ids_sha256": {
+            "excluded": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "test": "b7d6d7ea4fbd3a15ef74494cda16532fdf284b050618064e206317e30316404f",
+            "train": "b2aec61d770b08e32eb920d76cc40c77031fb1f58ecd525c402aa3fbeb7d543f",
+            "val": "cf475a95336872579aad4c7a1762f781c7ec3146474fed119d955b92e3d35bfc"
+          },
+          "schema_version": 1,
+          "selected_regions": [
+            "WC_1",
+            "conferenceRoom_1",
+            "conferenceRoom_2",
+            "copyRoom_1",
+            "hallway_1",
+            "hallway_2",
+            "hallway_3",
+            "hallway_4",
+            "hallway_5",
+            "hallway_6",
+            "hallway_7",
+            "hallway_8",
+            "office_1",
+            "office_10",
+            "office_11",
+            "office_12",
+            "office_13",
+            "office_14",
+            "office_15",
+            "office_16",
+            "office_17",
+            "office_18",
+            "office_19",
+            "office_2",
+            "office_20",
+            "office_21",
+            "office_22",
+            "office_23",
+            "office_24",
+            "office_25",
+            "office_26",
+            "office_27",
+            "office_28",
+            "office_29",
+            "office_3",
+            "office_30",
+            "office_31",
+            "office_4",
+            "office_5",
+            "office_6",
+            "office_7",
+            "office_8",
+            "office_9",
+            "pantry_1"
+          ],
+          "split_counts": {
+            "excluded": 0,
+            "test": 1641,
+            "train": 7013,
+            "val": 1673
+          },
+          "split_region_counts": {
+            "excluded": {
+              "WC_1": 0,
+              "conferenceRoom_1": 0,
+              "conferenceRoom_2": 0,
+              "copyRoom_1": 0,
+              "hallway_1": 0,
+              "hallway_2": 0,
+              "hallway_3": 0,
+              "hallway_4": 0,
+              "hallway_5": 0,
+              "hallway_6": 0,
+              "hallway_7": 0,
+              "hallway_8": 0,
+              "office_1": 0,
+              "office_10": 0,
+              "office_11": 0,
+              "office_12": 0,
+              "office_13": 0,
+              "office_14": 0,
+              "office_15": 0,
+              "office_16": 0,
+              "office_17": 0,
+              "office_18": 0,
+              "office_19": 0,
+              "office_2": 0,
+              "office_20": 0,
+              "office_21": 0,
+              "office_22": 0,
+              "office_23": 0,
+              "office_24": 0,
+              "office_25": 0,
+              "office_26": 0,
+              "office_27": 0,
+              "office_28": 0,
+              "office_29": 0,
+              "office_3": 0,
+              "office_30": 0,
+              "office_31": 0,
+              "office_4": 0,
+              "office_5": 0,
+              "office_6": 0,
+              "office_7": 0,
+              "office_8": 0,
+              "office_9": 0,
+              "pantry_1": 0
+            },
+            "test": {
+              "WC_1": 0,
+              "conferenceRoom_1": 280,
+              "conferenceRoom_2": 0,
+              "copyRoom_1": 0,
+              "hallway_1": 0,
+              "hallway_2": 0,
+              "hallway_3": 0,
+              "hallway_4": 0,
+              "hallway_5": 0,
+              "hallway_6": 0,
+              "hallway_7": 0,
+              "hallway_8": 72,
+              "office_1": 0,
+              "office_10": 0,
+              "office_11": 0,
+              "office_12": 0,
+              "office_13": 0,
+              "office_14": 0,
+              "office_15": 0,
+              "office_16": 289,
+              "office_17": 0,
+              "office_18": 0,
+              "office_19": 0,
+              "office_2": 0,
+              "office_20": 190,
+              "office_21": 0,
+              "office_22": 200,
+              "office_23": 152,
+              "office_24": 0,
+              "office_25": 0,
+              "office_26": 0,
+              "office_27": 0,
+              "office_28": 0,
+              "office_29": 0,
+              "office_3": 0,
+              "office_30": 458,
+              "office_31": 0,
+              "office_4": 0,
+              "office_5": 0,
+              "office_6": 0,
+              "office_7": 0,
+              "office_8": 0,
+              "office_9": 0,
+              "pantry_1": 0
+            },
+            "train": {
+              "WC_1": 298,
+              "conferenceRoom_1": 0,
+              "conferenceRoom_2": 361,
+              "copyRoom_1": 127,
+              "hallway_1": 64,
+              "hallway_2": 0,
+              "hallway_3": 118,
+              "hallway_4": 17,
+              "hallway_5": 0,
+              "hallway_6": 1411,
+              "hallway_7": 1553,
+              "hallway_8": 0,
+              "office_1": 167,
+              "office_10": 112,
+              "office_11": 112,
+              "office_12": 115,
+              "office_13": 120,
+              "office_14": 0,
+              "office_15": 85,
+              "office_16": 0,
+              "office_17": 175,
+              "office_18": 182,
+              "office_19": 141,
+              "office_2": 139,
+              "office_20": 0,
+              "office_21": 186,
+              "office_22": 0,
+              "office_23": 0,
+              "office_24": 0,
+              "office_25": 114,
+              "office_26": 221,
+              "office_27": 229,
+              "office_28": 0,
+              "office_29": 101,
+              "office_3": 172,
+              "office_30": 0,
+              "office_31": 0,
+              "office_4": 116,
+              "office_5": 123,
+              "office_6": 0,
+              "office_7": 110,
+              "office_8": 99,
+              "office_9": 121,
+              "pantry_1": 124
+            },
+            "val": {
+              "WC_1": 0,
+              "conferenceRoom_1": 0,
+              "conferenceRoom_2": 0,
+              "copyRoom_1": 0,
+              "hallway_1": 0,
+              "hallway_2": 97,
+              "hallway_3": 0,
+              "hallway_4": 0,
+              "hallway_5": 77,
+              "hallway_6": 0,
+              "hallway_7": 0,
+              "hallway_8": 0,
+              "office_1": 0,
+              "office_10": 0,
+              "office_11": 0,
+              "office_12": 0,
+              "office_13": 0,
+              "office_14": 93,
+              "office_15": 0,
+              "office_16": 0,
+              "office_17": 0,
+              "office_18": 0,
+              "office_19": 0,
+              "office_2": 0,
+              "office_20": 0,
+              "office_21": 0,
+              "office_22": 0,
+              "office_23": 0,
+              "office_24": 161,
+              "office_25": 0,
+              "office_26": 0,
+              "office_27": 0,
+              "office_28": 233,
+              "office_29": 0,
+              "office_3": 0,
+              "office_30": 0,
+              "office_31": 901,
+              "office_4": 0,
+              "office_5": 0,
+              "office_6": 111,
+              "office_7": 0,
+              "office_8": 0,
+              "office_9": 0,
+              "pantry_1": 0
+            }
+          }
+        }
+      },
+      "verified": true
+    },
+    "epoch": 9,
+    "learned_method_evaluated": true,
+    "model_config_differences": {},
+    "path": "/home/bgao491/PriorBIMDA/outputs/stanford_area1/accepted.pt",
+    "sha256": "ffc69e51bfca6e0619d19c1665f2748d35b24c48c33f67303f646ae74cdcc711",
+    "status": "verified"
+  },
+  "config": {
+    "path": "/home/bgao491/PriorBIMDA/configs/stanford_area1.yaml",
+    "sha256": "c2478535ab990bd170fa5eba14a0154d0276d7d4ae88c00da972af3e7143e703"
+  },
+  "dataset_split_provenance": {
+    "annotation_file": "/home/bgao491/PriorBIMDA/data/annotations/stanford_area1_room_v1.jsonl",
+    "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+    "annotation_record_count": 10327,
+    "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+    "excluded_reasons": {},
+    "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+    "fused_lidar_validation": {
+      "disjoint": true,
+      "unique_source_counts": {
+        "test": 0,
+        "train": 0,
+        "val": 0
+      }
+    },
+    "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+    "manifest_preparation_fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+    "manifest_preparation_fingerprint_status": "verified",
+    "manifest_record_count": 10327,
+    "mode": "annotations",
+    "ordered_ids_sha256": {
+      "excluded": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "test": "b7d6d7ea4fbd3a15ef74494cda16532fdf284b050618064e206317e30316404f",
+      "train": "b2aec61d770b08e32eb920d76cc40c77031fb1f58ecd525c402aa3fbeb7d543f",
+      "val": "cf475a95336872579aad4c7a1762f781c7ec3146474fed119d955b92e3d35bfc"
+    },
+    "schema_version": 1,
+    "selected_regions": [
+      "WC_1",
+      "conferenceRoom_1",
+      "conferenceRoom_2",
+      "copyRoom_1",
+      "hallway_1",
+      "hallway_2",
+      "hallway_3",
+      "hallway_4",
+      "hallway_5",
+      "hallway_6",
+      "hallway_7",
+      "hallway_8",
+      "office_1",
+      "office_10",
+      "office_11",
+      "office_12",
+      "office_13",
+      "office_14",
+      "office_15",
+      "office_16",
+      "office_17",
+      "office_18",
+      "office_19",
+      "office_2",
+      "office_20",
+      "office_21",
+      "office_22",
+      "office_23",
+      "office_24",
+      "office_25",
+      "office_26",
+      "office_27",
+      "office_28",
+      "office_29",
+      "office_3",
+      "office_30",
+      "office_31",
+      "office_4",
+      "office_5",
+      "office_6",
+      "office_7",
+      "office_8",
+      "office_9",
+      "pantry_1"
+    ],
+    "split_counts": {
+      "excluded": 0,
+      "test": 1641,
+      "train": 7013,
+      "val": 1673
+    },
+    "split_region_counts": {
+      "excluded": {
+        "WC_1": 0,
+        "conferenceRoom_1": 0,
+        "conferenceRoom_2": 0,
+        "copyRoom_1": 0,
+        "hallway_1": 0,
+        "hallway_2": 0,
+        "hallway_3": 0,
+        "hallway_4": 0,
+        "hallway_5": 0,
+        "hallway_6": 0,
+        "hallway_7": 0,
+        "hallway_8": 0,
+        "office_1": 0,
+        "office_10": 0,
+        "office_11": 0,
+        "office_12": 0,
+        "office_13": 0,
+        "office_14": 0,
+        "office_15": 0,
+        "office_16": 0,
+        "office_17": 0,
+        "office_18": 0,
+        "office_19": 0,
+        "office_2": 0,
+        "office_20": 0,
+        "office_21": 0,
+        "office_22": 0,
+        "office_23": 0,
+        "office_24": 0,
+        "office_25": 0,
+        "office_26": 0,
+        "office_27": 0,
+        "office_28": 0,
+        "office_29": 0,
+        "office_3": 0,
+        "office_30": 0,
+        "office_31": 0,
+        "office_4": 0,
+        "office_5": 0,
+        "office_6": 0,
+        "office_7": 0,
+        "office_8": 0,
+        "office_9": 0,
+        "pantry_1": 0
+      },
+      "test": {
+        "WC_1": 0,
+        "conferenceRoom_1": 280,
+        "conferenceRoom_2": 0,
+        "copyRoom_1": 0,
+        "hallway_1": 0,
+        "hallway_2": 0,
+        "hallway_3": 0,
+        "hallway_4": 0,
+        "hallway_5": 0,
+        "hallway_6": 0,
+        "hallway_7": 0,
+        "hallway_8": 72,
+        "office_1": 0,
+        "office_10": 0,
+        "office_11": 0,
+        "office_12": 0,
+        "office_13": 0,
+        "office_14": 0,
+        "office_15": 0,
+        "office_16": 289,
+        "office_17": 0,
+        "office_18": 0,
+        "office_19": 0,
+        "office_2": 0,
+        "office_20": 190,
+        "office_21": 0,
+        "office_22": 200,
+        "office_23": 152,
+        "office_24": 0,
+        "office_25": 0,
+        "office_26": 0,
+        "office_27": 0,
+        "office_28": 0,
+        "office_29": 0,
+        "office_3": 0,
+        "office_30": 458,
+        "office_31": 0,
+        "office_4": 0,
+        "office_5": 0,
+        "office_6": 0,
+        "office_7": 0,
+        "office_8": 0,
+        "office_9": 0,
+        "pantry_1": 0
+      },
+      "train": {
+        "WC_1": 298,
+        "conferenceRoom_1": 0,
+        "conferenceRoom_2": 361,
+        "copyRoom_1": 127,
+        "hallway_1": 64,
+        "hallway_2": 0,
+        "hallway_3": 118,
+        "hallway_4": 17,
+        "hallway_5": 0,
+        "hallway_6": 1411,
+        "hallway_7": 1553,
+        "hallway_8": 0,
+        "office_1": 167,
+        "office_10": 112,
+        "office_11": 112,
+        "office_12": 115,
+        "office_13": 120,
+        "office_14": 0,
+        "office_15": 85,
+        "office_16": 0,
+        "office_17": 175,
+        "office_18": 182,
+        "office_19": 141,
+        "office_2": 139,
+        "office_20": 0,
+        "office_21": 186,
+        "office_22": 0,
+        "office_23": 0,
+        "office_24": 0,
+        "office_25": 114,
+        "office_26": 221,
+        "office_27": 229,
+        "office_28": 0,
+        "office_29": 101,
+        "office_3": 172,
+        "office_30": 0,
+        "office_31": 0,
+        "office_4": 116,
+        "office_5": 123,
+        "office_6": 0,
+        "office_7": 110,
+        "office_8": 99,
+        "office_9": 121,
+        "pantry_1": 124
+      },
+      "val": {
+        "WC_1": 0,
+        "conferenceRoom_1": 0,
+        "conferenceRoom_2": 0,
+        "copyRoom_1": 0,
+        "hallway_1": 0,
+        "hallway_2": 97,
+        "hallway_3": 0,
+        "hallway_4": 0,
+        "hallway_5": 77,
+        "hallway_6": 0,
+        "hallway_7": 0,
+        "hallway_8": 0,
+        "office_1": 0,
+        "office_10": 0,
+        "office_11": 0,
+        "office_12": 0,
+        "office_13": 0,
+        "office_14": 93,
+        "office_15": 0,
+        "office_16": 0,
+        "office_17": 0,
+        "office_18": 0,
+        "office_19": 0,
+        "office_2": 0,
+        "office_20": 0,
+        "office_21": 0,
+        "office_22": 0,
+        "office_23": 0,
+        "office_24": 161,
+        "office_25": 0,
+        "office_26": 0,
+        "office_27": 0,
+        "office_28": 233,
+        "office_29": 0,
+        "office_3": 0,
+        "office_30": 0,
+        "office_31": 901,
+        "office_4": 0,
+        "office_5": 0,
+        "office_6": 111,
+        "office_7": 0,
+        "office_8": 0,
+        "office_9": 0,
+        "pantry_1": 0
+      }
+    }
+  },
+  "evaluation_support": {
+    "definition": "pano GT valid and covered by at least one regular view",
+    "depth_range_m": [
+      0.2,
+      5.0
+    ],
+    "exact_erp_pixel_solid_angle_metrics_reported": true,
+    "formal_primary": "equal-station macro of exact solid-angle-weighted metrics",
+    "identical_for_every_depth_and_fusion_method": true,
+    "pixel_micro_role": "secondary diagnostic",
+    "uncertainty_resampling_unit": "room cluster"
+  },
+  "evaluator": {
+    "path": "/home/bgao491/PriorBIMDA/scripts/model/evaluate_stanford_pano.py",
+    "sha256": "0d699f0c4d5b1cdea53289fa8af024cf8a48391133a52c87348f94652dcc992c"
+  },
+  "formal_protocol_eligible": true,
+  "fusion": {
+    "consistency_log_threshold": 0.25,
+    "domain": "log radial range",
+    "huber_log_delta": 0.08,
+    "methods": [
+      "single_best_view",
+      "joint_weighted_log",
+      "joint_huber",
+      "joint_photo_huber",
+      "joint_synchronized_huber"
+    ],
+    "overlap_scale_synchronization": {
+      "graph_constraint": "weighted least squares, registered-anchor zero-mean KKT constraint, L2-to-zero",
+      "huber_log_delta": 0.08,
+      "input": "prediction overlap plus centrality/confidence only; no GT",
+      "l2": 1e-06,
+      "max_abs_log_offset": 0.5,
+      "min_overlap": 256,
+      "pair_location": "median initialization plus three Huber IRLS iterations",
+      "pair_max_deterministic_samples": 4096
+    },
+    "photometric_exposure_alignment": "per-view median log-luminance gain, clipped [0.5,2]",
+    "photometric_sigma": 0.12,
+    "station_bim_scale": {
+      "local_variant": "same registered deterministic local correction per view",
+      "samples_per_view_cap": 50000,
+      "sampling": "deterministic evenly spaced valid raster-order indices",
+      "scope": "one universal BIM/DA3 scale shared by all regular views"
+    }
+  },
+  "geometry": {
+    "centrality_power": 4.0,
+    "confidence_floor": 0.05,
+    "pano_shape": [
+      512,
+      1024
+    ],
+    "projection": "pinhole z-depth to same-center equirectangular radial range",
+    "single_best_view_semantics": "per-ray single-source mosaic: independently choose the maximum centrality/confidence contributor at each ERP pixel"
+  },
+  "per_room_csv": {
+    "path": "/home/bgao491/PriorBIMDA/results/stanford_area1/pano_test/per_room.csv",
+    "sha256": "fb1e37721d774039e92a01243bb00a38e78bae5f6c2edef525ac45fcb4e6bb60"
+  },
+  "per_station_csv": {
+    "path": "/home/bgao491/PriorBIMDA/results/stanford_area1/pano_test/per_station.csv",
+    "sha256": "18c91935292c282ce57635360ce5b9e05f5eea6142189e05591b2378daf39d34"
+  },
+  "prediction_input_contract": {
+    "cached_da3_depth_and_confidence": true,
+    "pano_depth_runtime_role": "evaluation target only",
+    "pano_depth_used_only_after_all_predictions_are_frozen": true,
+    "pano_rgb_for_photometric_weight_only": true,
+    "regular_bim_render": true,
+    "regular_ground_truth_arrays_loaded": false,
+    "regular_rgb": true
+  },
+  "prepared_manifest": {
+    "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/manifest.jsonl",
+    "sha256": "6bdf397abe30984c3e920068a03c09d5982d4b72e28a142be5c51f25794ba4df"
+  },
+  "protocol": "stanford-area1-regular-and-pano-tangent-depth-v3",
+  "regular_pano_joint_per_station_csv": {
+    "path": "/home/bgao491/PriorBIMDA/results/stanford_area1/pano_test/regular_pano_joint_per_station.csv",
+    "sha256": "6a880fdac1ba43c35d264c93594bffb31db725f467ce380261b0a3c69983da69"
+  },
+  "route_p_tangent_inputs": {
+    "cache_schema_version": 2,
+    "claim_boundary": "Route-P uses raw DA3 only and is reported independently from Route-R BIM/direct/learned comparisons",
+    "combined_supports": {
+      "common_regular": "regular-only coverage intersected with valid pano GT; fixed across regular-only and both combined source sets",
+      "native_union": "valid pano GT intersected with each source set's own coverage"
+    },
+    "evaluation_scope": {
+      "evaluated_station_count": 31,
+      "evaluated_station_ids": [
+        "042a479869b44a7c9159922f19a285ea",
+        "0d600f92f8d14e288ddc590c32584a5a",
+        "54ca9cb6c3aa40779491ee273d287ebc",
+        "84cdc9a2fc2141fab30a4e2342171ce9",
+        "874b1dfd225c45dd9fc79b1414c44ca5",
+        "4de69cf4bb0d4ebe80b426faefdfe7ec",
+        "4ece53eed21b4e44886d83c3b7846a3b",
+        "7c870c23c35c4480b05a45083f704ff0",
+        "db1eab8f268e4773b92d6cc403e09178",
+        "f62548d255d24e6983b698e34b343b60",
+        "23123f4fd8d94d64ab9859c2cc1907fa",
+        "71286f97e48a43c498c7c9aaf646c7d2",
+        "79fca76427654b0182d9a307d3909b88",
+        "9ea4d8df99b24fba907ade0c88169211",
+        "bcfed22743054528992abb1504f65da8",
+        "7eb7e942b7ba4db1a26f766d402b2d0c",
+        "dbcdb339c8044f17a641e216c7e7fb46",
+        "f02c98c173b94fa4928b24ce8c66a7bc",
+        "2d842ce0d9814d96ae6f171e9d11c298",
+        "fcd2380fad1f4221b9df96ea97828b9c",
+        "ffd2cca53bfe4dc580469bc1fffb077e",
+        "55120255801c4a2db0db78cdb8e376b5",
+        "5a18aa053606464bac74c4820fb9a355",
+        "7f04c9b205aa42dfbc7311b09699bf6b",
+        "1b329c346b4e4b62b07e2796bd506eee",
+        "40e7119da2be416da1fa66a11fcad683",
+        "4ff66baf78ae47e0bbd6443312ba648e",
+        "737918e517c940158e75774d9e4be69a",
+        "8f08b0656229405694a485b2252bfe6e",
+        "99ef0587d5194f998b36b7bdd64aadb1",
+        "ca8b23ad64ee4e73a430ad1ce7eb5771"
+      ],
+      "formal_full_manifest": true,
+      "ordered_prefix_limit": null
+    },
+    "gt_or_bim_used_for_scale_weight_or_selection": false,
+    "identity_checks": [
+      "formal full-split status",
+      "runtime split and explicit test authorization",
+      "config and annotation SHA256",
+      "exact dataset split provenance",
+      "pinned DA3 name/revision/process_res/load policy",
+      "station UUID/room/panorama RGB SHA256",
+      "every tangent PNG and DA3 cache SHA256",
+      "every schema-v2 cache metadata field",
+      "nested14 preset K and T_face_from_pano rebuilt via shared pano_tangent"
+    ],
+    "manifest": {
+      "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/manifests/test_full.json",
+      "protocol": "stanford-area1-pano-tangent-da3-cache-v1",
+      "schema_version": 1,
+      "sha256": "6f72a0c44193beef29dea6dbe1468e9d72d45d417ebea2ffef86029dae2319a5"
+    },
+    "official_pano_depth_evaluation_targets": {
+      "042a479869b44a7c9159922f19a285ea": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_042a479869b44a7c9159922f19a285ea_conferenceRoom_1_frame_equirectangular_domain_depth.png",
+        "sha256": "3e5b323cc327a8ba0e5ab8d5a71fb9456305212d71129be01ea8dd65c9093be6"
+      },
+      "0d600f92f8d14e288ddc590c32584a5a": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_0d600f92f8d14e288ddc590c32584a5a_conferenceRoom_1_frame_equirectangular_domain_depth.png",
+        "sha256": "5b81faf323b787a3792d4551b01a36bc05b31004e61d80e5e2794c2e5387f930"
+      },
+      "1b329c346b4e4b62b07e2796bd506eee": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_1b329c346b4e4b62b07e2796bd506eee_office_30_frame_equirectangular_domain_depth.png",
+        "sha256": "59a51574d5c1f59a8eebc31c9214c78abf713365753ba2026474cf57cebb8c3e"
+      },
+      "23123f4fd8d94d64ab9859c2cc1907fa": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_23123f4fd8d94d64ab9859c2cc1907fa_office_16_frame_equirectangular_domain_depth.png",
+        "sha256": "b7c0a5ddc0e57c4eb0b5244d0494956a89629c9e3de3625c399c3564c28cca52"
+      },
+      "2d842ce0d9814d96ae6f171e9d11c298": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_2d842ce0d9814d96ae6f171e9d11c298_office_22_frame_equirectangular_domain_depth.png",
+        "sha256": "ef131c3f766cd2db79a82d3ea3f7ce25fb724a443baca1d7ee0aa02c5b6c1e63"
+      },
+      "40e7119da2be416da1fa66a11fcad683": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_40e7119da2be416da1fa66a11fcad683_office_30_frame_equirectangular_domain_depth.png",
+        "sha256": "1a52012a2d5f48ea4f8e0e0239e4046f516a7ecc0eabc11d310e25bd4f54c48d"
+      },
+      "4de69cf4bb0d4ebe80b426faefdfe7ec": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_4de69cf4bb0d4ebe80b426faefdfe7ec_hallway_8_frame_equirectangular_domain_depth.png",
+        "sha256": "993251527715507d060267f655ea15509e723f9d64729047b7b6791159e2afb2"
+      },
+      "4ece53eed21b4e44886d83c3b7846a3b": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_4ece53eed21b4e44886d83c3b7846a3b_hallway_8_frame_equirectangular_domain_depth.png",
+        "sha256": "0ae9e90ab7e5910578e859927fd2bea2d845ef88d2d7245ed0360f6cf4dc7b78"
+      },
+      "4ff66baf78ae47e0bbd6443312ba648e": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_4ff66baf78ae47e0bbd6443312ba648e_office_30_frame_equirectangular_domain_depth.png",
+        "sha256": "9e7bfd44e4777f898ca88a4064fd99b67ba4ec7a51349df8b1ca3dec5293016f"
+      },
+      "54ca9cb6c3aa40779491ee273d287ebc": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_54ca9cb6c3aa40779491ee273d287ebc_conferenceRoom_1_frame_equirectangular_domain_depth.png",
+        "sha256": "d0c54685c8dc3a03c76d40dae1ecbc16e8b262af97ed4c128e6f924a82fe733b"
+      },
+      "55120255801c4a2db0db78cdb8e376b5": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_55120255801c4a2db0db78cdb8e376b5_office_23_frame_equirectangular_domain_depth.png",
+        "sha256": "d1cf8fa29b7e0cc742c6c9be9f64650cbb1217952083f3232757df06f1532715"
+      },
+      "5a18aa053606464bac74c4820fb9a355": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_5a18aa053606464bac74c4820fb9a355_office_23_frame_equirectangular_domain_depth.png",
+        "sha256": "565ee636f9e856644ad010e5525e9fe13c1fe7e1d8900039c4db433628676f49"
+      },
+      "71286f97e48a43c498c7c9aaf646c7d2": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_71286f97e48a43c498c7c9aaf646c7d2_office_16_frame_equirectangular_domain_depth.png",
+        "sha256": "528b5d03cbb467bd502d3c5cfd62ff902def062a176ec71f7907cc19340d691c"
+      },
+      "737918e517c940158e75774d9e4be69a": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_737918e517c940158e75774d9e4be69a_office_30_frame_equirectangular_domain_depth.png",
+        "sha256": "dc18bc7581eee6769cbfbe7c70438940944a3f2ac9b36ed0a753135243f99c1b"
+      },
+      "79fca76427654b0182d9a307d3909b88": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_79fca76427654b0182d9a307d3909b88_office_16_frame_equirectangular_domain_depth.png",
+        "sha256": "50ea8bedfe3f61f3e4653323634a3502d29b1bc7b8b4a3f0c59da0a71d3b6261"
+      },
+      "7c870c23c35c4480b05a45083f704ff0": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_7c870c23c35c4480b05a45083f704ff0_hallway_8_frame_equirectangular_domain_depth.png",
+        "sha256": "a7651179cc2084ea01bf2debfc639e5946e5b9ae33cdd2891b946ba69a8f8322"
+      },
+      "7eb7e942b7ba4db1a26f766d402b2d0c": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_7eb7e942b7ba4db1a26f766d402b2d0c_office_20_frame_equirectangular_domain_depth.png",
+        "sha256": "1005148039c6057be359ffaf62523bf8393e758539b45c4a47e8678de79de5c2"
+      },
+      "7f04c9b205aa42dfbc7311b09699bf6b": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_7f04c9b205aa42dfbc7311b09699bf6b_office_23_frame_equirectangular_domain_depth.png",
+        "sha256": "4e6a5962a1bb3b8ec24da05c0dc0e3e50af1a154e7223f6dfad496766841a22a"
+      },
+      "84cdc9a2fc2141fab30a4e2342171ce9": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_84cdc9a2fc2141fab30a4e2342171ce9_conferenceRoom_1_frame_equirectangular_domain_depth.png",
+        "sha256": "a8d79be239da2986c336f00460deaeda36f789d3e9a842f802f0329736982c3d"
+      },
+      "874b1dfd225c45dd9fc79b1414c44ca5": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_874b1dfd225c45dd9fc79b1414c44ca5_conferenceRoom_1_frame_equirectangular_domain_depth.png",
+        "sha256": "9b490a0a7f3fab62c7696b9c4b889075723b7f0630161d86d2ae1d831514ce04"
+      },
+      "8f08b0656229405694a485b2252bfe6e": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_8f08b0656229405694a485b2252bfe6e_office_30_frame_equirectangular_domain_depth.png",
+        "sha256": "2bb1ec23180667ac0e36fb8e5faf6925471e5e46dfb68465b997666d078cff16"
+      },
+      "99ef0587d5194f998b36b7bdd64aadb1": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_99ef0587d5194f998b36b7bdd64aadb1_office_30_frame_equirectangular_domain_depth.png",
+        "sha256": "72a0f08b8f1e5b2ae56a96efd14881a53ffce7232583c013ff6ac65a1fe36945"
+      },
+      "9ea4d8df99b24fba907ade0c88169211": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_9ea4d8df99b24fba907ade0c88169211_office_16_frame_equirectangular_domain_depth.png",
+        "sha256": "3d8ebdb0abfb40483a47e81f6d55badd7c65824b73dfb8a765f2de7ad11ead4c"
+      },
+      "bcfed22743054528992abb1504f65da8": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_bcfed22743054528992abb1504f65da8_office_16_frame_equirectangular_domain_depth.png",
+        "sha256": "2caf2f5e360aef24e475a1beac58e39d59a6b23ead719454a442c82ba26863fa"
+      },
+      "ca8b23ad64ee4e73a430ad1ce7eb5771": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_ca8b23ad64ee4e73a430ad1ce7eb5771_office_30_frame_equirectangular_domain_depth.png",
+        "sha256": "d01b0854785ee9840889ee991be87bf42e6ad6bee88ab106258f142a0c6edf2d"
+      },
+      "db1eab8f268e4773b92d6cc403e09178": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_db1eab8f268e4773b92d6cc403e09178_hallway_8_frame_equirectangular_domain_depth.png",
+        "sha256": "4648730739a19a5e44a3fdd1986cd3589984ef94c2c4313f2439b4e40c41fcef"
+      },
+      "dbcdb339c8044f17a641e216c7e7fb46": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_dbcdb339c8044f17a641e216c7e7fb46_office_20_frame_equirectangular_domain_depth.png",
+        "sha256": "72421ae4bac9b815fe997991d60ee29f3859ed5a058ec08ab7602a23ec303151"
+      },
+      "f02c98c173b94fa4928b24ce8c66a7bc": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_f02c98c173b94fa4928b24ce8c66a7bc_office_20_frame_equirectangular_domain_depth.png",
+        "sha256": "fab99c4663c70f2fa2278ce6511ee7181d0be09354ab05fa88dfcc1f5de61aa5"
+      },
+      "f62548d255d24e6983b698e34b343b60": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_f62548d255d24e6983b698e34b343b60_hallway_8_frame_equirectangular_domain_depth.png",
+        "sha256": "31bad2289c970546894c4722c9aca4fa1cffc5e47e86b2fcc38df3190c6ba6bd"
+      },
+      "fcd2380fad1f4221b9df96ea97828b9c": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_fcd2380fad1f4221b9df96ea97828b9c_office_22_frame_equirectangular_domain_depth.png",
+        "sha256": "441f544d313263673cbba3c5cc8812ce35cb62cab562e6105e97d34b02f630af"
+      },
+      "ffd2cca53bfe4dc580469bc1fffb077e": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_ffd2cca53bfe4dc580469bc1fffb077e_office_22_frame_equirectangular_domain_depth.png",
+        "sha256": "b7eb843b01a6df624d10089c60ae6564eed064e1f617268d19357132dfa957ce"
+      }
+    },
+    "pano_only_file_identities": {},
+    "photometric_method": "not applicable: all tangent RGB views are deterministic resamplings of the same panorama RGB",
+    "prediction_quantity": "cached tangent perspective z-depth converted to ERP radial range",
+    "status": "verified_formal_manifest",
+    "synchronization_gauge": {
+      "purpose": "prevent view-count changes from introducing an arbitrary global log-scale shift",
+      "regular_plus_tangent": "base-weighted zero mean over the ordered regular contributors, matching the regular-only anchor set",
+      "tangent6_and_tangent14": "base-weighted zero mean over the identical first-six cubemap views"
+    },
+    "tangent_only_supports": {
+      "common_tangent6_tangent14": "valid pano GT intersected with both variants; view-count quality claim",
+      "native": "valid pano GT intersected with each variant's own coverage"
+    },
+    "view_count_ablation": {
+      "tangent14": "all nested14 views",
+      "tangent6": "first six nested14 views; exactly shared cubemap6 geometry"
+    },
+    "weight": "face_centrality**centrality_power * cached_DA3_confidence"
+  },
+  "schema_version": 3,
+  "seed": 42,
+  "selected_pano_files": {
+    "042a479869b44a7c9159922f19a285ea/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_042a479869b44a7c9159922f19a285ea_conferenceRoom_1_frame_equirectangular_domain_depth.png",
+      "sha256": "3e5b323cc327a8ba0e5ab8d5a71fb9456305212d71129be01ea8dd65c9093be6"
+    },
+    "042a479869b44a7c9159922f19a285ea/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_042a479869b44a7c9159922f19a285ea_conferenceRoom_1_frame_equirectangular_domain_pose.json",
+      "sha256": "9945e00982da19ba7238eb7079d57b85d48d687c101f23b405572870db509b54"
+    },
+    "042a479869b44a7c9159922f19a285ea/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_042a479869b44a7c9159922f19a285ea_conferenceRoom_1_frame_equirectangular_domain_rgb.png",
+      "sha256": "b8f1ab0617b9abb0a4961b13b05b5d9221f5d4eab8744c2f7c405bc394743150"
+    },
+    "042a479869b44a7c9159922f19a285ea/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_042a479869b44a7c9159922f19a285ea_conferenceRoom_1_frame_equirectangular_domain_semantic.png",
+      "sha256": "8a331e5ab758cb09f5027b7e69a5eebb572421d17b87f68199ac7365994dfc83"
+    },
+    "0d600f92f8d14e288ddc590c32584a5a/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_0d600f92f8d14e288ddc590c32584a5a_conferenceRoom_1_frame_equirectangular_domain_depth.png",
+      "sha256": "5b81faf323b787a3792d4551b01a36bc05b31004e61d80e5e2794c2e5387f930"
+    },
+    "0d600f92f8d14e288ddc590c32584a5a/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_0d600f92f8d14e288ddc590c32584a5a_conferenceRoom_1_frame_equirectangular_domain_pose.json",
+      "sha256": "aa00142bb30cf151bdcfba3be0ad36d4f64928dcf59c463c582759f1527f8b83"
+    },
+    "0d600f92f8d14e288ddc590c32584a5a/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_0d600f92f8d14e288ddc590c32584a5a_conferenceRoom_1_frame_equirectangular_domain_rgb.png",
+      "sha256": "913c558d69e4167bdefa90e2174856f7524275d790e6c1adefca49885a7c9e4e"
+    },
+    "0d600f92f8d14e288ddc590c32584a5a/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_0d600f92f8d14e288ddc590c32584a5a_conferenceRoom_1_frame_equirectangular_domain_semantic.png",
+      "sha256": "542f43232feafb055e39589e377c30c7deafdd55347f31d77beb9a0743fd2c8d"
+    },
+    "1b329c346b4e4b62b07e2796bd506eee/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_1b329c346b4e4b62b07e2796bd506eee_office_30_frame_equirectangular_domain_depth.png",
+      "sha256": "59a51574d5c1f59a8eebc31c9214c78abf713365753ba2026474cf57cebb8c3e"
+    },
+    "1b329c346b4e4b62b07e2796bd506eee/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_1b329c346b4e4b62b07e2796bd506eee_office_30_frame_equirectangular_domain_pose.json",
+      "sha256": "82bfd0c065f98e8b9368206654899717cf9c223481785e2a7c1bf77d4d91f8e6"
+    },
+    "1b329c346b4e4b62b07e2796bd506eee/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_1b329c346b4e4b62b07e2796bd506eee_office_30_frame_equirectangular_domain_rgb.png",
+      "sha256": "022549e082316c4265b34463499e6c2fe37c74968d1dac4cbc87b8385b1c111a"
+    },
+    "1b329c346b4e4b62b07e2796bd506eee/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_1b329c346b4e4b62b07e2796bd506eee_office_30_frame_equirectangular_domain_semantic.png",
+      "sha256": "a49fb56497590276657d5e7f8761a0db10e0dfed53de6737d79076e9f92d643e"
+    },
+    "23123f4fd8d94d64ab9859c2cc1907fa/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_23123f4fd8d94d64ab9859c2cc1907fa_office_16_frame_equirectangular_domain_depth.png",
+      "sha256": "b7c0a5ddc0e57c4eb0b5244d0494956a89629c9e3de3625c399c3564c28cca52"
+    },
+    "23123f4fd8d94d64ab9859c2cc1907fa/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_23123f4fd8d94d64ab9859c2cc1907fa_office_16_frame_equirectangular_domain_pose.json",
+      "sha256": "9c1834d9dd0c2429cf86670f3acc811871cd9c33f707a73747440a0bea17922b"
+    },
+    "23123f4fd8d94d64ab9859c2cc1907fa/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_23123f4fd8d94d64ab9859c2cc1907fa_office_16_frame_equirectangular_domain_rgb.png",
+      "sha256": "0657e09f7157484322c2021a7a98581a08430487410f1c3ef2012ea289f98191"
+    },
+    "23123f4fd8d94d64ab9859c2cc1907fa/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_23123f4fd8d94d64ab9859c2cc1907fa_office_16_frame_equirectangular_domain_semantic.png",
+      "sha256": "f524aa39118b076e1ad8e28065aab741e9bae33669567a4a507319d9ca070c20"
+    },
+    "2d842ce0d9814d96ae6f171e9d11c298/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_2d842ce0d9814d96ae6f171e9d11c298_office_22_frame_equirectangular_domain_depth.png",
+      "sha256": "ef131c3f766cd2db79a82d3ea3f7ce25fb724a443baca1d7ee0aa02c5b6c1e63"
+    },
+    "2d842ce0d9814d96ae6f171e9d11c298/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_2d842ce0d9814d96ae6f171e9d11c298_office_22_frame_equirectangular_domain_pose.json",
+      "sha256": "7e53d928e230fa288829654fb29a995e50e187218022ca742e4740eea480cb4b"
+    },
+    "2d842ce0d9814d96ae6f171e9d11c298/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_2d842ce0d9814d96ae6f171e9d11c298_office_22_frame_equirectangular_domain_rgb.png",
+      "sha256": "05c3d33b85c7ce55e1d0a16b96f483d83c5889ab8e02c0af4a835e5789292db5"
+    },
+    "2d842ce0d9814d96ae6f171e9d11c298/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_2d842ce0d9814d96ae6f171e9d11c298_office_22_frame_equirectangular_domain_semantic.png",
+      "sha256": "e505ac20851d82ce2e6588ecc44a26ef478fc524296370bd45d8d389dcb8599d"
+    },
+    "40e7119da2be416da1fa66a11fcad683/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_40e7119da2be416da1fa66a11fcad683_office_30_frame_equirectangular_domain_depth.png",
+      "sha256": "1a52012a2d5f48ea4f8e0e0239e4046f516a7ecc0eabc11d310e25bd4f54c48d"
+    },
+    "40e7119da2be416da1fa66a11fcad683/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_40e7119da2be416da1fa66a11fcad683_office_30_frame_equirectangular_domain_pose.json",
+      "sha256": "f018034b45d315fe1b6ef98b39682ae8253ac1e3b8c1c3e621267f1850ee9e50"
+    },
+    "40e7119da2be416da1fa66a11fcad683/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_40e7119da2be416da1fa66a11fcad683_office_30_frame_equirectangular_domain_rgb.png",
+      "sha256": "a37e996ea9e693062b70098caae1893e1c741e63a56f9809f4818cd052ffa71c"
+    },
+    "40e7119da2be416da1fa66a11fcad683/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_40e7119da2be416da1fa66a11fcad683_office_30_frame_equirectangular_domain_semantic.png",
+      "sha256": "8b35629301289c117c69d39b5509f8c4051028ca122e4c415c2b7b22a12f620d"
+    },
+    "4de69cf4bb0d4ebe80b426faefdfe7ec/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_4de69cf4bb0d4ebe80b426faefdfe7ec_hallway_8_frame_equirectangular_domain_depth.png",
+      "sha256": "993251527715507d060267f655ea15509e723f9d64729047b7b6791159e2afb2"
+    },
+    "4de69cf4bb0d4ebe80b426faefdfe7ec/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_4de69cf4bb0d4ebe80b426faefdfe7ec_hallway_8_frame_equirectangular_domain_pose.json",
+      "sha256": "7a27d659346fcc40db28dd953367210335bc9adfa781b5f36f07411ad855b27f"
+    },
+    "4de69cf4bb0d4ebe80b426faefdfe7ec/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_4de69cf4bb0d4ebe80b426faefdfe7ec_hallway_8_frame_equirectangular_domain_rgb.png",
+      "sha256": "0895b84f87d9e5f47c7b662bda8c0195177ae45c311a725fc497a7edffda0a54"
+    },
+    "4de69cf4bb0d4ebe80b426faefdfe7ec/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_4de69cf4bb0d4ebe80b426faefdfe7ec_hallway_8_frame_equirectangular_domain_semantic.png",
+      "sha256": "0b7ed5ea6e7c934035da3525d42f973f0344b0b193a4dd04ad06c4646381c303"
+    },
+    "4ece53eed21b4e44886d83c3b7846a3b/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_4ece53eed21b4e44886d83c3b7846a3b_hallway_8_frame_equirectangular_domain_depth.png",
+      "sha256": "0ae9e90ab7e5910578e859927fd2bea2d845ef88d2d7245ed0360f6cf4dc7b78"
+    },
+    "4ece53eed21b4e44886d83c3b7846a3b/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_4ece53eed21b4e44886d83c3b7846a3b_hallway_8_frame_equirectangular_domain_pose.json",
+      "sha256": "47a45d8aa373099f3846f09a73c3bdff8fd016a6436596cfb0fd6e22dd88d7ae"
+    },
+    "4ece53eed21b4e44886d83c3b7846a3b/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_4ece53eed21b4e44886d83c3b7846a3b_hallway_8_frame_equirectangular_domain_rgb.png",
+      "sha256": "20c7aad5893a49545b5ea683aab00db962fb922e9e651eb989aee2c84dd2e8ba"
+    },
+    "4ece53eed21b4e44886d83c3b7846a3b/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_4ece53eed21b4e44886d83c3b7846a3b_hallway_8_frame_equirectangular_domain_semantic.png",
+      "sha256": "d54a96a6c0e1425b676314537ee9f82a7be4fe9587abe1e256d0c86bdc781ba4"
+    },
+    "4ff66baf78ae47e0bbd6443312ba648e/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_4ff66baf78ae47e0bbd6443312ba648e_office_30_frame_equirectangular_domain_depth.png",
+      "sha256": "9e7bfd44e4777f898ca88a4064fd99b67ba4ec7a51349df8b1ca3dec5293016f"
+    },
+    "4ff66baf78ae47e0bbd6443312ba648e/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_4ff66baf78ae47e0bbd6443312ba648e_office_30_frame_equirectangular_domain_pose.json",
+      "sha256": "4cfe52310bb77c9d24be9e76acc208f414de95a4ed01b1d847b816faf275f58c"
+    },
+    "4ff66baf78ae47e0bbd6443312ba648e/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_4ff66baf78ae47e0bbd6443312ba648e_office_30_frame_equirectangular_domain_rgb.png",
+      "sha256": "fca7785f313c42a30c6d73e0b18ba32ff70920fef5217dbd99625c04099d8257"
+    },
+    "4ff66baf78ae47e0bbd6443312ba648e/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_4ff66baf78ae47e0bbd6443312ba648e_office_30_frame_equirectangular_domain_semantic.png",
+      "sha256": "a66b62bc80c76f065407fd1e7aca8acc69515ddb4353fbb9e18ee50f95064671"
+    },
+    "54ca9cb6c3aa40779491ee273d287ebc/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_54ca9cb6c3aa40779491ee273d287ebc_conferenceRoom_1_frame_equirectangular_domain_depth.png",
+      "sha256": "d0c54685c8dc3a03c76d40dae1ecbc16e8b262af97ed4c128e6f924a82fe733b"
+    },
+    "54ca9cb6c3aa40779491ee273d287ebc/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_54ca9cb6c3aa40779491ee273d287ebc_conferenceRoom_1_frame_equirectangular_domain_pose.json",
+      "sha256": "a3ab918b3fa2be9b822968b27bfbd67c79f080ec067896b65f2eeb8c9fb121f9"
+    },
+    "54ca9cb6c3aa40779491ee273d287ebc/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_54ca9cb6c3aa40779491ee273d287ebc_conferenceRoom_1_frame_equirectangular_domain_rgb.png",
+      "sha256": "68f1899cb2af7e3125f64ecdf420aa8a73af47095e434a907102f8880565a706"
+    },
+    "54ca9cb6c3aa40779491ee273d287ebc/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_54ca9cb6c3aa40779491ee273d287ebc_conferenceRoom_1_frame_equirectangular_domain_semantic.png",
+      "sha256": "b08ad8400588a3fbb7529a2c553b5072cc794c9ad3435aa875f6fd725a6f95c2"
+    },
+    "55120255801c4a2db0db78cdb8e376b5/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_55120255801c4a2db0db78cdb8e376b5_office_23_frame_equirectangular_domain_depth.png",
+      "sha256": "d1cf8fa29b7e0cc742c6c9be9f64650cbb1217952083f3232757df06f1532715"
+    },
+    "55120255801c4a2db0db78cdb8e376b5/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_55120255801c4a2db0db78cdb8e376b5_office_23_frame_equirectangular_domain_pose.json",
+      "sha256": "88e2da47e92e1bac348e1b52b77dbb5d9998ac222766af66abd8476c2d149570"
+    },
+    "55120255801c4a2db0db78cdb8e376b5/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_55120255801c4a2db0db78cdb8e376b5_office_23_frame_equirectangular_domain_rgb.png",
+      "sha256": "ed3526889a082eba4bf597611ac4a01e485501ae86422dec5642a670c28de19d"
+    },
+    "55120255801c4a2db0db78cdb8e376b5/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_55120255801c4a2db0db78cdb8e376b5_office_23_frame_equirectangular_domain_semantic.png",
+      "sha256": "ded91b1506ed9d19a1ea4e9cf77835e855de2f41fd05917bc730a904e0d36f10"
+    },
+    "5a18aa053606464bac74c4820fb9a355/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_5a18aa053606464bac74c4820fb9a355_office_23_frame_equirectangular_domain_depth.png",
+      "sha256": "565ee636f9e856644ad010e5525e9fe13c1fe7e1d8900039c4db433628676f49"
+    },
+    "5a18aa053606464bac74c4820fb9a355/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_5a18aa053606464bac74c4820fb9a355_office_23_frame_equirectangular_domain_pose.json",
+      "sha256": "96ad2a81eaa5dde90ff3dc5f90e2072daf1720b0f0e2069df90d1cfbe05b90d4"
+    },
+    "5a18aa053606464bac74c4820fb9a355/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_5a18aa053606464bac74c4820fb9a355_office_23_frame_equirectangular_domain_rgb.png",
+      "sha256": "88b90b62b3370f789e296e0fff1ce73f9ede8d3ab6c05ef446ee4c84e136f8ce"
+    },
+    "5a18aa053606464bac74c4820fb9a355/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_5a18aa053606464bac74c4820fb9a355_office_23_frame_equirectangular_domain_semantic.png",
+      "sha256": "ca453dd7eefa6c580433802b18d2e425913da8736bb0c5e75d9869ec7d81b343"
+    },
+    "71286f97e48a43c498c7c9aaf646c7d2/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_71286f97e48a43c498c7c9aaf646c7d2_office_16_frame_equirectangular_domain_depth.png",
+      "sha256": "528b5d03cbb467bd502d3c5cfd62ff902def062a176ec71f7907cc19340d691c"
+    },
+    "71286f97e48a43c498c7c9aaf646c7d2/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_71286f97e48a43c498c7c9aaf646c7d2_office_16_frame_equirectangular_domain_pose.json",
+      "sha256": "96054f45103044acbd966c044ee099a1b534331419187ca4fa817e711c192cb4"
+    },
+    "71286f97e48a43c498c7c9aaf646c7d2/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_71286f97e48a43c498c7c9aaf646c7d2_office_16_frame_equirectangular_domain_rgb.png",
+      "sha256": "d0bfeb7691c80782b8e55fabd8d2b4c4481f7418d2ca0ad2380285b6ddc45158"
+    },
+    "71286f97e48a43c498c7c9aaf646c7d2/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_71286f97e48a43c498c7c9aaf646c7d2_office_16_frame_equirectangular_domain_semantic.png",
+      "sha256": "8f930d682e866f9cc3abf0f46d9de25a35df228c5919325d2a7a499b56e46494"
+    },
+    "737918e517c940158e75774d9e4be69a/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_737918e517c940158e75774d9e4be69a_office_30_frame_equirectangular_domain_depth.png",
+      "sha256": "dc18bc7581eee6769cbfbe7c70438940944a3f2ac9b36ed0a753135243f99c1b"
+    },
+    "737918e517c940158e75774d9e4be69a/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_737918e517c940158e75774d9e4be69a_office_30_frame_equirectangular_domain_pose.json",
+      "sha256": "fc4f2571a1b84049f08633eed7fff54763f97de7ab4dbdc5f1210b7056fe7304"
+    },
+    "737918e517c940158e75774d9e4be69a/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_737918e517c940158e75774d9e4be69a_office_30_frame_equirectangular_domain_rgb.png",
+      "sha256": "22e6ee77d8f0095ea772c95ee7955c2c3f252f8778a0d9c5f64a6f2be9bfd797"
+    },
+    "737918e517c940158e75774d9e4be69a/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_737918e517c940158e75774d9e4be69a_office_30_frame_equirectangular_domain_semantic.png",
+      "sha256": "4d0927830e2f888dc6cc0ece45e417b1f94af87c3c361b801299ff32a068af01"
+    },
+    "79fca76427654b0182d9a307d3909b88/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_79fca76427654b0182d9a307d3909b88_office_16_frame_equirectangular_domain_depth.png",
+      "sha256": "50ea8bedfe3f61f3e4653323634a3502d29b1bc7b8b4a3f0c59da0a71d3b6261"
+    },
+    "79fca76427654b0182d9a307d3909b88/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_79fca76427654b0182d9a307d3909b88_office_16_frame_equirectangular_domain_pose.json",
+      "sha256": "24af548958d1f3c315b9948b01548f6e44d80c229a803d07d02007eaa2aec440"
+    },
+    "79fca76427654b0182d9a307d3909b88/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_79fca76427654b0182d9a307d3909b88_office_16_frame_equirectangular_domain_rgb.png",
+      "sha256": "a9329476c06b1f32bfea0882d57d19f13df39b43e9777f7d119dfd6a9ffc3868"
+    },
+    "79fca76427654b0182d9a307d3909b88/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_79fca76427654b0182d9a307d3909b88_office_16_frame_equirectangular_domain_semantic.png",
+      "sha256": "bf113d47ddbe15e642e2044fb7dca5977571f656363f0b4fdcdd692bc2a18054"
+    },
+    "7c870c23c35c4480b05a45083f704ff0/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_7c870c23c35c4480b05a45083f704ff0_hallway_8_frame_equirectangular_domain_depth.png",
+      "sha256": "a7651179cc2084ea01bf2debfc639e5946e5b9ae33cdd2891b946ba69a8f8322"
+    },
+    "7c870c23c35c4480b05a45083f704ff0/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_7c870c23c35c4480b05a45083f704ff0_hallway_8_frame_equirectangular_domain_pose.json",
+      "sha256": "610b89b3bdff82eb0340835bef221067bf03d9ba2f96ee21698be582885e838e"
+    },
+    "7c870c23c35c4480b05a45083f704ff0/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_7c870c23c35c4480b05a45083f704ff0_hallway_8_frame_equirectangular_domain_rgb.png",
+      "sha256": "592083ce291f96d539d8acd4e01db79077d58d725d7d2876cd9e4760a618bb2f"
+    },
+    "7c870c23c35c4480b05a45083f704ff0/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_7c870c23c35c4480b05a45083f704ff0_hallway_8_frame_equirectangular_domain_semantic.png",
+      "sha256": "9b6d02de2618e09de87935cccc3a65839b06bb8e27539b1e43d7524eb35bcb0b"
+    },
+    "7eb7e942b7ba4db1a26f766d402b2d0c/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_7eb7e942b7ba4db1a26f766d402b2d0c_office_20_frame_equirectangular_domain_depth.png",
+      "sha256": "1005148039c6057be359ffaf62523bf8393e758539b45c4a47e8678de79de5c2"
+    },
+    "7eb7e942b7ba4db1a26f766d402b2d0c/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_7eb7e942b7ba4db1a26f766d402b2d0c_office_20_frame_equirectangular_domain_pose.json",
+      "sha256": "bf9c5f5950f91ae7d8d1d71c85de5ff0a4228d3994c1c38b55dbb57a8c7cd732"
+    },
+    "7eb7e942b7ba4db1a26f766d402b2d0c/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_7eb7e942b7ba4db1a26f766d402b2d0c_office_20_frame_equirectangular_domain_rgb.png",
+      "sha256": "c1d71c89c82ff567bde94abe5c25f0cd8210cd02565e39bc1618f040d5a9a62e"
+    },
+    "7eb7e942b7ba4db1a26f766d402b2d0c/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_7eb7e942b7ba4db1a26f766d402b2d0c_office_20_frame_equirectangular_domain_semantic.png",
+      "sha256": "528ad4070e3133224fa5238250fdf0aca482c14b111b2b5957ac92141ddfbc01"
+    },
+    "7f04c9b205aa42dfbc7311b09699bf6b/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_7f04c9b205aa42dfbc7311b09699bf6b_office_23_frame_equirectangular_domain_depth.png",
+      "sha256": "4e6a5962a1bb3b8ec24da05c0dc0e3e50af1a154e7223f6dfad496766841a22a"
+    },
+    "7f04c9b205aa42dfbc7311b09699bf6b/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_7f04c9b205aa42dfbc7311b09699bf6b_office_23_frame_equirectangular_domain_pose.json",
+      "sha256": "3e3b639c0af73b40c18503617c8d6c2030da0152ba8eabcfd55c63f8ff7d74c8"
+    },
+    "7f04c9b205aa42dfbc7311b09699bf6b/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_7f04c9b205aa42dfbc7311b09699bf6b_office_23_frame_equirectangular_domain_rgb.png",
+      "sha256": "f9471f826625087a5937ea5b3121766d6b5c3da77a09dedc222eef32279b4a34"
+    },
+    "7f04c9b205aa42dfbc7311b09699bf6b/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_7f04c9b205aa42dfbc7311b09699bf6b_office_23_frame_equirectangular_domain_semantic.png",
+      "sha256": "e78475265234efd9d38b344d5b256298123dc751bfee8303909e1ba1431b790e"
+    },
+    "84cdc9a2fc2141fab30a4e2342171ce9/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_84cdc9a2fc2141fab30a4e2342171ce9_conferenceRoom_1_frame_equirectangular_domain_depth.png",
+      "sha256": "a8d79be239da2986c336f00460deaeda36f789d3e9a842f802f0329736982c3d"
+    },
+    "84cdc9a2fc2141fab30a4e2342171ce9/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_84cdc9a2fc2141fab30a4e2342171ce9_conferenceRoom_1_frame_equirectangular_domain_pose.json",
+      "sha256": "70364855b1da013dc649a2a87bc32c2d6ce826ea04ba2d8d1748fc2ff6678e6b"
+    },
+    "84cdc9a2fc2141fab30a4e2342171ce9/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_84cdc9a2fc2141fab30a4e2342171ce9_conferenceRoom_1_frame_equirectangular_domain_rgb.png",
+      "sha256": "a913bd6dacfb5c557faf7ffddc12cc0bffa16b1013ff7d17a18a6b89f948f1ae"
+    },
+    "84cdc9a2fc2141fab30a4e2342171ce9/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_84cdc9a2fc2141fab30a4e2342171ce9_conferenceRoom_1_frame_equirectangular_domain_semantic.png",
+      "sha256": "e2362055fb1c4876435a4cbfcce43fdcafcd14368a3bfa41acdf2f6171ce290b"
+    },
+    "874b1dfd225c45dd9fc79b1414c44ca5/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_874b1dfd225c45dd9fc79b1414c44ca5_conferenceRoom_1_frame_equirectangular_domain_depth.png",
+      "sha256": "9b490a0a7f3fab62c7696b9c4b889075723b7f0630161d86d2ae1d831514ce04"
+    },
+    "874b1dfd225c45dd9fc79b1414c44ca5/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_874b1dfd225c45dd9fc79b1414c44ca5_conferenceRoom_1_frame_equirectangular_domain_pose.json",
+      "sha256": "6b57175536248bc5b3a31e0a6b8a61c86fd1d9dd35e4d9788bdb789370bab8a7"
+    },
+    "874b1dfd225c45dd9fc79b1414c44ca5/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_874b1dfd225c45dd9fc79b1414c44ca5_conferenceRoom_1_frame_equirectangular_domain_rgb.png",
+      "sha256": "5f7cc60cfb21be7e3c1d8dd29e01c5a84110c42f406cdbc2ccb3be12a9412277"
+    },
+    "874b1dfd225c45dd9fc79b1414c44ca5/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_874b1dfd225c45dd9fc79b1414c44ca5_conferenceRoom_1_frame_equirectangular_domain_semantic.png",
+      "sha256": "578e5b37b4f087096a34e644673f92ecc1a7f20e390f513f0880c7b2d0cc956f"
+    },
+    "8f08b0656229405694a485b2252bfe6e/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_8f08b0656229405694a485b2252bfe6e_office_30_frame_equirectangular_domain_depth.png",
+      "sha256": "2bb1ec23180667ac0e36fb8e5faf6925471e5e46dfb68465b997666d078cff16"
+    },
+    "8f08b0656229405694a485b2252bfe6e/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_8f08b0656229405694a485b2252bfe6e_office_30_frame_equirectangular_domain_pose.json",
+      "sha256": "c3a96ea29a2a1d4490d3e2b82d710cfd0ad604566c9843fc94fa3b24f58e8662"
+    },
+    "8f08b0656229405694a485b2252bfe6e/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_8f08b0656229405694a485b2252bfe6e_office_30_frame_equirectangular_domain_rgb.png",
+      "sha256": "1515854d0c4828d0f6a8b77bfd0d7f401897d5cb255307e77035a76ce2035955"
+    },
+    "8f08b0656229405694a485b2252bfe6e/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_8f08b0656229405694a485b2252bfe6e_office_30_frame_equirectangular_domain_semantic.png",
+      "sha256": "735ca8943c67b54da8b2781f6773eb279ec9b1ab1d9af94edae9d4614ce164a6"
+    },
+    "99ef0587d5194f998b36b7bdd64aadb1/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_99ef0587d5194f998b36b7bdd64aadb1_office_30_frame_equirectangular_domain_depth.png",
+      "sha256": "72a0f08b8f1e5b2ae56a96efd14881a53ffce7232583c013ff6ac65a1fe36945"
+    },
+    "99ef0587d5194f998b36b7bdd64aadb1/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_99ef0587d5194f998b36b7bdd64aadb1_office_30_frame_equirectangular_domain_pose.json",
+      "sha256": "dd3a9ec56ba57c9568902c2cb404d48aae7f24b2d26d33bc15ef3e967394c830"
+    },
+    "99ef0587d5194f998b36b7bdd64aadb1/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_99ef0587d5194f998b36b7bdd64aadb1_office_30_frame_equirectangular_domain_rgb.png",
+      "sha256": "03d3cdecb570c7af21f1ed207273580b7372b93c3916661deeb6ccf6077f2ed4"
+    },
+    "99ef0587d5194f998b36b7bdd64aadb1/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_99ef0587d5194f998b36b7bdd64aadb1_office_30_frame_equirectangular_domain_semantic.png",
+      "sha256": "76e29359949957e360ed82db966dbf824578fc7300fe9f8aef8021e154870bfc"
+    },
+    "9ea4d8df99b24fba907ade0c88169211/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_9ea4d8df99b24fba907ade0c88169211_office_16_frame_equirectangular_domain_depth.png",
+      "sha256": "3d8ebdb0abfb40483a47e81f6d55badd7c65824b73dfb8a765f2de7ad11ead4c"
+    },
+    "9ea4d8df99b24fba907ade0c88169211/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_9ea4d8df99b24fba907ade0c88169211_office_16_frame_equirectangular_domain_pose.json",
+      "sha256": "a25f4c9d607a5166abeda07883592263aee4df2ac8e63835c7fa1a134a50344b"
+    },
+    "9ea4d8df99b24fba907ade0c88169211/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_9ea4d8df99b24fba907ade0c88169211_office_16_frame_equirectangular_domain_rgb.png",
+      "sha256": "638b59e0ad49c4f0896dba39b928019551ce25532b92b905cf9cbb441e49e433"
+    },
+    "9ea4d8df99b24fba907ade0c88169211/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_9ea4d8df99b24fba907ade0c88169211_office_16_frame_equirectangular_domain_semantic.png",
+      "sha256": "70c905ea75b2a5cda375e28ff8bb9f9429683000a3675aa039eb31509c84ad25"
+    },
+    "bcfed22743054528992abb1504f65da8/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_bcfed22743054528992abb1504f65da8_office_16_frame_equirectangular_domain_depth.png",
+      "sha256": "2caf2f5e360aef24e475a1beac58e39d59a6b23ead719454a442c82ba26863fa"
+    },
+    "bcfed22743054528992abb1504f65da8/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_bcfed22743054528992abb1504f65da8_office_16_frame_equirectangular_domain_pose.json",
+      "sha256": "90ffbb6cbae6b91f353410418bd9c331404aa2450bf9f75ff263ccb37b35af4b"
+    },
+    "bcfed22743054528992abb1504f65da8/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_bcfed22743054528992abb1504f65da8_office_16_frame_equirectangular_domain_rgb.png",
+      "sha256": "c5ab23ce5f68f96c463c60038814cd2ba5af25aa81fc42d20c7391ab59ac1de2"
+    },
+    "bcfed22743054528992abb1504f65da8/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_bcfed22743054528992abb1504f65da8_office_16_frame_equirectangular_domain_semantic.png",
+      "sha256": "9ae96970114bf5a1f943d47c2670334bb4c25656f73736cf0ab44fa8560c112a"
+    },
+    "ca8b23ad64ee4e73a430ad1ce7eb5771/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_ca8b23ad64ee4e73a430ad1ce7eb5771_office_30_frame_equirectangular_domain_depth.png",
+      "sha256": "d01b0854785ee9840889ee991be87bf42e6ad6bee88ab106258f142a0c6edf2d"
+    },
+    "ca8b23ad64ee4e73a430ad1ce7eb5771/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_ca8b23ad64ee4e73a430ad1ce7eb5771_office_30_frame_equirectangular_domain_pose.json",
+      "sha256": "a75ed99c21561f4d6eff50473f07491f4c1e1825c1354bafc25f2414678ffba7"
+    },
+    "ca8b23ad64ee4e73a430ad1ce7eb5771/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_ca8b23ad64ee4e73a430ad1ce7eb5771_office_30_frame_equirectangular_domain_rgb.png",
+      "sha256": "5498902cab2258c6eaf2e09a95d324452c2a8d266856e6f2cdeab737b9c96d20"
+    },
+    "ca8b23ad64ee4e73a430ad1ce7eb5771/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_ca8b23ad64ee4e73a430ad1ce7eb5771_office_30_frame_equirectangular_domain_semantic.png",
+      "sha256": "20a3655d4ec88f1a825a92706f9aec42e4d339cbe3463ede211700a1f872bb60"
+    },
+    "db1eab8f268e4773b92d6cc403e09178/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_db1eab8f268e4773b92d6cc403e09178_hallway_8_frame_equirectangular_domain_depth.png",
+      "sha256": "4648730739a19a5e44a3fdd1986cd3589984ef94c2c4313f2439b4e40c41fcef"
+    },
+    "db1eab8f268e4773b92d6cc403e09178/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_db1eab8f268e4773b92d6cc403e09178_hallway_8_frame_equirectangular_domain_pose.json",
+      "sha256": "a5c3832edf53f94d1ea6db2a78d2ab6f8a79147143f57a946aa5cb91c0a712f7"
+    },
+    "db1eab8f268e4773b92d6cc403e09178/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_db1eab8f268e4773b92d6cc403e09178_hallway_8_frame_equirectangular_domain_rgb.png",
+      "sha256": "161bcace681f7332904b3c8267579f8ceab5053262f2c3b71644983e60327bb3"
+    },
+    "db1eab8f268e4773b92d6cc403e09178/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_db1eab8f268e4773b92d6cc403e09178_hallway_8_frame_equirectangular_domain_semantic.png",
+      "sha256": "7e69da0f4fa9bf35ea5f6344c0adf363b509e1c167ea40a3c69eeda753312bb2"
+    },
+    "dbcdb339c8044f17a641e216c7e7fb46/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_dbcdb339c8044f17a641e216c7e7fb46_office_20_frame_equirectangular_domain_depth.png",
+      "sha256": "72421ae4bac9b815fe997991d60ee29f3859ed5a058ec08ab7602a23ec303151"
+    },
+    "dbcdb339c8044f17a641e216c7e7fb46/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_dbcdb339c8044f17a641e216c7e7fb46_office_20_frame_equirectangular_domain_pose.json",
+      "sha256": "1fd6ccb1e42e8c35e5531dc8162f9e8daa4061020b6df77d2e8bca2d0898b8f4"
+    },
+    "dbcdb339c8044f17a641e216c7e7fb46/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_dbcdb339c8044f17a641e216c7e7fb46_office_20_frame_equirectangular_domain_rgb.png",
+      "sha256": "e3f288c7d522d6ab96c91f0c724da162f5f1fb5d54172d90f1877b69b5433454"
+    },
+    "dbcdb339c8044f17a641e216c7e7fb46/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_dbcdb339c8044f17a641e216c7e7fb46_office_20_frame_equirectangular_domain_semantic.png",
+      "sha256": "cb9dcadbeb52b6016c6f17f98ce9ee9c679581bce02e5255357859b007243928"
+    },
+    "f02c98c173b94fa4928b24ce8c66a7bc/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_f02c98c173b94fa4928b24ce8c66a7bc_office_20_frame_equirectangular_domain_depth.png",
+      "sha256": "fab99c4663c70f2fa2278ce6511ee7181d0be09354ab05fa88dfcc1f5de61aa5"
+    },
+    "f02c98c173b94fa4928b24ce8c66a7bc/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_f02c98c173b94fa4928b24ce8c66a7bc_office_20_frame_equirectangular_domain_pose.json",
+      "sha256": "c44c08b83d286c0a7e10edb279a04e7bc2348d225ad8ad9497f3aeb0dfc73166"
+    },
+    "f02c98c173b94fa4928b24ce8c66a7bc/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_f02c98c173b94fa4928b24ce8c66a7bc_office_20_frame_equirectangular_domain_rgb.png",
+      "sha256": "446d847f502ca6d44df57bb39ad48831608b04a597f386c788ca96d7b981d049"
+    },
+    "f02c98c173b94fa4928b24ce8c66a7bc/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_f02c98c173b94fa4928b24ce8c66a7bc_office_20_frame_equirectangular_domain_semantic.png",
+      "sha256": "de8e0fcc7f94070b77c9888278d74d55baf5c1c10592512b65b76de9fc6b79ee"
+    },
+    "f62548d255d24e6983b698e34b343b60/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_f62548d255d24e6983b698e34b343b60_hallway_8_frame_equirectangular_domain_depth.png",
+      "sha256": "31bad2289c970546894c4722c9aca4fa1cffc5e47e86b2fcc38df3190c6ba6bd"
+    },
+    "f62548d255d24e6983b698e34b343b60/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_f62548d255d24e6983b698e34b343b60_hallway_8_frame_equirectangular_domain_pose.json",
+      "sha256": "bb70ff371624bb8c0876434281e3aa27f0367e393051067184f469add8079e82"
+    },
+    "f62548d255d24e6983b698e34b343b60/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_f62548d255d24e6983b698e34b343b60_hallway_8_frame_equirectangular_domain_rgb.png",
+      "sha256": "ee3ee5f34d6c7988b769bd49dea45c5a1879596a598c19e43cec9905e50ba19c"
+    },
+    "f62548d255d24e6983b698e34b343b60/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_f62548d255d24e6983b698e34b343b60_hallway_8_frame_equirectangular_domain_semantic.png",
+      "sha256": "1d911ee9778eba2b36ac5f4b153df476d58342ae90b24ac786c603fb30687db9"
+    },
+    "fcd2380fad1f4221b9df96ea97828b9c/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_fcd2380fad1f4221b9df96ea97828b9c_office_22_frame_equirectangular_domain_depth.png",
+      "sha256": "441f544d313263673cbba3c5cc8812ce35cb62cab562e6105e97d34b02f630af"
+    },
+    "fcd2380fad1f4221b9df96ea97828b9c/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_fcd2380fad1f4221b9df96ea97828b9c_office_22_frame_equirectangular_domain_pose.json",
+      "sha256": "264e76ed29f90df07256cbe71a4b5427458f9fc355bb066b7b2d69e35ee9b313"
+    },
+    "fcd2380fad1f4221b9df96ea97828b9c/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_fcd2380fad1f4221b9df96ea97828b9c_office_22_frame_equirectangular_domain_rgb.png",
+      "sha256": "281474658af8fbb75d1543e85cb38d5020165ef7c0757686e6e40a318b0c0744"
+    },
+    "fcd2380fad1f4221b9df96ea97828b9c/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_fcd2380fad1f4221b9df96ea97828b9c_office_22_frame_equirectangular_domain_semantic.png",
+      "sha256": "0ce8809f2cb6be36ff3285eb890be36d39020b99cdb4dee5179a12ef51214b48"
+    },
+    "ffd2cca53bfe4dc580469bc1fffb077e/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_ffd2cca53bfe4dc580469bc1fffb077e_office_22_frame_equirectangular_domain_depth.png",
+      "sha256": "b7eb843b01a6df624d10089c60ae6564eed064e1f617268d19357132dfa957ce"
+    },
+    "ffd2cca53bfe4dc580469bc1fffb077e/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_ffd2cca53bfe4dc580469bc1fffb077e_office_22_frame_equirectangular_domain_pose.json",
+      "sha256": "36a333e0824510512549900d725bfa4935b50632a75911d86ead2624ced65911"
+    },
+    "ffd2cca53bfe4dc580469bc1fffb077e/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_ffd2cca53bfe4dc580469bc1fffb077e_office_22_frame_equirectangular_domain_rgb.png",
+      "sha256": "1ca25a934cec2f973197624dfba931e8c076985ff5d41558287d6b73dc684573"
+    },
+    "ffd2cca53bfe4dc580469bc1fffb077e/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_ffd2cca53bfe4dc580469bc1fffb077e_office_22_frame_equirectangular_domain_semantic.png",
+      "sha256": "4ea0fae7fa217e8b547d9f58d421c6b1721aed754b55177e4018372524c6a8d1"
+    }
+  },
+  "shared_geometry_code_identity": {
+    "pano_tangent": {
+      "path": "/home/bgao491/PriorBIMDA/src/bim_priorda3/data/pano_tangent.py",
+      "sha256": "38e66ae31db9ee282176ac4b50dff8258805009e4c32f66a7ecc4af439520035"
+    },
+    "stanford_pano": {
+      "path": "/home/bgao491/PriorBIMDA/src/bim_priorda3/data/stanford_pano.py",
+      "sha256": "cccfd7ea34a5960585490c91d310c1bbbde4d6382f77c7cf465b7ee35ea21f9f"
+    }
+  },
+  "split": "test",
+  "split_annotation": {
+    "path": "/home/bgao491/PriorBIMDA/data/annotations/stanford_area1_room_v1.jsonl",
+    "sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59"
+  },
+  "station_selection": {
+    "all_discovered_pano_stations": 190,
+    "all_paired_pano_stations": 186,
+    "all_pano_only_station_ids": [
+      "1edba7eece574027bab1fa5459fd8cd4",
+      "24f42d6efff54b09a34897f69fa11064",
+      "684b940fafd64fd98aef16157c8a96e2",
+      "e0c041d3b2a94769b1dc86935f983f34"
+    ],
+    "max_stations_ordered_prefix": null,
+    "regular_stations_missing_pano": [],
+    "selected_paired_stations": 31,
+    "selected_station_ids": [
+      "042a479869b44a7c9159922f19a285ea",
+      "0d600f92f8d14e288ddc590c32584a5a",
+      "54ca9cb6c3aa40779491ee273d287ebc",
+      "84cdc9a2fc2141fab30a4e2342171ce9",
+      "874b1dfd225c45dd9fc79b1414c44ca5",
+      "4de69cf4bb0d4ebe80b426faefdfe7ec",
+      "4ece53eed21b4e44886d83c3b7846a3b",
+      "7c870c23c35c4480b05a45083f704ff0",
+      "db1eab8f268e4773b92d6cc403e09178",
+      "f62548d255d24e6983b698e34b343b60",
+      "23123f4fd8d94d64ab9859c2cc1907fa",
+      "71286f97e48a43c498c7c9aaf646c7d2",
+      "79fca76427654b0182d9a307d3909b88",
+      "9ea4d8df99b24fba907ade0c88169211",
+      "bcfed22743054528992abb1504f65da8",
+      "7eb7e942b7ba4db1a26f766d402b2d0c",
+      "dbcdb339c8044f17a641e216c7e7fb46",
+      "f02c98c173b94fa4928b24ce8c66a7bc",
+      "2d842ce0d9814d96ae6f171e9d11c298",
+      "fcd2380fad1f4221b9df96ea97828b9c",
+      "ffd2cca53bfe4dc580469bc1fffb077e",
+      "55120255801c4a2db0db78cdb8e376b5",
+      "5a18aa053606464bac74c4820fb9a355",
+      "7f04c9b205aa42dfbc7311b09699bf6b",
+      "1b329c346b4e4b62b07e2796bd506eee",
+      "40e7119da2be416da1fa66a11fcad683",
+      "4ff66baf78ae47e0bbd6443312ba648e",
+      "737918e517c940158e75774d9e4be69a",
+      "8f08b0656229405694a485b2252bfe6e",
+      "99ef0587d5194f998b36b7bdd64aadb1",
+      "ca8b23ad64ee4e73a430ad1ce7eb5771"
+    ],
+    "shared_station_fraction_of_split_panos": 1.0,
+    "split_pano_only_station_ids": [],
+    "split_regular_stations": 31,
+    "split_total_pano_stations": 31
+  },
+  "strict_single_frame_protocol": {
+    "bim_used_by_selector": false,
+    "gt_used_by_selector": false,
+    "identical_support_for_all_depth_and_strict_comparison_methods": true,
+    "joint_comparators": [
+      "joint_weighted_log",
+      "joint_huber",
+      "joint_photo_huber",
+      "joint_synchronized_huber"
+    ],
+    "pano_rgb_used_by_selector": false,
+    "selector": "one projected regular frame with maximum sum(base_weights)",
+    "selector_inputs": "projection centrality and cached DA3 confidence only",
+    "support": "selected frame coverage intersected with valid pano GT",
+    "tie_break": "lexicographically smallest stable frame_id"
+  },
+  "strict_single_per_station_csv": {
+    "path": "/home/bgao491/PriorBIMDA/results/stanford_area1/pano_test/strict_single_per_station.csv",
+    "sha256": "f9a82b3e2fde0fcba0adafa3da7b069c4116fb6cea616bfe6bb5c87f014302d6"
+  },
+  "tangent_per_station_csv": {
+    "path": "/home/bgao491/PriorBIMDA/results/stanford_area1/pano_test/tangent_per_station.csv",
+    "sha256": "f2ae9e2e88a996db253bc9a495f03699c1f2098132ffba5e4f9dbb411438c844"
+  },
+  "test_access_explicitly_authorized": true,
+  "universal_scale_protocol": {
+    "path": "/home/bgao491/PriorBIMDA/data/provenance/universal_scale_estimator_v1.json",
+    "per_dataset_overrides_allowed": false,
+    "refinement_anchor": "universally scaled DA3 depth",
+    "scale_estimator": {
+      "min_samples": 100,
+      "name": "log_upper_cap_v1",
+      "q10_log_cap": "inf",
+      "q25_log_cap": 0.05,
+      "ratio_max": 5.0,
+      "ratio_min": 0.2
+    },
+    "sha256": "361fc2c97ffca9dde1a3a1b6b97fcd1d894003809a01935205f16cb4043c3ba1",
+    "status": "verified"
+  }
+}

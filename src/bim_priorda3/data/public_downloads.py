@@ -54,6 +54,12 @@ _AREA1_SELECTED_PREFIXES = (
     "area_1/data/pose/",
     "area_1/data/semantic/",
 )
+_AREA1_PANO_PREFIXES = (
+    "area_1/pano/rgb/",
+    "area_1/pano/depth/",
+    "area_1/pano/pose/",
+    "area_1/pano/semantic/",
+)
 _AREA1_SELECTED_FILES = {
     "area_1/3d/semantic.obj",
     "area_1/3d/semantic.mtl",
@@ -64,6 +70,7 @@ _AREA1_MODALITY_PATTERNS = {
     "pose": "*.json",
     "semantic": "*.png",
 }
+_AREA1_PANO_MODALITY_PATTERNS = dict(_AREA1_MODALITY_PATTERNS)
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 _CONTENT_RANGE_PATTERN = re.compile(r"bytes\s+(\d+)-(\d+)/(\d+|\*)", re.IGNORECASE)
 
@@ -303,9 +310,14 @@ def _normalized_tar_member(name: str) -> PurePosixPath:
     return PurePosixPath(*parts)
 
 
-def _selected_area1_member(name: str) -> bool:
+def _selected_area1_member(name: str, *, include_pano: bool = False) -> bool:
     normalized = _normalized_tar_member(name).as_posix()
-    return normalized in _AREA1_SELECTED_FILES or normalized.startswith(_AREA1_SELECTED_PREFIXES)
+    selected_prefixes = (
+        _AREA1_SELECTED_PREFIXES + _AREA1_PANO_PREFIXES
+        if include_pano
+        else _AREA1_SELECTED_PREFIXES
+    )
+    return normalized in _AREA1_SELECTED_FILES or normalized.startswith(selected_prefixes)
 
 
 def stanford_area1_inventory(root: Path) -> dict[str, int]:
@@ -320,9 +332,27 @@ def stanford_area1_inventory(root: Path) -> dict[str, int]:
     return counts
 
 
-def _area1_modality_frame_keys(area: Path, modality: str) -> set[str]:
-    pattern = _AREA1_MODALITY_PATTERNS[modality]
-    paths = (area / "data" / modality).glob(pattern)
+def stanford_area1_pano_inventory(root: Path) -> dict[str, int]:
+    """Count the optional equirectangular modalities used by pano evaluation."""
+
+    pano = root.expanduser().resolve() / "area_1" / "pano"
+    return {
+        modality: len(list((pano / modality).glob(pattern)))
+        for modality, pattern in _AREA1_PANO_MODALITY_PATTERNS.items()
+    }
+
+
+def _area1_modality_frame_keys(
+    area: Path,
+    modality: str,
+    *,
+    projection: str = "data",
+) -> set[str]:
+    patterns = _AREA1_MODALITY_PATTERNS if projection == "data" else _AREA1_PANO_MODALITY_PATTERNS
+    if projection not in {"data", "pano"}:
+        raise ValueError(f"Unknown Area_1 projection directory: {projection}")
+    pattern = patterns[modality]
+    paths = (area / projection / modality).glob(pattern)
     suffix = f"_domain_{modality}"
     frame_keys: set[str] = set()
     for path in paths:
@@ -338,9 +368,9 @@ def _area1_modality_frame_keys(area: Path, modality: str) -> set[str]:
     return frame_keys
 
 
-def _verify_area1_modality_pairing(area: Path) -> None:
+def _verify_area1_modality_pairing(area: Path, *, projection: str = "data") -> None:
     frame_keys = {
-        modality: _area1_modality_frame_keys(area, modality)
+        modality: _area1_modality_frame_keys(area, modality, projection=projection)
         for modality in _AREA1_MODALITY_PATTERNS
     }
     reference = frame_keys["rgb"]
@@ -394,6 +424,21 @@ def verify_stanford_area1_extraction(root: Path) -> dict[str, int]:
     return counts
 
 
+def verify_stanford_area1_pano_extraction(root: Path) -> dict[str, int]:
+    """Verify the optional 190-station equirectangular RGB/depth/pose/semantic set."""
+
+    root = root.expanduser().resolve()
+    area = root / "area_1"
+    counts = stanford_area1_pano_inventory(root)
+    for modality in _AREA1_PANO_MODALITY_PATTERNS:
+        if counts[modality] != 190:
+            raise ValueError(
+                f"Area_1 pano extraction expected 190 {modality} files, got {counts[modality]}"
+            )
+    _verify_area1_modality_pairing(area, projection="pano")
+    return counts
+
+
 def verify_stanford_semantic_labels(path: Path) -> dict[str, Any]:
     path = path.expanduser().resolve()
     if not path.is_file():
@@ -412,9 +457,11 @@ def verify_stanford_semantic_labels(path: Path) -> dict[str, Any]:
     }
 
 
-def stanford_area1_is_complete(root: Path) -> bool:
+def stanford_area1_is_complete(root: Path, *, require_pano: bool = False) -> bool:
     try:
         verify_stanford_area1_extraction(root)
+        if require_pano:
+            verify_stanford_area1_pano_extraction(root)
     except (OSError, ValueError):
         return False
     return True
@@ -424,23 +471,45 @@ def extract_stanford_area1(
     archive: Path,
     destination: Path,
     *,
+    include_pano: bool = False,
     progress: Callable[[str], None] = print,
 ) -> dict[str, int]:
-    """Extract only regular RGB/depth/pose/semantic and the Area_1 semantic mesh."""
+    """Extract the regular benchmark inputs and, optionally, pano modalities."""
 
     archive = archive.expanduser().resolve()
     destination = destination.expanduser().resolve()
     destination.mkdir(parents=True, exist_ok=True)
-    if stanford_area1_is_complete(destination):
+    regular_complete = stanford_area1_is_complete(destination)
+    pano_complete = False
+    if include_pano:
+        try:
+            verify_stanford_area1_pano_extraction(destination)
+        except (OSError, ValueError):
+            pano_complete = False
+        else:
+            pano_complete = True
+    if regular_complete and (not include_pano or pano_complete):
         counts = stanford_area1_inventory(destination)
+        if include_pano:
+            counts.update(
+                {
+                    f"pano_{key}": value
+                    for key, value in stanford_area1_pano_inventory(destination).items()
+                }
+            )
         progress(f"[skip] verified Area_1 extraction at {destination / 'area_1'}")
         return counts
-    counts = {"rgb": 0, "depth": 0, "pose": 0, "semantic": 0, "mesh": 0}
     with tarfile.open(archive, mode="r:") as bundle:
         for index, member in enumerate(bundle, 1):
             path = _normalized_tar_member(member.name)
             name = path.as_posix()
-            if not member.isfile() or not _selected_area1_member(name):
+            if not member.isfile() or not _selected_area1_member(
+                name,
+                include_pano=include_pano,
+            ):
+                continue
+            is_pano = name.startswith("area_1/pano/")
+            if (is_pano and pano_complete) or (not is_pano and regular_complete):
                 continue
             source = bundle.extractfile(member)
             if source is None:
@@ -451,15 +520,18 @@ def extract_stanford_area1(
             with temporary.open("wb") as output:
                 shutil.copyfileobj(source, output, length=16 * 1024 * 1024)
             os.replace(temporary, target)
-            if "/data/" in name:
-                modality = path.parts[2]
-                counts[modality] += 1
-            else:
-                counts["mesh"] += 1
             if index % 10_000 == 0:
                 progress(f"  scanned {index} TAR entries")
     try:
-        return verify_stanford_area1_extraction(destination)
+        counts = verify_stanford_area1_extraction(destination)
+        if include_pano:
+            counts.update(
+                {
+                    f"pano_{key}": value
+                    for key, value in verify_stanford_area1_pano_extraction(destination).items()
+                }
+            )
+        return counts
     except ValueError as error:
         raise RuntimeError(str(error)) from error
 

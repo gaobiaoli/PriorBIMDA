@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "status": "post_hoc_protocol_diagnostic",
+  "comparison": "legacy bounded core-envelope prior versus hit-only all-envelope prior",
+  "fixed_factors": {
+    "sample_ids": 10327,
+    "rgb_equal_frames": 10327,
+    "raw_da3_depth_equal_frames": 10327,
+    "ground_truth_depth_equal_frames": 10327,
+    "ground_truth_valid_mask_equal_frames": 10327,
+    "split_counts": {
+      "train": 7013,
+      "val": 1673,
+      "test": 1641
+    },
+    "ground_truth_evaluation_support_m": [0.2, 5.0],
+    "architecture": "attention scale + low/detail proportional refiner + frozen DA3 layer-11/layer-23 features",
+    "training_schedule": "scratch 3 scale-only + 9 refiner-only + 3 low-LR joint epochs"
+  },
+  "prior_protocols": {
+    "legacy": {
+      "included_categories": ["wall", "floor", "ceiling", "column", "beam"],
+      "excluded_envelope_categories": ["door", "window"],
+      "bim_validity": "finite hit within 0.2--5.0 m",
+      "valid_pixels": 2329973343,
+      "coverage": 0.8882100900057902
+    },
+    "hit_only": {
+      "protocol": "global-area-hit-only-fixed-envelope-v2",
+      "validity_protocol": "finite-positive-ray-hit-v1",
+      "included_categories": ["wall", "floor", "ceiling", "column", "beam", "door", "window"],
+      "excluded_envelope_categories": [],
+      "bim_validity": "any finite positive fixed-envelope ray hit; no BIM depth cutoff",
+      "valid_pixels": 2621636015,
+      "coverage": 0.9993949363589656,
+      "newly_valid_pixels": 291662672,
+      "newly_valid_fraction_of_all_pixels": 0.11118484635317533,
+      "valid_pixels_above_5m": 126247226,
+      "valid_fraction_above_5m": 0.04815589398286474,
+      "valid_pixels_below_0_2m": 19640070,
+      "valid_fraction_below_0_2m": 0.007491531962342225,
+      "minimum_hit_depth_m": 0.0045166015625,
+      "maximum_hit_depth_m": 39.0
+    }
+  },
+  "pixel_micro": {
+    "val": {
+      "frames": 1673,
+      "legacy": {
+        "robust_bim_direct_abs_rel": 0.08710039,
+        "learned_scale_abs_rel": 0.06959680,
+        "final_abs_rel": 0.06209457,
+        "final_mae_m": 0.12400717,
+        "final_rmse_m": 0.30842432,
+        "final_delta1": 0.94615475
+      },
+      "hit_only": {
+        "robust_bim_direct_abs_rel": 0.12411115,
+        "learned_scale_abs_rel": 0.07225500,
+        "scale_plus_low_abs_rel": 0.06567539,
+        "final_abs_rel": 0.06306194,
+        "final_mae_m": 0.12568867,
+        "final_rmse_m": 0.31341506,
+        "final_delta1": 0.94376042
+      },
+      "hit_only_final_relative_change_percent": 1.5579,
+      "hit_only_final_improvement_over_hit_only_bim_direct_percent": 49.1891
+    },
+    "test": {
+      "frames": 1641,
+      "legacy": {
+        "robust_bim_direct_abs_rel": 0.07814638,
+        "learned_scale_abs_rel": 0.07144184,
+        "final_abs_rel": 0.06243524,
+        "final_mae_m": 0.10779922,
+        "final_rmse_m": 0.28165639,
+        "final_delta1": 0.94391001
+      },
+      "hit_only": {
+        "robust_bim_direct_abs_rel": 0.10744880,
+        "learned_scale_abs_rel": 0.07546768,
+        "scale_plus_low_abs_rel": 0.06696097,
+        "final_abs_rel": 0.06585180,
+        "final_mae_m": 0.11725593,
+        "final_rmse_m": 0.30093435,
+        "final_delta1": 0.93913767
+      },
+      "hit_only_final_relative_change_percent": 5.4722,
+      "hit_only_final_improvement_over_hit_only_bim_direct_percent": 38.7134
+    }
+  },
+  "paired_room_bootstrap": {
+    "definition": "hit-only final minus legacy final room AbsRel; negative is better",
+    "repetitions": 10000,
+    "seed": 42,
+    "val": {
+      "rooms": 7,
+      "mean_difference": 0.003191628266035386,
+      "median_difference": 0.00323827840886641,
+      "hit_only_better_room_fraction": 0.2857142857142857,
+      "confidence_interval_95": [-0.0015200798363402487, 0.008867820986347889]
+    },
+    "test": {
+      "rooms": 7,
+      "mean_difference": 0.0012644220627025377,
+      "median_difference": 0.00393590101313665,
+      "hit_only_better_room_fraction": 0.2857142857142857,
+      "confidence_interval_95": [-0.004165119852138797, 0.004988184557135333]
+    }
+  },
+  "conclusion": "The hit-only rule increases BIM coverage but lowers prior precision. Retraining recovers most of the damage and remains substantially better than the hit-only non-learning BIM-direct comparator, but does not outperform the legacy bounded core-envelope learned model. The cross-protocol room-bootstrap intervals include zero, so the observed aggregate degradation is not established as room-level significant with seven rooms."
+}

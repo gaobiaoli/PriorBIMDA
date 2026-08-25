@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from bim_priorda3.data.stanford_preparation import (
+    STANFORD_BIM_VALIDITY_PROTOCOL,
     _validate_alignment_receipt,
     _validate_reusable_sample,
 )
@@ -118,7 +119,7 @@ def _sample_payload(shape: tuple[int, int]) -> dict[str, np.ndarray]:
     semantic_class = np.zeros(shape, dtype=np.uint8)
     zeros = np.zeros(shape, dtype=np.uint8)
     return {
-        "sample_schema_version": np.asarray(2, dtype=np.uint16),
+        "sample_schema_version": np.asarray(3, dtype=np.uint16),
         "base_depth": np.ones(shape, dtype=np.float16),
         "base_confidence": np.ones(shape, dtype=np.float16),
         "bim_depth": np.ones(shape, dtype=np.float16),
@@ -139,6 +140,7 @@ def _sample_payload(shape: tuple[int, int]) -> dict[str, np.ndarray]:
         "camera_to_area": np.eye(4),
         "area_from_bim": np.eye(4),
         "bim_scene_coordinate_frame": np.asarray("Stanford Area_1 world"),
+        "bim_validity_protocol": np.asarray(STANFORD_BIM_VALIDITY_PROTOCOL),
         "global_bim_fingerprint_sha256": np.asarray("1" * 64),
         "da3_cache_artifact_sha256": np.asarray("2" * 64),
         "preparation_fingerprint_sha256": np.asarray("3" * 64),

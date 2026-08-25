@@ -16,6 +16,7 @@ from bim_priorda3.losses import (
     build_live_trust_target,
 )
 from bim_priorda3.models import BIMPriorDA3
+from bim_priorda3.models.refiner import ScaleAnchoredDepthRefiner
 
 
 class _FakeDA3Backbone(nn.Module):
@@ -142,6 +143,21 @@ def test_v5_is_initialized_as_scale_only_and_has_residual_gradients() -> None:
     assert torch.count_nonzero(model.refiner.detail_output.weight.grad) > 0
     assert torch.count_nonzero(model.refiner.low_output.weight.grad) > 0
     assert torch.count_nonzero(model.refiner.frame_output.weight.grad) > 0
+
+
+def test_model_output_safety_bound_is_explicitly_configurable() -> None:
+    default_cfg = load_config("configs/slabim_base.yaml")
+    default_cfg.model.base_channels = 4
+    assert BIMPriorDA3(default_cfg).output_max_depth == pytest.approx(10.0)
+
+    full_depth_cfg = load_config("configs/slabim_base.yaml")
+    full_depth_cfg.model.base_channels = 4
+    full_depth_cfg.model.output_max_depth_m = 128.0
+    assert BIMPriorDA3(full_depth_cfg).output_max_depth == pytest.approx(128.0)
+
+    full_depth_cfg.model.output_max_depth_m = float("inf")
+    with pytest.raises(ValueError, match="output_max_depth_m"):
+        BIMPriorDA3(full_depth_cfg)
 
 
 def test_universal_model_ignores_direct_baseline_as_residual_anchor() -> None:
@@ -419,6 +435,34 @@ def test_gated_adapters_share_identical_common_initialization() -> None:
     assert set(plain_state) < set(gated_state)
     for name, value in plain_state.items():
         assert torch.equal(value, gated_state[name]), name
+
+
+def test_rgb_aware_bim_adapter_gate_uses_rgb_features() -> None:
+    refiner = ScaleAnchoredDepthRefiner(
+        rgb_channels=3,
+        geometry_channels=4,
+        bim_channels=8,
+        base_channels=4,
+        max_frame_log_residual=0.2,
+        max_low_log_residual=0.25,
+        max_detail_log_residual=0.15,
+        max_total_log_residual=0.45,
+        gate_bim_adapters=True,
+        bim_adapter_gate_floor=0.1,
+        bim_adapter_gate_use_rgb=True,
+    )
+    assert refiner.bim_adapter_gates[0].in_channels == 12
+    with torch.no_grad():
+        refiner.bim_adapter_gates[0].weight[:, :4].fill_(1.0)
+    geometry = torch.zeros(1, 4, 32, 32)
+    bim = torch.zeros(1, 8, 32, 32)
+    bim[:, 1:2] = 1.0
+    dark = refiner(torch.zeros(1, 3, 32, 32), geometry, bim)
+    bright = refiner(torch.ones(1, 3, 32, 32), geometry, bim)
+    assert not torch.equal(
+        dark["bim_adapter_gate_logits"],
+        bright["bim_adapter_gate_logits"],
+    )
 
 
 def test_e2e_da3_last_stage_has_live_depth_scale_and_gradients(

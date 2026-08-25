@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "protocol": "stanford-area1-pano-test-execution-v1",
+  "execution_date": "2026-08-15",
+  "selection_receipt": {
+    "path": "data/provenance/stanford_area1_pano_method_selection_v1.json",
+    "sha256": "649732c294174530e1f121324720da6d76d8a44d46cea0102f2484a9a52d2c56"
+  },
+  "execution": {
+    "split": "test",
+    "confirm_test": true,
+    "single_formal_execution": true,
+    "device": "cuda",
+    "batch_size": 8,
+    "pano_height": 512,
+    "bootstrap_repetitions": 10000,
+    "seed": 42,
+    "wall_time_seconds": 1256.57,
+    "maximum_resident_set_kib": 2259280
+  },
+  "frozen_inputs": {
+    "config": {
+      "path": "configs/stanford_area1.yaml",
+      "sha256": "c2478535ab990bd170fa5eba14a0154d0276d7d4ae88c00da972af3e7143e703"
+    },
+    "checkpoint": {
+      "path": "outputs/stanford_area1/accepted.pt",
+      "sha256": "ffc69e51bfca6e0619d19c1665f2748d35b24c48c33f67303f646ae74cdcc711"
+    },
+    "evaluator": {
+      "path": "scripts/model/evaluate_stanford_pano.py",
+      "sha256": "0d699f0c4d5b1cdea53289fa8af024cf8a48391133a52c87348f94652dcc992c"
+    },
+    "test_tangent_manifest": {
+      "path": "data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/manifests/test_full.json",
+      "sha256": "6f72a0c44193beef29dea6dbe1468e9d72d45d417ebea2ffef86029dae2319a5"
+    }
+  },
+  "population": {
+    "rooms": 7,
+    "shared_regular_pano_stations": 31,
+    "pano_only_stations": 0
+  },
+  "artifacts": {
+    "summary": {
+      "path": "results/stanford_area1/pano_test/summary.json",
+      "sha256": "bee9cee821e435b21a02284743d68b424f51673be76eebd8a7b38d3141a34746"
+    },
+    "provenance": {
+      "path": "results/stanford_area1/pano_test/provenance.json",
+      "sha256": "59ff764839db3e7cc4638d460abc95f6f991b9055f1f7b3047f2d994aea145b4"
+    },
+    "per_station": {
+      "path": "results/stanford_area1/pano_test/per_station.csv",
+      "sha256": "18c91935292c282ce57635360ce5b9e05f5eea6142189e05591b2378daf39d34"
+    },
+    "strict_single": {
+      "path": "results/stanford_area1/pano_test/strict_single_per_station.csv",
+      "sha256": "f9a82b3e2fde0fcba0adafa3da7b069c4116fb6cea616bfe6bb5c87f014302d6"
+    },
+    "per_room": {
+      "path": "results/stanford_area1/pano_test/per_room.csv",
+      "sha256": "fb1e37721d774039e92a01243bb00a38e78bae5f6c2edef525ac45fcb4e6bb60"
+    },
+    "tangent": {
+      "path": "results/stanford_area1/pano_test/tangent_per_station.csv",
+      "sha256": "f2ae9e2e88a996db253bc9a495f03699c1f2098132ffba5e4f9dbb411438c844"
+    },
+    "regular_pano_joint": {
+      "path": "results/stanford_area1/pano_test/regular_pano_joint_per_station.csv",
+      "sha256": "6a880fdac1ba43c35d264c93594bffb31db725f467ce380261b0a3c69983da69"
+    }
+  },
+  "frozen_selected_method_test_results": {
+    "pano_quality_common_regular": {
+      "fusion": "joint_huber",
+      "reference": "raw_da3/regular_only",
+      "candidate": "raw_da3/regular_plus_tangent14",
+      "abs_rel_reference": 0.26985007904170066,
+      "abs_rel_candidate": 0.22865117520499842,
+      "relative_reduction_percent": 15.267330653750028,
+      "room_cluster_ci95_candidate_minus_reference": [
+        -0.05293252694634856,
+        -0.030209395968477607
+      ],
+      "candidate_better_room_fraction": 1.0
+    },
+    "view_count_common_tangent_support": {
+      "fusion": "joint_huber",
+      "reference": "raw_da3/tangent6",
+      "candidate": "raw_da3/tangent14",
+      "abs_rel_reference": 0.394128923473705,
+      "abs_rel_candidate": 0.3639978000014616,
+      "relative_reduction_percent": 7.644991696290376,
+      "room_cluster_ci95_candidate_minus_reference": [
+        -0.04052809815017464,
+        -0.016809324505593873
+      ],
+      "candidate_better_room_fraction": 1.0
+    },
+    "coverage_solid_angle_fraction": {
+      "regular_only": 0.6691995333006087,
+      "regular_plus_tangent6": 0.9975274287046186,
+      "regular_plus_tangent14": 0.9995674976662225
+    },
+    "deterministic_bim_chain": {
+      "fusion": "joint_huber",
+      "raw_da3_abs_rel": 0.26985007904170055,
+      "universal_scale_abs_rel": 0.10824293910297154,
+      "bim_direct_abs_rel": 0.11006414803873296,
+      "raw_to_universal_scale_reduction_percent": 59.8877497137051,
+      "universal_scale_to_bim_direct_reduction_percent": -1.682519849196723,
+      "local_bim_ci95_candidate_minus_scale": [
+        -0.0011799296128611149,
+        0.004008931907464233
+      ]
+    }
+  },
+  "post_execution_reporting_scope": {
+    "primary_focus": "training-free panorama joint estimation",
+    "bim_scope": "deterministic universal scale and BIM-direct only",
+    "learned_results_in_raw_evaluator_artifacts": "archival only; excluded from panorama method selection, main claims, and main figures",
+    "reason": "user requested panorama-first validation without a learned BIM enhancement claim"
+  }
+}

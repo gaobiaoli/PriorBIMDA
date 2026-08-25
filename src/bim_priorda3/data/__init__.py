@@ -9,7 +9,12 @@ from .ifc_envelope import (
 from .pose_recovery import PoseRecoveryResult, recover_lidar_poses
 from .slabim import DEFAULT_REGIONS, download_regions
 from .splits import AnnotationSplitResolution, resolve_annotation_splits
-from .stanford2d3ds import StanfordFrame, discover_stanford_frames
+from .stanford2d3ds import (
+    StanfordFrame,
+    discover_stanford_frames,
+    load_stanford_all_valid_depth,
+    official_regular_depth_path,
+)
 from .stanford_registration import accepted_transforms
 
 __all__ = [
@@ -26,6 +31,8 @@ __all__ = [
     "discover_stanford_frames",
     "download_regions",
     "load_ifc_envelope_geometry",
+    "load_stanford_all_valid_depth",
+    "official_regular_depth_path",
     "recover_lidar_poses",
     "relocate_record",
     "resolve_annotation_splits",

@@ -1,0 +1,1035 @@
+{
+  "exploratory_validation_protocol": "stanford-area1-val-strict-single-plus-pano-tangent-v4-candidate-v1",
+  "figures": [
+    {
+      "description": "Primary test panorama quality and coverage result.",
+      "files": [
+        {
+          "bytes": 200306,
+          "format": "png",
+          "path": "test_main_pano_gain.png",
+          "sha256": "08b0f4c6b72138ca4f17ed1b63f9b3ced19831a421409b009c46cefc46203801"
+        },
+        {
+          "bytes": 66902,
+          "format": "svg",
+          "path": "test_main_pano_gain.svg",
+          "sha256": "0ea51e9a4141011d38844f9c0329b697a166f629270bc370dbc3c3cb6bfacc59"
+        },
+        {
+          "bytes": 21642,
+          "format": "pdf",
+          "path": "test_main_pano_gain.pdf",
+          "sha256": "52ecaff0e9faf25904c91c72730d38250c58bc434dc0b03fc350f7b57521ef5d"
+        }
+      ],
+      "id": "test_main_pano_gain",
+      "numeric_payload": {
+        "coverage": [
+          {
+            "label": "Multi-regular only",
+            "mean_solid_angle_coverage_fraction": 0.6691995333006086,
+            "source_set": "regular_only"
+          },
+          {
+            "label": "+ tangent6",
+            "mean_solid_angle_coverage_fraction": 0.9975274287046187,
+            "source_set": "regular_plus_tangent6"
+          },
+          {
+            "label": "+ tangent14",
+            "mean_solid_angle_coverage_fraction": 0.9995674976662227,
+            "source_set": "regular_plus_tangent14"
+          }
+        ],
+        "coverage_support": "native_union",
+        "depth_method": "raw_da3",
+        "fusion_method": "joint_huber",
+        "quality": [
+          {
+            "label": "Multi-regular only",
+            "source_set": "regular_only",
+            "spherical_abs_rel": 0.26985007904170055
+          },
+          {
+            "label": "+ tangent6",
+            "source_set": "regular_plus_tangent6",
+            "spherical_abs_rel": 0.23500773781734544
+          },
+          {
+            "label": "+ tangent14",
+            "source_set": "regular_plus_tangent14",
+            "spherical_abs_rel": 0.2286511752049984
+          }
+        ],
+        "quality_support": "common_regular",
+        "regular_plus_tangent14_vs_regular": {
+          "bootstrap_repetitions": 10000,
+          "candidate_abs_rel": 0.22865117520499842,
+          "candidate_minus_reference": -0.0411989038367022,
+          "confidence_interval_95": [
+            -0.05293252694634856,
+            -0.030209395968477607
+          ],
+          "reference_abs_rel": 0.26985007904170066,
+          "room_count": 7,
+          "station_count": 31
+        },
+        "split": "test",
+        "tangent14_vs_tangent6": {
+          "bootstrap_repetitions": 10000,
+          "candidate_abs_rel": 0.22865117520499842,
+          "candidate_minus_reference": -0.006356562612347035,
+          "confidence_interval_95": [
+            -0.011804687854192803,
+            -0.0008592236771584578
+          ],
+          "reference_abs_rel": 0.2350077378173455,
+          "room_count": 7,
+          "station_count": 31
+        }
+      }
+    },
+    {
+      "description": "Validation/test fusion sensitivity; alternatives do not redefine F*.",
+      "files": [
+        {
+          "bytes": 248162,
+          "format": "png",
+          "path": "fusion_sensitivity.png",
+          "sha256": "a661bc5a61588d22b2c610422021d58abbea3dc30f7f417d7e14fe7eff9398b0"
+        },
+        {
+          "bytes": 55996,
+          "format": "svg",
+          "path": "fusion_sensitivity.svg",
+          "sha256": "0f7720931a2980b5f476b8c9131cfbf50800ed0ed7e25672f06ebad2b9e50dce"
+        },
+        {
+          "bytes": 21585,
+          "format": "pdf",
+          "path": "fusion_sensitivity.pdf",
+          "sha256": "dff5cd524fa4a7ef19e216bfdbc32bb4c15fd51efc156731755ce272d37c2b82"
+        }
+      ],
+      "id": "fusion_sensitivity",
+      "numeric_payload": {
+        "depth_method": "raw_da3",
+        "quality_support": "common_regular",
+        "selection_note": "F* was frozen on validation before test; alternatives are sensitivity only.",
+        "splits": {
+          "test": [
+            {
+              "fusion_label": "Weighted log",
+              "fusion_method": "joint_weighted_log",
+              "source_label": "Multi-regular only",
+              "source_set": "regular_only",
+              "spherical_abs_rel": 0.2763841360159938
+            },
+            {
+              "fusion_label": "Weighted log",
+              "fusion_method": "joint_weighted_log",
+              "source_label": "+ tangent6",
+              "source_set": "regular_plus_tangent6",
+              "spherical_abs_rel": 0.21290687285028256
+            },
+            {
+              "fusion_label": "Weighted log",
+              "fusion_method": "joint_weighted_log",
+              "source_label": "+ tangent14",
+              "source_set": "regular_plus_tangent14",
+              "spherical_abs_rel": 0.18332984881817868
+            },
+            {
+              "fusion_label": "Huber (F*)",
+              "fusion_method": "joint_huber",
+              "source_label": "Multi-regular only",
+              "source_set": "regular_only",
+              "spherical_abs_rel": 0.26985007904170055
+            },
+            {
+              "fusion_label": "Huber (F*)",
+              "fusion_method": "joint_huber",
+              "source_label": "+ tangent6",
+              "source_set": "regular_plus_tangent6",
+              "spherical_abs_rel": 0.23500773781734544
+            },
+            {
+              "fusion_label": "Huber (F*)",
+              "fusion_method": "joint_huber",
+              "source_label": "+ tangent14",
+              "source_set": "regular_plus_tangent14",
+              "spherical_abs_rel": 0.2286511752049984
+            },
+            {
+              "fusion_label": "Synchronized",
+              "fusion_method": "joint_synchronized_huber",
+              "source_label": "Multi-regular only",
+              "source_set": "regular_only",
+              "spherical_abs_rel": 0.29309645182006683
+            },
+            {
+              "fusion_label": "Synchronized",
+              "fusion_method": "joint_synchronized_huber",
+              "source_label": "+ tangent6",
+              "source_set": "regular_plus_tangent6",
+              "spherical_abs_rel": 0.27766378129760033
+            },
+            {
+              "fusion_label": "Synchronized",
+              "fusion_method": "joint_synchronized_huber",
+              "source_label": "+ tangent14",
+              "source_set": "regular_plus_tangent14",
+              "spherical_abs_rel": 0.2642742691197086
+            }
+          ],
+          "val": [
+            {
+              "fusion_label": "Weighted log",
+              "fusion_method": "joint_weighted_log",
+              "source_label": "Multi-regular only",
+              "source_set": "regular_only",
+              "spherical_abs_rel": 0.24979035654263904
+            },
+            {
+              "fusion_label": "Weighted log",
+              "fusion_method": "joint_weighted_log",
+              "source_label": "+ tangent6",
+              "source_set": "regular_plus_tangent6",
+              "spherical_abs_rel": 0.19195435839008396
+            },
+            {
+              "fusion_label": "Weighted log",
+              "fusion_method": "joint_weighted_log",
+              "source_label": "+ tangent14",
+              "source_set": "regular_plus_tangent14",
+              "spherical_abs_rel": 0.16223741025780208
+            },
+            {
+              "fusion_label": "Huber (F*)",
+              "fusion_method": "joint_huber",
+              "source_label": "Multi-regular only",
+              "source_set": "regular_only",
+              "spherical_abs_rel": 0.24412822781120652
+            },
+            {
+              "fusion_label": "Huber (F*)",
+              "fusion_method": "joint_huber",
+              "source_label": "+ tangent6",
+              "source_set": "regular_plus_tangent6",
+              "spherical_abs_rel": 0.21332895689541373
+            },
+            {
+              "fusion_label": "Huber (F*)",
+              "fusion_method": "joint_huber",
+              "source_label": "+ tangent14",
+              "source_set": "regular_plus_tangent14",
+              "spherical_abs_rel": 0.20846886634827563
+            },
+            {
+              "fusion_label": "Synchronized",
+              "fusion_method": "joint_synchronized_huber",
+              "source_label": "Multi-regular only",
+              "source_set": "regular_only",
+              "spherical_abs_rel": 0.26316801915046456
+            },
+            {
+              "fusion_label": "Synchronized",
+              "fusion_method": "joint_synchronized_huber",
+              "source_label": "+ tangent6",
+              "source_set": "regular_plus_tangent6",
+              "spherical_abs_rel": 0.2517741671133572
+            },
+            {
+              "fusion_label": "Synchronized",
+              "fusion_method": "joint_synchronized_huber",
+              "source_label": "+ tangent14",
+              "source_set": "regular_plus_tangent14",
+              "spherical_abs_rel": 0.2394557758275043
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "Six-versus-fourteen tangent-view ablation with paired CI.",
+      "files": [
+        {
+          "bytes": 206813,
+          "format": "png",
+          "path": "tangent_view_count_ablation.png",
+          "sha256": "e79cac84eeae5578ee6c2c343c2ef2418c45490ec38c075c8a5637435a1d5e43"
+        },
+        {
+          "bytes": 60946,
+          "format": "svg",
+          "path": "tangent_view_count_ablation.svg",
+          "sha256": "c28be95d77653debfb24320af08898b48577099abb9beea6dee6ceb9cd58fc4f"
+        },
+        {
+          "bytes": 21719,
+          "format": "pdf",
+          "path": "tangent_view_count_ablation.pdf",
+          "sha256": "4419dfb2144e2c34ae1ffcdfd115ed4882226846287e16f91c89e992623f0b6e"
+        }
+      ],
+      "id": "tangent_view_count_ablation",
+      "numeric_payload": {
+        "depth_method": "raw_da3",
+        "fusion_method": "joint_huber",
+        "quality_support": "common_tangent6_tangent14",
+        "splits": {
+          "test": {
+            "contrast": {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.3639978000014616,
+              "candidate_minus_reference": -0.03013112347224347,
+              "confidence_interval_95": [
+                -0.04052809815017464,
+                -0.016809324505593873
+              ],
+              "reference_abs_rel": 0.394128923473705,
+              "room_count": 7,
+              "station_count": 31
+            },
+            "values": {
+              "tangent14": 0.36399780000146165,
+              "tangent6": 0.39412892347370504
+            }
+          },
+          "val": {
+            "contrast": {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.3608695001411209,
+              "candidate_minus_reference": -0.01623665517868221,
+              "confidence_interval_95": [
+                -0.03939813173514645,
+                0.0002279231294334562
+              ],
+              "reference_abs_rel": 0.3771061553198031,
+              "room_count": 7,
+              "station_count": 32
+            },
+            "values": {
+              "tangent14": 0.36086950014112085,
+              "tangent6": 0.37710615531980307
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "Strict single regular versus all-regular Route-R joint; no pano tangents.",
+      "files": [
+        {
+          "bytes": 353030,
+          "format": "png",
+          "path": "strict_single_vs_joint.png",
+          "sha256": "68fcece5ddabad2ecf79da1764bf7755a6d66ad57b83e093e8975306b064fea0"
+        },
+        {
+          "bytes": 106801,
+          "format": "svg",
+          "path": "strict_single_vs_joint.svg",
+          "sha256": "eda67f00a9fc74bf5a82faea687a27b1d31a7d6f7769a66e04e3c938f5fc2a3f"
+        },
+        {
+          "bytes": 25346,
+          "format": "pdf",
+          "path": "strict_single_vs_joint.pdf",
+          "sha256": "9535774a8c0014ec9423010a7f6c71201a128e9c9d72e2982af8f5c046210614"
+        }
+      ],
+      "id": "strict_single_vs_joint",
+      "numeric_payload": {
+        "comparison_support": "strict selected-frame support",
+        "joint_fusion_method": "joint_huber",
+        "joint_route": "multi_regular_route_r",
+        "panorama_tangents_included": false,
+        "splits": {
+          "test": [
+            {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.26975936350515684,
+              "candidate_minus_reference": 0.09923575742889044,
+              "confidence_interval_95": [
+                0.08839154367205015,
+                0.10879950880401615
+              ],
+              "depth_method": "raw_da3",
+              "label": "Raw DA3",
+              "reference_abs_rel": 0.1705236060762664,
+              "room_count": 7,
+              "station_count": 31
+            },
+            {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.11343033296498904,
+              "candidate_minus_reference": -0.013307802983076319,
+              "confidence_interval_95": [
+                -0.03067187084637053,
+                0.0012989786787858813
+              ],
+              "depth_method": "universal_scale",
+              "label": "Universal scale",
+              "reference_abs_rel": 0.1267381359480654,
+              "room_count": 7,
+              "station_count": 31
+            },
+            {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.11567945400276919,
+              "candidate_minus_reference": -0.013441594848757682,
+              "confidence_interval_95": [
+                -0.03480514906582862,
+                0.0038198596819604574
+              ],
+              "depth_method": "bim_direct",
+              "label": "BIM direct",
+              "reference_abs_rel": 0.1291210488515269,
+              "room_count": 7,
+              "station_count": 31
+            }
+          ],
+          "val": [
+            {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.21363404685062648,
+              "candidate_minus_reference": 0.09777745311068926,
+              "confidence_interval_95": [
+                0.07797997686351607,
+                0.11210063404099255
+              ],
+              "depth_method": "raw_da3",
+              "label": "Raw DA3",
+              "reference_abs_rel": 0.11585659373993723,
+              "room_count": 7,
+              "station_count": 30
+            },
+            {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.06976919591584556,
+              "candidate_minus_reference": -0.014513013849453592,
+              "confidence_interval_95": [
+                -0.03211292133174188,
+                -0.003993963489923498
+              ],
+              "depth_method": "universal_scale",
+              "label": "Universal scale",
+              "reference_abs_rel": 0.08428220976529915,
+              "room_count": 7,
+              "station_count": 30
+            },
+            {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.07231769267399127,
+              "candidate_minus_reference": -0.013870510336613916,
+              "confidence_interval_95": [
+                -0.033717473458582316,
+                -0.003253018119978239
+              ],
+              "depth_method": "bim_direct",
+              "label": "BIM direct",
+              "reference_abs_rel": 0.08618820301060519,
+              "room_count": 7,
+              "station_count": 30
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "Exploratory validation-only negative control: pano tangents gain coverage but regress accuracy on common strict support; not a formal/test claim.",
+      "files": [
+        {
+          "bytes": 233627,
+          "format": "png",
+          "path": "strict_single_plus_pano_validation.png",
+          "sha256": "b60edcda57e16455b75c4150051853f7dc92ff4fdb7a599cebf9fa071b4c55c7"
+        },
+        {
+          "bytes": 84228,
+          "format": "svg",
+          "path": "strict_single_plus_pano_validation.svg",
+          "sha256": "e5fd948a22f1c113c3b98adc22007d5338d019cbd0472eaa894a7b73cb4716b8"
+        },
+        {
+          "bytes": 24938,
+          "format": "pdf",
+          "path": "strict_single_plus_pano_validation.pdf",
+          "sha256": "20149a6932d182b8bd08033daca4de1dabab9ec138ca92294b1e910918b77394"
+        }
+      ],
+      "id": "strict_single_plus_pano_validation",
+      "numeric_payload": {
+        "bootstrap_repetitions": 10000,
+        "bootstrap_seed": 42,
+        "coverage_support": "per-method native union",
+        "depth_method": "raw_da3",
+        "formal_v3_result": false,
+        "fusion_method": "joint_huber",
+        "fusion_parameters_frozen": true,
+        "interpretation": "coverage gain but accuracy regression",
+        "methods": [
+          {
+            "label": "Single regular",
+            "method": "strict_single",
+            "native_union_solid_angle_coverage_fraction": 0.1087083108209313,
+            "spherical_abs_rel": 0.11585659373993723
+          },
+          {
+            "contrast_vs_strict_single": {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.1645430356219374,
+              "candidate_minus_reference": 0.04868644188200019,
+              "confidence_interval_95": [
+                0.024897949357310437,
+                0.05946641713275593
+              ],
+              "reference_abs_rel": 0.11585659373993723,
+              "room_count": 7,
+              "station_count": 30
+            },
+            "label": "+ tangent6",
+            "method": "strict_single_plus_tangent6",
+            "native_union_solid_angle_coverage_fraction": 0.9937505567643155,
+            "spherical_abs_rel": 0.16454303562193737
+          },
+          {
+            "contrast_vs_strict_single": {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.31859168638712176,
+              "candidate_minus_reference": 0.20273509264718453,
+              "confidence_interval_95": [
+                0.09855890385617044,
+                0.26421837316617114
+              ],
+              "reference_abs_rel": 0.11585659373993723,
+              "room_count": 7,
+              "station_count": 30
+            },
+            "label": "+ tangent14",
+            "method": "strict_single_plus_tangent14",
+            "native_union_solid_angle_coverage_fraction": 0.9985434178578535,
+            "spherical_abs_rel": 0.31859168638712176
+          }
+        ],
+        "publication_status": "candidate_for_future_preregistration",
+        "quality_support": "common strict selected-frame support",
+        "room_count": 7,
+        "split": "val",
+        "station_count": 30,
+        "status": "exploratory_validation_only",
+        "training_free_only": true
+      }
+    },
+    {
+      "description": "Training-free raw→scale→direct chain; local direct correction is negative/null.",
+      "files": [
+        {
+          "bytes": 158450,
+          "format": "png",
+          "path": "deterministic_bim_chain.png",
+          "sha256": "783ad929eb0f6c1846f2868b597c4c69417e25833e277a781b6128f9725c2db3"
+        },
+        {
+          "bytes": 63792,
+          "format": "svg",
+          "path": "deterministic_bim_chain.svg",
+          "sha256": "e16d8e469a95de1a896e11c71a35947613f25ed4493032bd158e6a25e45217d3"
+        },
+        {
+          "bytes": 20403,
+          "format": "pdf",
+          "path": "deterministic_bim_chain.pdf",
+          "sha256": "6914f7a47ae8a7d8ee4ed01e7409a05b78449c658a9157b6fc965604494c229f"
+        }
+      ],
+      "id": "deterministic_bim_chain",
+      "numeric_payload": {
+        "fusion_method": "joint_huber",
+        "splits": {
+          "test": {
+            "bim_direct_vs_universal_scale": {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.11006414803873296,
+              "candidate_minus_reference": 0.0018212089357614307,
+              "confidence_interval_95": [
+                -0.0011799296128611149,
+                0.004008931907464233
+              ],
+              "reference_abs_rel": 0.10824293910297154,
+              "room_count": 7,
+              "station_count": 31
+            },
+            "chain": [
+              {
+                "depth_method": "raw_da3",
+                "label": "Raw DA3",
+                "spherical_abs_rel": 0.26985007904170055
+              },
+              {
+                "depth_method": "universal_scale",
+                "label": "Universal scale",
+                "spherical_abs_rel": 0.10824293910297154
+              },
+              {
+                "depth_method": "bim_direct",
+                "label": "BIM direct",
+                "spherical_abs_rel": 0.11006414803873296
+              }
+            ],
+            "universal_scale_vs_raw": {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.10824293910297154,
+              "candidate_minus_reference": -0.16160713993872905,
+              "confidence_interval_95": [
+                -0.19543346866464192,
+                -0.106697477068566
+              ],
+              "reference_abs_rel": 0.26985007904170055,
+              "room_count": 7,
+              "station_count": 31
+            }
+          },
+          "val": {
+            "bim_direct_vs_universal_scale": {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.07674157449577927,
+              "candidate_minus_reference": 0.00229918886461881,
+              "confidence_interval_95": [
+                -0.00038386614201540645,
+                0.0036845822908083115
+              ],
+              "reference_abs_rel": 0.07444238563116046,
+              "room_count": 7,
+              "station_count": 30
+            },
+            "chain": [
+              {
+                "depth_method": "raw_da3",
+                "label": "Raw DA3",
+                "spherical_abs_rel": 0.24412822781120652
+              },
+              {
+                "depth_method": "universal_scale",
+                "label": "Universal scale",
+                "spherical_abs_rel": 0.07444238563116046
+              },
+              {
+                "depth_method": "bim_direct",
+                "label": "BIM direct",
+                "spherical_abs_rel": 0.07674157449577927
+              }
+            ],
+            "universal_scale_vs_raw": {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.07444238563116046,
+              "candidate_minus_reference": -0.16968584218004606,
+              "confidence_interval_95": [
+                -0.18515101032292552,
+                -0.16185807797802254
+              ],
+              "reference_abs_rel": 0.24412822781120652,
+              "room_count": 7,
+              "station_count": 30
+            }
+          }
+        },
+        "training_free_only": true
+      }
+    },
+    {
+      "description": "Room points recomputed exactly from formal per-station CSV rows.",
+      "files": [
+        {
+          "bytes": 633366,
+          "format": "png",
+          "path": "room_level_paired_pano_claim.png",
+          "sha256": "7cb8088ccffbe6ef885bd4c9ea0b01efc6f9bd3c8b22164828a0bfd3f8255b4e"
+        },
+        {
+          "bytes": 119670,
+          "format": "svg",
+          "path": "room_level_paired_pano_claim.svg",
+          "sha256": "82db16135146e1359afa96ba24c149802517323ea6d17c095fbf13fbf9fb1eb0"
+        },
+        {
+          "bytes": 31709,
+          "format": "pdf",
+          "path": "room_level_paired_pano_claim.pdf",
+          "sha256": "6bf88a14dc36c6a4d83a9081080613e23366287120f11080cfdf14a0df7ac3bf"
+        }
+      ],
+      "id": "room_level_paired_pano_claim",
+      "numeric_payload": {
+        "depth_method": "raw_da3",
+        "fusion_method": "joint_huber",
+        "room_aggregation": "mean station spherical AbsRel within each room",
+        "splits": {
+          "test": {
+            "formal_station_macro_contrast": {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.22865117520499842,
+              "candidate_minus_reference": -0.0411989038367022,
+              "confidence_interval_95": [
+                -0.05293252694634856,
+                -0.030209395968477607
+              ],
+              "reference_abs_rel": 0.26985007904170066,
+              "room_count": 7,
+              "station_count": 31
+            },
+            "room_points_recomputed_from_csv": [
+              {
+                "candidate_minus_reference": -0.03125751423972306,
+                "regular_only": 0.24846589912888678,
+                "regular_plus_tangent14": 0.21720838488916372,
+                "room": "conferenceRoom_1",
+                "station_count": 5
+              },
+              {
+                "candidate_minus_reference": -0.06815673706728115,
+                "regular_only": 0.3069069503814452,
+                "regular_plus_tangent14": 0.23875021331416407,
+                "room": "hallway_8",
+                "station_count": 5
+              },
+              {
+                "candidate_minus_reference": -0.019399461810493318,
+                "regular_only": 0.264644415463985,
+                "regular_plus_tangent14": 0.24524495365349167,
+                "room": "office_16",
+                "station_count": 5
+              },
+              {
+                "candidate_minus_reference": -0.042423338542512706,
+                "regular_only": 0.2591929813917688,
+                "regular_plus_tangent14": 0.21676964284925607,
+                "room": "office_20",
+                "station_count": 3
+              },
+              {
+                "candidate_minus_reference": -0.04463555706306738,
+                "regular_only": 0.28693586142236666,
+                "regular_plus_tangent14": 0.24230030435929928,
+                "room": "office_22",
+                "station_count": 3
+              },
+              {
+                "candidate_minus_reference": -0.03832089710953679,
+                "regular_only": 0.29596173313859436,
+                "regular_plus_tangent14": 0.2576408360290576,
+                "room": "office_23",
+                "station_count": 3
+              },
+              {
+                "candidate_minus_reference": -0.04385115360070424,
+                "regular_only": 0.24842777108042058,
+                "regular_plus_tangent14": 0.20457661747971634,
+                "room": "office_30",
+                "station_count": 7
+              }
+            ]
+          },
+          "val": {
+            "formal_station_macro_contrast": {
+              "bootstrap_repetitions": 10000,
+              "candidate_abs_rel": 0.20846886634827563,
+              "candidate_minus_reference": -0.03565936146293088,
+              "confidence_interval_95": [
+                -0.05380705403149476,
+                -0.026930421696558675
+              ],
+              "reference_abs_rel": 0.2441282278112065,
+              "room_count": 7,
+              "station_count": 30
+            },
+            "room_points_recomputed_from_csv": [
+              {
+                "candidate_minus_reference": -0.06187616698546272,
+                "regular_only": 0.24565621147775638,
+                "regular_plus_tangent14": 0.18378004449229365,
+                "room": "hallway_2",
+                "station_count": 3
+              },
+              {
+                "candidate_minus_reference": -0.06334152518374583,
+                "regular_only": 0.2664739437494157,
+                "regular_plus_tangent14": 0.20313241856566985,
+                "room": "hallway_5",
+                "station_count": 3
+              },
+              {
+                "candidate_minus_reference": -0.05308024203781278,
+                "regular_only": 0.2756328615935816,
+                "regular_plus_tangent14": 0.2225526195557688,
+                "room": "office_14",
+                "station_count": 2
+              },
+              {
+                "candidate_minus_reference": -0.0379074075501491,
+                "regular_only": 0.24453600621216798,
+                "regular_plus_tangent14": 0.20662859866201888,
+                "room": "office_24",
+                "station_count": 3
+              },
+              {
+                "candidate_minus_reference": -0.027637048477247073,
+                "regular_only": 0.24971599784239878,
+                "regular_plus_tangent14": 0.2220789493651517,
+                "room": "office_28",
+                "station_count": 4
+              },
+              {
+                "candidate_minus_reference": -0.024317477867861426,
+                "regular_only": 0.22830323253443358,
+                "regular_plus_tangent14": 0.20398575466657215,
+                "room": "office_31",
+                "station_count": 13
+              },
+              {
+                "candidate_minus_reference": -0.02378482723152031,
+                "regular_only": 0.26788830625688986,
+                "regular_plus_tangent14": 0.24410347902536955,
+                "room": "office_6",
+                "station_count": 2
+              }
+            ]
+          }
+        },
+        "support": "common_regular"
+      }
+    },
+    {
+      "description": "Candidate A: method pipeline.",
+      "files": [
+        {
+          "bytes": 175855,
+          "format": "png",
+          "path": "process_candidate_a_erp_tangent_pipeline.png",
+          "sha256": "993258be3ee7d81cdd4d1e147592dc44708ef7ca0a7bb2cf5103b0c4fa27ef10"
+        },
+        {
+          "bytes": 74961,
+          "format": "svg",
+          "path": "process_candidate_a_erp_tangent_pipeline.svg",
+          "sha256": "e5928dae3cfd52f1f9c9181ce481139318289babacc8a18b8ccb9a5db235c9ed"
+        },
+        {
+          "bytes": 29662,
+          "format": "pdf",
+          "path": "process_candidate_a_erp_tangent_pipeline.pdf",
+          "sha256": "1e011598c5b868af69a6d28cc8fe13c19ae42e573d359c1b7fe3ad998f039819"
+        }
+      ],
+      "id": "process_candidate_a_erp_tangent_pipeline",
+      "numeric_payload": {
+        "stages": [
+          "ERP",
+          "nested14",
+          "DA3",
+          "ERP reprojection",
+          "joint Huber",
+          "pano depth"
+        ],
+        "training_free": true
+      }
+    },
+    {
+      "description": "Candidate B: orthogonal evaluation design.",
+      "files": [
+        {
+          "bytes": 156415,
+          "format": "png",
+          "path": "process_candidate_b_orthogonal_matrix.png",
+          "sha256": "d7b80ce51dff1aa05e1597f1ad2c2c68b075a2c91f6673903dc7276ac346556c"
+        },
+        {
+          "bytes": 61871,
+          "format": "svg",
+          "path": "process_candidate_b_orthogonal_matrix.svg",
+          "sha256": "057fe8a18451eefd1505d53af43e097c8fc3505764aaa8f8982eee06e09e5aed"
+        },
+        {
+          "bytes": 30763,
+          "format": "pdf",
+          "path": "process_candidate_b_orthogonal_matrix.pdf",
+          "sha256": "39d47e9a731e79b20ffecd6e75b66781c50fb4736b2a01cc2bd3874f4793f264"
+        }
+      ],
+      "id": "process_candidate_b_orthogonal_matrix",
+      "numeric_payload": {
+        "bim_axis": [
+          "raw_da3",
+          "universal_scale",
+          "bim_direct"
+        ],
+        "learned_refinement_included": false,
+        "panorama_axis": [
+          "regular_only",
+          "regular_plus_tangent6",
+          "regular_plus_tangent14"
+        ]
+      }
+    },
+    {
+      "description": "Candidate C: same-center deployment coverage flow.",
+      "files": [
+        {
+          "bytes": 169640,
+          "format": "png",
+          "path": "process_candidate_c_deployment_coverage.png",
+          "sha256": "cc2629e4f10e589a0320fc0bd752266b0e8b1a0159437c348797478fc02cdc16"
+        },
+        {
+          "bytes": 73908,
+          "format": "svg",
+          "path": "process_candidate_c_deployment_coverage.svg",
+          "sha256": "fc2eb01e111e00605f9b6006b979c5304c1a76f5ec8d6171fa967f11bb6cc683"
+        },
+        {
+          "bytes": 30286,
+          "format": "pdf",
+          "path": "process_candidate_c_deployment_coverage.pdf",
+          "sha256": "3b231d64a5125bba729d3f09ebe90b7ef5a073b29315bc568ea345db3839bba0"
+        }
+      ],
+      "id": "process_candidate_c_deployment_coverage",
+      "numeric_payload": {
+        "same_camera_center": true,
+        "test_coverage": [
+          {
+            "label": "Multi-regular only",
+            "mean_solid_angle_coverage_fraction": 0.6691995333006086,
+            "source_set": "regular_only"
+          },
+          {
+            "label": "+ tangent6",
+            "mean_solid_angle_coverage_fraction": 0.9975274287046187,
+            "source_set": "regular_plus_tangent6"
+          },
+          {
+            "label": "+ tangent14",
+            "mean_solid_angle_coverage_fraction": 0.9995674976662227,
+            "source_set": "regular_plus_tangent14"
+          }
+        ],
+        "triangulation_claim": false
+      }
+    }
+  ],
+  "formal_numeric_payload_sha256": "9d633a6314a8ffa80fa9b434a666db5634e4888e83360880234704a5338d4521",
+  "formal_protocol": "stanford-area1-regular-and-pano-tangent-depth-v3",
+  "formal_schema_version": 3,
+  "formal_sources_reopened": false,
+  "generation_mode": "manifest_payload_replay_plus_exploratory_validation_receipt",
+  "generator": "scripts/analysis/generate_pano_evaluation_assets.py",
+  "generator_sha256": "9888da485c6736a4a2ce185fe99fc5576e8ef499bbab6759aaf7fa0aced8cd5f",
+  "method_scope": {
+    "included_depth_methods": [
+      "raw_da3",
+      "universal_scale",
+      "bim_direct"
+    ],
+    "learned_refinement_plotted": false,
+    "quality_range_m": [
+      0.2,
+      5.0
+    ],
+    "same_camera_center": true,
+    "station-local_BIM_variants_plotted": false,
+    "training_free_only": true,
+    "triangulation_or_mvs_claim": false
+  },
+  "primary_fusion": {
+    "id": "joint_huber",
+    "label": "joint Huber",
+    "status": "frozen on validation before formal test"
+  },
+  "schema_version": 1,
+  "source_access_contract": "Formal numeric payloads/source identities replayed from the prior quantitative manifest without reopening formal artifacts; only exploratory val summary/provenance opened. No test CSV, raw images, GT, BIM, prediction caches, checkpoints, or model execution.",
+  "sources": [
+    {
+      "bytes": 35782,
+      "path": "results/stanford_area1/pano_test/per_room.csv",
+      "sha256": "fb1e37721d774039e92a01243bb00a38e78bae5f6c2edef525ac45fcb4e6bb60"
+    },
+    {
+      "bytes": 378781,
+      "path": "results/stanford_area1/pano_test/per_station.csv",
+      "sha256": "18c91935292c282ce57635360ce5b9e05f5eea6142189e05591b2378daf39d34"
+    },
+    {
+      "bytes": 108289,
+      "path": "results/stanford_area1/pano_test/provenance.json",
+      "sha256": "59ff764839db3e7cc4638d460abc95f6f991b9055f1f7b3047f2d994aea145b4"
+    },
+    {
+      "bytes": 241867,
+      "path": "results/stanford_area1/pano_test/regular_pano_joint_per_station.csv",
+      "sha256": "6a880fdac1ba43c35d264c93594bffb31db725f467ce380261b0a3c69983da69"
+    },
+    {
+      "bytes": 424719,
+      "path": "results/stanford_area1/pano_test/strict_single_per_station.csv",
+      "sha256": "f9a82b3e2fde0fcba0adafa3da7b069c4116fb6cea616bfe6bb5c87f014302d6"
+    },
+    {
+      "bytes": 4434174,
+      "path": "results/stanford_area1/pano_test/summary.json",
+      "sha256": "bee9cee821e435b21a02284743d68b424f51673be76eebd8a7b38d3141a34746"
+    },
+    {
+      "bytes": 214322,
+      "path": "results/stanford_area1/pano_test/tangent_per_station.csv",
+      "sha256": "f2ae9e2e88a996db253bc9a495f03699c1f2098132ffba5e4f9dbb411438c844"
+    },
+    {
+      "bytes": 35576,
+      "path": "results/stanford_area1/pano_val/per_room.csv",
+      "sha256": "b4b6870766a616e2113efd84e78ba4d0a7b03df684880efa1d796ad1436c5fa2"
+    },
+    {
+      "bytes": 366094,
+      "path": "results/stanford_area1/pano_val/per_station.csv",
+      "sha256": "d9c24b7ee08a204f0c676fbb5500c09078e1ab5873e868d31a6c0c4d330ef0d7"
+    },
+    {
+      "bytes": 159919,
+      "path": "results/stanford_area1/pano_val/provenance.json",
+      "sha256": "df4f8050eefd0a7d1c2fdb3304f1283d22c73e98fe50e3b7c9b9d9ae0e2a7a2d"
+    },
+    {
+      "bytes": 233500,
+      "path": "results/stanford_area1/pano_val/regular_pano_joint_per_station.csv",
+      "sha256": "ba736bc9b5f8c4e9ae30d4a3018a908d259757834161617f221e5c91b0a2184d"
+    },
+    {
+      "bytes": 406683,
+      "path": "results/stanford_area1/pano_val/strict_single_per_station.csv",
+      "sha256": "a73c68029cc79edafc4c75f7a3c1464fd6ed023ce26260ba71da7fd34d77b061"
+    },
+    {
+      "bytes": 4436938,
+      "path": "results/stanford_area1/pano_val/summary.json",
+      "sha256": "68e101b59a2bb1340f16b5ddceecfdead91ddf1395b47a79bc21994c496cd361"
+    },
+    {
+      "bytes": 220725,
+      "path": "results/stanford_area1/pano_val/tangent_per_station.csv",
+      "sha256": "1a6364131853ebcf977d39a66da1b6e20cb1ff9825f8d6aee5a3314278f87a72"
+    },
+    {
+      "bytes": 35002,
+      "path": "results/stanford_area1/pano_val_single_plus_tangent/provenance.json",
+      "sha256": "95c18fd5ef82582923d9ff4680c6de32bf6cb43ce77e352999671b0cd7c4b615"
+    },
+    {
+      "bytes": 13650,
+      "path": "results/stanford_area1/pano_val_single_plus_tangent/summary.json",
+      "sha256": "6f2cd6ddf2b448162ff29950549a96e11628ccc5cd4d6efb525e6dc8910ed833"
+    }
+  ],
+  "test_csv_reopened": false
+}

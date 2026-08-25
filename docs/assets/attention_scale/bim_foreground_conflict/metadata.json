@@ -1,0 +1,58 @@
+[
+  {
+    "sample_id": "conferenceRoom_1/camera_042a479869b44a7c9159922f19a285ea_conferenceRoom_1_frame_3",
+    "split": "test",
+    "definition": "GT < BIM - max(0.10 m, 0.05 * BIM), with valid GT and BIM",
+    "full_depth_gt_validity": "official uint16 raw != 0 and raw != 65535",
+    "counts": {
+      "valid": 254016,
+      "furniture": 69446,
+      "conflict": 89428,
+      "overlap": 67474,
+      "furniture_only": 1972,
+      "conflict_only": 21954
+    },
+    "fractions": {
+      "furniture_of_valid": 0.2733922272612749,
+      "conflict_of_valid": 0.35205656336608715,
+      "furniture_in_conflict": 0.971603836074072,
+      "conflict_that_is_furniture": 0.7545064185713647
+    },
+    "depth_display_p98_m": 4.044921875,
+    "panel": "docs/assets/attention_scale/bim_foreground_conflict/conferenceRoom_1__camera_042a479869b44a7c9159922f19a285ea_conferenceRoom_1_frame_3__panel.png",
+    "components": {
+      "rgb": "docs/assets/attention_scale/bim_foreground_conflict/conferenceRoom_1__camera_042a479869b44a7c9159922f19a285ea_conferenceRoom_1_frame_3__rgb.png",
+      "furniture_overlay": "docs/assets/attention_scale/bim_foreground_conflict/conferenceRoom_1__camera_042a479869b44a7c9159922f19a285ea_conferenceRoom_1_frame_3__furniture_overlay.png",
+      "conflict_overlay": "docs/assets/attention_scale/bim_foreground_conflict/conferenceRoom_1__camera_042a479869b44a7c9159922f19a285ea_conferenceRoom_1_frame_3__conflict_overlay.png",
+      "mask_decomposition": "docs/assets/attention_scale/bim_foreground_conflict/conferenceRoom_1__camera_042a479869b44a7c9159922f19a285ea_conferenceRoom_1_frame_3__mask_decomposition.png"
+    }
+  },
+  {
+    "sample_id": "office_30/camera_99ef0587d5194f998b36b7bdd64aadb1_office_30_frame_8",
+    "split": "test",
+    "definition": "GT < BIM - max(0.10 m, 0.05 * BIM), with valid GT and BIM",
+    "full_depth_gt_validity": "official uint16 raw != 0 and raw != 65535",
+    "counts": {
+      "valid": 254016,
+      "furniture": 343,
+      "conflict": 220832,
+      "overlap": 0,
+      "furniture_only": 343,
+      "conflict_only": 220832
+    },
+    "fractions": {
+      "furniture_of_valid": 0.0013503086419753086,
+      "conflict_of_valid": 0.8693625598387503,
+      "furniture_in_conflict": 0.0,
+      "conflict_that_is_furniture": 0.0
+    },
+    "depth_display_p98_m": 5.068359375,
+    "panel": "docs/assets/attention_scale/bim_foreground_conflict/office_30__camera_99ef0587d5194f998b36b7bdd64aadb1_office_30_frame_8__panel.png",
+    "components": {
+      "rgb": "docs/assets/attention_scale/bim_foreground_conflict/office_30__camera_99ef0587d5194f998b36b7bdd64aadb1_office_30_frame_8__rgb.png",
+      "furniture_overlay": "docs/assets/attention_scale/bim_foreground_conflict/office_30__camera_99ef0587d5194f998b36b7bdd64aadb1_office_30_frame_8__furniture_overlay.png",
+      "conflict_overlay": "docs/assets/attention_scale/bim_foreground_conflict/office_30__camera_99ef0587d5194f998b36b7bdd64aadb1_office_30_frame_8__conflict_overlay.png",
+      "mask_decomposition": "docs/assets/attention_scale/bim_foreground_conflict/office_30__camera_99ef0587d5194f998b36b7bdd64aadb1_office_30_frame_8__mask_decomposition.png"
+    }
+  }
+]

@@ -1,0 +1,28 @@
+extends: stanford_area1_attentive_scale_da3_features.yaml
+
+experiment:
+  name: stanford_area1_attentive_scale_da3_features_hit_only
+  output_dir: outputs/stanford_area1_attentive_scale_da3_features_hit_only
+
+data:
+  # Keep the previous benchmark immutable. Only the BIM prior is regenerated:
+  # every finite positive fixed-envelope hit is valid, without a 0.2--5.0 m
+  # BIM cutoff. The GT/loss/evaluation support remains 0.2--5.0 m.
+  processed_root: data/processed/stanford_area1_hit_only_504
+  # Same immutable room assignments as the previous benchmark, rebound to
+  # the preparation fingerprints of the hit-only BIM artifacts.
+  split_fingerprint_sha256: 98df6610a13d97d61edac37d8191512fc129e2a521993cbfc1110e699be19b0e
+  da3_cache_roots:
+    area_1: data/processed/stanford_area1_504/da3_cache/area_1
+  da3_feature_cache_root: data/processed/stanford_area1_hit_only_504/da3_features_l11_l23
+  # Matches the provenance bit embedded in the reused pinned DA3 cache.
+  local_files_only: true
+
+evaluation:
+  # The old train-only comparator receipt is bound to the old prepared
+  # manifest. Fixed comparator parameters are retained for a controlled
+  # architecture comparison, but evaluation must explicitly mark this run as
+  # exploratory until a new train-only receipt is frozen.
+  robust_scale_selection_receipt: null
+  robust_scale_selection_receipt_sha256: null
+  robust_scale_selection_protocol_sha256: null

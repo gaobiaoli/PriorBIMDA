@@ -1,0 +1,39 @@
+extends: stanford_area1_attentive_scale_da3_features.yaml
+
+experiment:
+  name: stanford_area1_hybrid_additive
+  output_dir: outputs/stanford_area1_hybrid_additive
+
+model:
+  # Keep the better no-token attention-scale architecture. Cached DA3 tokens
+  # are consumed only by the spatial refiner.
+  da3_feature_fusion:
+    enabled: false
+    scale_enabled: false
+    refiner_enabled: true
+    layers: [11, 23]
+    channels: 1024
+  additive_residual:
+    enabled: true
+    # A separate full-resolution head predicts a correction in metres after
+    # the bounded multiplicative low/detail result. The head starts at zero.
+    max_residual_m: 0.20
+    detach_shared_features: true
+
+loss:
+  additive_residual_teacher: 0.50
+  additive_residual_beta_m: 0.02
+  additive_regularization: 0.005
+  additive_scale_orthogonality: 0.01
+
+train:
+  epochs: 18
+  scratch_stage_epochs:
+    scale_only: 3
+    refiner_only: 9
+    additive_only: 3
+    joint: 3
+  # The additive group first becomes active late in the global cosine
+  # schedule, so it receives a larger initial group LR than the backbone.
+  additive_residual_learning_rate: 0.00016
+  early_stopping_patience: 18

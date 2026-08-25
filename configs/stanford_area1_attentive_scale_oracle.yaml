@@ -1,0 +1,13 @@
+extends: stanford_area1_attentive_scale.yaml
+
+experiment:
+  name: stanford_area1_attentive_scale_oracle
+  output_dir: outputs/stanford_area1_attentive_scale_oracle
+
+loss:
+  # Exact train-time AbsRel-optimal scalar supervision. All architecture,
+  # initialization, optimizer, schedule and data settings remain inherited
+  # unchanged from the attentive-scale experiment.
+  attention_scale_oracle: 0.50
+  attention_scale_oracle_beta: 0.02
+  attention_scale_oracle_min_support: 100

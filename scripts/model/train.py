@@ -58,8 +58,14 @@ REFINER_HEAD_WARMUP_PARAMETER_PREFIXES = (
     "refiner.frame_output.",
     "refiner.bim_adapters.",
 )
+ATTENTION_SCALE_WARMUP_PARAMETER_PREFIXES = ("attention_scale.",)
 REFINER_HEAD_WARMUP_STAGE = "refiner_heads_and_bim_adapters"
+ATTENTION_SCALE_WARMUP_STAGE = "attention_scale_head"
 REFINER_FULL_STAGE = "full_original_non_da3"
+SCRATCH_SCALE_STAGE = "scratch_scale_only"
+SCRATCH_REFINER_STAGE = "scratch_refiner_only"
+SCRATCH_ADDITIVE_STAGE = "scratch_additive_only"
+SCRATCH_JOINT_STAGE = "scratch_low_lr_joint"
 
 
 def file_sha256(path: Path) -> str:
@@ -158,7 +164,8 @@ def load_initial_model_weights(
     checkpoint_model_config: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     """Initialize a stage while preserving freshly loaded E2E DA3 weights."""
-    if not model.e2e_da3_enabled:
+    attention_scale_enabled = bool(getattr(model, "attention_scale_enabled", False))
+    if not model.e2e_da3_enabled and not attention_scale_enabled:
         model.load_state_dict(checkpoint_model, strict=True)
         return {
             "strict": True,
@@ -169,8 +176,18 @@ def load_initial_model_weights(
     incompatible = model.load_state_dict(checkpoint_model, strict=False)
     model_da3_keys = {name for name in model.state_dict() if name.startswith("da3.")}
     checkpoint_da3_keys = {name for name in checkpoint_model if name.startswith("da3.")}
+    model_attention_keys = {
+        name for name in model.state_dict() if name.startswith("attention_scale.")
+    }
+    checkpoint_attention_keys = {
+        name for name in checkpoint_model if name.startswith("attention_scale.")
+    }
     missing_keys = set(incompatible.missing_keys)
-    expected_missing = set() if checkpoint_da3_keys else model_da3_keys
+    expected_missing = set()
+    if model.e2e_da3_enabled and not checkpoint_da3_keys:
+        expected_missing.update(model_da3_keys)
+    if attention_scale_enabled and not checkpoint_attention_keys:
+        expected_missing.update(model_attention_keys)
     if missing_keys != expected_missing or incompatible.unexpected_keys:
         raise ValueError(
             "E2E stage initialization is incompatible with the checkpoint: "
@@ -195,7 +212,7 @@ def load_initial_model_weights(
         "strict": False,
         "missing_keys": list(incompatible.missing_keys),
         "unexpected_keys": list(incompatible.unexpected_keys),
-        "policy": "only freshly loaded da3.* parameters may be absent",
+        "policy": ("only freshly loaded da3.* and/or attention_scale.* parameters may be absent"),
     }
 
 
@@ -303,8 +320,241 @@ def snapshot_parameter_trainability(
     return {name: bool(parameter.requires_grad) for name, parameter in model.named_parameters()}
 
 
-def _is_refiner_head_warmup_parameter(name: str) -> bool:
-    return name.startswith(REFINER_HEAD_WARMUP_PARAMETER_PREFIXES)
+def resolve_scratch_stage_epochs(
+    cfg: Mapping[str, Any],
+    *,
+    e2e_enabled: bool,
+    attention_scale_enabled: bool,
+    additive_residual_enabled: bool = False,
+) -> dict[str, int] | None:
+    """Resolve the optional scratch scale/refiner/joint curriculum."""
+
+    train_cfg = cfg.get("train", {})
+    if not isinstance(train_cfg, Mapping):
+        raise TypeError("train config must be a mapping")
+    raw = train_cfg.get("scratch_stage_epochs")
+    if raw is None:
+        return None
+    if not isinstance(raw, Mapping):
+        raise TypeError("train.scratch_stage_epochs must be a mapping")
+    if e2e_enabled:
+        raise ValueError("train.scratch_stage_epochs requires frozen/cached DA3")
+    if not attention_scale_enabled:
+        raise ValueError("train.scratch_stage_epochs requires model.attention_scale.enabled=true")
+    expected = {"scale_only", "refiner_only", "joint"}
+    ordered_names = ("scale_only", "refiner_only", "joint")
+    if additive_residual_enabled:
+        expected.add("additive_only")
+        ordered_names = ("scale_only", "refiner_only", "additive_only", "joint")
+    if set(raw) != expected:
+        raise ValueError(
+            "train.scratch_stage_epochs has the wrong stages; expected "
+            f"{sorted(expected)}"
+        )
+    stages: dict[str, int] = {}
+    for name in ordered_names:
+        value = raw[name]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"train.scratch_stage_epochs.{name} must be a positive integer")
+        stages[name] = value
+    total_epochs = train_cfg.get("epochs")
+    if isinstance(total_epochs, bool) or not isinstance(total_epochs, int):
+        raise TypeError("train.epochs must be an integer for scratch staged training")
+    if sum(stages.values()) != total_epochs:
+        raise ValueError(
+            "train.scratch_stage_epochs must sum to train.epochs: "
+            f"stages={sum(stages.values())}, epochs={total_epochs}"
+        )
+    warmup = train_cfg.get("refiner_head_warmup_epochs", 0)
+    if warmup != 0:
+        raise ValueError(
+            "train.refiner_head_warmup_epochs must be 0 when scratch_stage_epochs is configured"
+        )
+    return stages
+
+
+def build_scratch_stage_schedule(
+    model: torch.nn.Module,
+    stage_epochs: Mapping[str, int],
+    original_trainability: Mapping[str, bool],
+) -> dict[str, object]:
+    """Build an auditable three-stage schedule for task-network scratch training."""
+
+    named_parameters = dict(model.named_parameters())
+    if set(named_parameters) != set(original_trainability):
+        raise ValueError("Original parameter trainability does not match the current model")
+    originally_trainable = tuple(
+        name for name in named_parameters if bool(original_trainability[name])
+    )
+    non_da3 = tuple(name for name in originally_trainable if not name.startswith("da3."))
+    scale = tuple(name for name in non_da3 if name.startswith("attention_scale."))
+    additive = tuple(name for name in non_da3 if name.startswith("refiner.additive_"))
+    refiner = tuple(
+        name
+        for name in non_da3
+        if not name.startswith("attention_scale.") and name not in additive
+    )
+    if not scale or not refiner:
+        raise RuntimeError(
+            "Scratch staged training requires trainable scale and refiner parameters"
+        )
+    scale_end = int(stage_epochs["scale_only"])
+    refiner_end = scale_end + int(stage_epochs["refiner_only"])
+    if "additive_only" in stage_epochs:
+        if not additive:
+            raise RuntimeError(
+                "Scratch additive stage requires refiner additive-head parameters"
+            )
+        additive_end = refiner_end + int(stage_epochs["additive_only"])
+        joint_end = additive_end + int(stage_epochs["joint"])
+        phases = (
+            (SCRATCH_SCALE_STAGE, 0, scale_end, scale),
+            (SCRATCH_REFINER_STAGE, scale_end, refiner_end, refiner),
+            (SCRATCH_ADDITIVE_STAGE, refiner_end, additive_end, additive),
+            (SCRATCH_JOINT_STAGE, additive_end, joint_end, non_da3),
+        )
+        schedule_kind = "scratch_scale_refiner_additive_joint"
+    else:
+        if additive:
+            raise RuntimeError(
+                "An enabled additive head requires train.scratch_stage_epochs.additive_only"
+            )
+        joint_end = refiner_end + int(stage_epochs["joint"])
+        phases = (
+            (SCRATCH_SCALE_STAGE, 0, scale_end, scale),
+            (SCRATCH_REFINER_STAGE, scale_end, refiner_end, refiner),
+            (SCRATCH_JOINT_STAGE, refiner_end, joint_end, non_da3),
+        )
+        schedule_kind = "scratch_scale_refiner_joint"
+    return {
+        "schema_version": 2,
+        "kind": schedule_kind,
+        "initialization": "fresh_task_network_without_init_checkpoint",
+        "phases": [
+            {
+                "name": name,
+                "start_epoch_inclusive": start,
+                "end_epoch_exclusive": end,
+                "trainable_non_da3_parameter_names": list(names),
+            }
+            for name, start, end, names in phases
+        ],
+        "total_epochs": joint_end,
+        "da3_policy": "frozen_cached",
+        "optimizer_parameter_policy": (
+            "one optimizer contains all originally trainable tensors; requires_grad "
+            "selects each stage and the global cosine schedule makes the final joint "
+            "stage low learning rate"
+        ),
+        "optimizer_parameter_tensors": len(originally_trainable),
+        "optimizer_parameter_names_sha256": _canonical_sha256(list(originally_trainable)),
+    }
+
+
+def apply_scratch_training_stage(
+    model: torch.nn.Module,
+    *,
+    epoch: int,
+    schedule: Mapping[str, Any],
+    original_trainability: Mapping[str, bool],
+) -> dict[str, object]:
+    """Activate exactly one scratch-training phase without rebuilding the optimizer."""
+
+    if isinstance(epoch, bool) or not isinstance(epoch, int) or epoch < 0:
+        raise ValueError("epoch must be a non-negative integer")
+    phases = schedule.get("phases")
+    if not isinstance(phases, list):
+        raise TypeError("Scratch schedule phases must be a list")
+    selected = next(
+        (
+            phase
+            for phase in phases
+            if int(phase["start_epoch_inclusive"]) <= epoch < int(phase["end_epoch_exclusive"])
+        ),
+        None,
+    )
+    if selected is None:
+        raise ValueError(f"Epoch {epoch} is outside the configured scratch stage schedule")
+    named_parameters = dict(model.named_parameters())
+    if set(named_parameters) != set(original_trainability):
+        raise ValueError("Original parameter trainability does not match the current model")
+    selected_names = set(selected["trainable_non_da3_parameter_names"])
+    for name, parameter in named_parameters.items():
+        if name.startswith("da3."):
+            desired = bool(original_trainability[name])
+        else:
+            desired = bool(original_trainability[name]) and name in selected_names
+        parameter.requires_grad_(desired)
+    actual = tuple(
+        name
+        for name, parameter in named_parameters.items()
+        if parameter.requires_grad and not name.startswith("da3.")
+    )
+    expected = tuple(name for name in named_parameters if name in selected_names)
+    if actual != expected:
+        raise RuntimeError("Scratch training stage produced an unexpected parameter set")
+    return {
+        "schema_version": 1,
+        "epoch": epoch,
+        "name": str(selected["name"]),
+        "start_epoch_inclusive": int(selected["start_epoch_inclusive"]),
+        "end_epoch_exclusive": int(selected["end_epoch_exclusive"]),
+        "trainable_non_da3_parameter_tensors": len(actual),
+        "trainable_non_da3_parameters": sum(named_parameters[name].numel() for name in actual),
+        "trainable_non_da3_parameter_names": list(actual),
+        "da3_trainability_unchanged": True,
+    }
+
+
+def apply_scratch_stage_module_modes(
+    model: BIMPriorDA3,
+    stage_name: str,
+) -> None:
+    """Keep each frozen phase deterministic after the parent enters train mode."""
+
+    if model.attention_scale is None:
+        raise RuntimeError("Scratch staged training requires an attention-scale module")
+    if stage_name == SCRATCH_SCALE_STAGE:
+        model.attention_scale.train()
+        model.refiner.eval()
+    elif stage_name == SCRATCH_REFINER_STAGE:
+        model.attention_scale.eval()
+        model.refiner.train()
+        if model.refiner.additive_body is not None:
+            model.refiner.additive_body.eval()
+        if model.refiner.additive_output is not None:
+            model.refiner.additive_output.eval()
+    elif stage_name == SCRATCH_ADDITIVE_STAGE:
+        model.attention_scale.eval()
+        model.refiner.eval()
+        if model.refiner.additive_body is None or model.refiner.additive_output is None:
+            raise RuntimeError("Scratch additive stage requires an enabled additive head")
+        model.refiner.additive_body.train()
+        model.refiner.additive_output.train()
+    elif stage_name == SCRATCH_JOINT_STAGE:
+        model.attention_scale.train()
+        model.refiner.train()
+    else:
+        raise ValueError(f"Unknown scratch training stage: {stage_name!r}")
+
+
+def _warmup_parameter_prefixes(model: torch.nn.Module) -> tuple[str, ...]:
+    if bool(getattr(model, "attention_scale_enabled", False)):
+        return ATTENTION_SCALE_WARMUP_PARAMETER_PREFIXES
+    return REFINER_HEAD_WARMUP_PARAMETER_PREFIXES
+
+
+def _warmup_stage_name(model: torch.nn.Module) -> str:
+    if bool(getattr(model, "attention_scale_enabled", False)):
+        return ATTENTION_SCALE_WARMUP_STAGE
+    return REFINER_HEAD_WARMUP_STAGE
+
+
+def _is_refiner_head_warmup_parameter(
+    name: str,
+    prefixes: tuple[str, ...] = REFINER_HEAD_WARMUP_PARAMETER_PREFIXES,
+) -> bool:
+    return name.startswith(prefixes)
 
 
 def build_refiner_head_warmup_schedule(
@@ -324,8 +574,11 @@ def build_refiner_head_warmup_schedule(
     originally_trainable = tuple(
         name for name in named_parameters if bool(original_trainability[name])
     )
+    warmup_prefixes = _warmup_parameter_prefixes(model)
     full_non_da3 = tuple(name for name in originally_trainable if not name.startswith("da3."))
-    heads_only = tuple(name for name in full_non_da3 if _is_refiner_head_warmup_parameter(name))
+    heads_only = tuple(
+        name for name in full_non_da3 if _is_refiner_head_warmup_parameter(name, warmup_prefixes)
+    )
     if warmup_epochs and not heads_only:
         raise RuntimeError(
             "Refiner head warmup requested, but the model exposes no trainable "
@@ -335,9 +588,9 @@ def build_refiner_head_warmup_schedule(
         "schema_version": 1,
         "configured_epochs": warmup_epochs,
         "default_when_omitted": 0,
-        "parameter_prefixes": list(REFINER_HEAD_WARMUP_PARAMETER_PREFIXES),
+        "parameter_prefixes": list(warmup_prefixes),
         "heads_only_stage": {
-            "name": REFINER_HEAD_WARMUP_STAGE,
+            "name": _warmup_stage_name(model),
             "start_epoch_inclusive": 0,
             "end_epoch_exclusive": warmup_epochs,
             "trainable_non_da3_parameter_names": list(heads_only),
@@ -397,12 +650,16 @@ def apply_refiner_head_warmup_stage(
     if set(named_parameters) != set(original_trainability):
         raise ValueError("Original parameter trainability does not match the current model")
     warmup_active = epoch < warmup_epochs
+    warmup_prefixes = _warmup_parameter_prefixes(model)
     for name, parameter in named_parameters.items():
         originally_trainable = bool(original_trainability[name])
         if name.startswith("da3."):
             desired = originally_trainable
         elif warmup_active:
-            desired = originally_trainable and _is_refiner_head_warmup_parameter(name)
+            desired = originally_trainable and _is_refiner_head_warmup_parameter(
+                name,
+                warmup_prefixes,
+            )
         else:
             desired = originally_trainable
         parameter.requires_grad_(desired)
@@ -417,7 +674,7 @@ def apply_refiner_head_warmup_stage(
         for name in named_parameters
         if bool(original_trainability[name])
         and not name.startswith("da3.")
-        and (not warmup_active or _is_refiner_head_warmup_parameter(name))
+        and (not warmup_active or _is_refiner_head_warmup_parameter(name, warmup_prefixes))
     )
     if trainable_non_da3_names != expected_non_da3_names:
         raise RuntimeError("Refiner head warmup produced an unexpected non-DA3 parameter set")
@@ -432,7 +689,7 @@ def apply_refiner_head_warmup_stage(
     return {
         "schema_version": 1,
         "epoch": epoch,
-        "name": (REFINER_HEAD_WARMUP_STAGE if warmup_active else REFINER_FULL_STAGE),
+        "name": (_warmup_stage_name(model) if warmup_active else REFINER_FULL_STAGE),
         "warmup_active": warmup_active,
         "configured_warmup_epochs": warmup_epochs,
         "trainable_non_da3_parameter_tensors": len(trainable_non_da3_names),
@@ -455,11 +712,19 @@ def build_optimizer(
     for name, configured_lr in (
         ("non_da3", learning_rate),
         (
+            "attention_scale",
+            float(cfg.train.get("attention_scale_learning_rate", learning_rate)),
+        ),
+        (
+            "additive_residual",
+            float(cfg.train.get("additive_residual_learning_rate", learning_rate)),
+        ),
+        (
             "da3",
             float(cfg.train.get("da3_learning_rate", learning_rate)),
         ),
     ):
-        parameters = grouped_parameters[name]
+        parameters = grouped_parameters.get(name, [])
         if not parameters:
             continue
         parameter_groups.append(
@@ -597,6 +862,11 @@ def is_validation_accepted(
     cached_prefix = "robust_bim_direct" if robust_scale_enabled else "anchor"
     live_prefix = "live_robust_bim_direct" if robust_scale_enabled else "live_bim_direct"
     count_prefixes = ["base", "scaled", "anchor", "refined"]
+    require_learned_scale = bool(
+        acceptance.get("require_learned_scale_better_than_universal", False)
+    )
+    if require_learned_scale:
+        count_prefixes.append("learned_scale")
     if robust_scale_enabled:
         count_prefixes.extend(["robust_global_scale", "robust_bim_direct"])
     if e2e_enabled:
@@ -667,6 +937,15 @@ def is_validation_accepted(
         f"{cached_prefix}_mae",
         f"{cached_prefix}_near_abs_rel",
     ]
+    if require_learned_scale:
+        metric_keys.extend(
+            [
+                "learned_scale_abs_rel",
+                "learned_scale_mae",
+                "scaled_abs_rel",
+                "scaled_mae",
+            ]
+        )
     if e2e_enabled:
         metric_keys.extend(
             [
@@ -689,6 +968,11 @@ def is_validation_accepted(
         and validation["refined_near_abs_rel"]
         <= validation[f"{cached_prefix}_near_abs_rel"] * near_tolerance
     )
+    if require_learned_scale:
+        accepted = accepted and (
+            validation["learned_scale_abs_rel"] < validation["scaled_abs_rel"]
+            and validation["learned_scale_mae"] < validation["scaled_mae"]
+        )
     if e2e_enabled:
         accepted = accepted and (
             validation["refined_abs_rel"] < validation[f"{live_prefix}_abs_rel"]
@@ -744,6 +1028,19 @@ def main() -> None:
         cfg,
         e2e_enabled=e2e_enabled,
     )
+    scratch_stage_epochs = resolve_scratch_stage_epochs(
+        cfg,
+        e2e_enabled=e2e_enabled,
+        attention_scale_enabled=bool(cfg.model.get("attention_scale", {}).get("enabled", False)),
+        additive_residual_enabled=bool(
+            cfg.model.get("additive_residual", {}).get("enabled", False)
+        ),
+    )
+    if scratch_stage_epochs is not None and args.init_checkpoint is not None:
+        raise ValueError(
+            "Scratch staged training forbids --init-checkpoint; initialize the task network "
+            "from the configured deterministic defaults"
+        )
     robust_scale_enabled = (
         resolve_scale_estimator_config(cfg.model.get("scale_estimator"))["name"]
         == ROBUST_LOG_CAP_SCALE_ESTIMATOR
@@ -892,6 +1189,16 @@ def main() -> None:
         original_parameter_trainability,
     )
     provenance["refiner_head_warmup_schedule"] = refiner_head_warmup_schedule
+    parameter_stage_schedule = (
+        build_scratch_stage_schedule(
+            model,
+            scratch_stage_epochs,
+            original_parameter_trainability,
+        )
+        if scratch_stage_epochs is not None
+        else refiner_head_warmup_schedule
+    )
+    provenance["parameter_stage_schedule"] = parameter_stage_schedule
     criterion = BIMPriorLoss(cfg)
     learning_rate = (
         float(args.learning_rate)
@@ -924,6 +1231,16 @@ def main() -> None:
     provenance["effective_runtime"] = {
         "epochs": total_epochs,
         "learning_rate": learning_rate,
+        "attention_scale_learning_rate": (
+            float(cfg.train.get("attention_scale_learning_rate", learning_rate))
+            if model.attention_scale_enabled
+            else None
+        ),
+        "additive_residual_learning_rate": (
+            float(cfg.train.get("additive_residual_learning_rate", learning_rate))
+            if model.additive_residual_enabled
+            else None
+        ),
         "da3_learning_rate": (
             float(cfg.train.get("da3_learning_rate", learning_rate))
             if model.e2e_da3_enabled
@@ -1016,6 +1333,14 @@ def main() -> None:
             raise ValueError(
                 "Resume refiner head warmup schedule differs from the current model/configuration"
             )
+        checkpoint_parameter_stage_schedule = checkpoint_provenance.get(
+            "parameter_stage_schedule",
+            checkpoint_head_warmup_schedule,
+        )
+        if checkpoint_parameter_stage_schedule != parameter_stage_schedule:
+            raise ValueError(
+                "Resume parameter stage schedule differs from the current model/configuration"
+            )
         for hash_name in (
             "resolved_config_sha256",
             "semantic_config_sha256",
@@ -1060,6 +1385,7 @@ def main() -> None:
         resumed_provenance["cli_overrides"] = provenance["cli_overrides"]
         resumed_provenance["dataset"] = dataset_provenance
         resumed_provenance["refiner_head_warmup_schedule"] = refiner_head_warmup_schedule
+        resumed_provenance["parameter_stage_schedule"] = parameter_stage_schedule
         init_policy_resume_events = list(
             resumed_provenance.get("initialization_policy_resume_events", [])
         )
@@ -1122,13 +1448,23 @@ def main() -> None:
         best_accepted_metric = float("inf")
     successful_optimizer_steps = int(history[-1].get("optimizer_steps", 0)) if history else 0
     attempted_optimizer_steps = int(history[-1].get("optimizer_step_attempts", 0)) if history else 0
-    active_refiner_training_stage = apply_refiner_head_warmup_stage(
-        model,
-        epoch=start_epoch,
-        warmup_epochs=refiner_head_warmup_epochs,
-        original_trainability=original_parameter_trainability,
+    active_refiner_training_stage = (
+        apply_scratch_training_stage(
+            model,
+            epoch=start_epoch,
+            schedule=parameter_stage_schedule,
+            original_trainability=original_parameter_trainability,
+        )
+        if scratch_stage_epochs is not None
+        else apply_refiner_head_warmup_stage(
+            model,
+            epoch=start_epoch,
+            warmup_epochs=refiner_head_warmup_epochs,
+            original_trainability=original_parameter_trainability,
+        )
     )
     provenance["active_refiner_training_stage"] = active_refiner_training_stage
+    provenance["active_parameter_stage"] = active_refiner_training_stage
     print(
         f"device={device}, train={len(train_set)}, val={len(val_set)}, "
         f"parameters={sum(p.numel() for p in model.parameters()):,}"
@@ -1148,7 +1484,9 @@ def main() -> None:
             [],
         ),
         "refiner_head_warmup_schedule": refiner_head_warmup_schedule,
+        "parameter_stage_schedule": parameter_stage_schedule,
         "active_refiner_training_stage": active_refiner_training_stage,
+        "active_parameter_stage": active_refiner_training_stage,
     }
     if "initialized_dataset_split_validation" in provenance:
         run_state["checkpoint_initialization"] = {
@@ -1166,14 +1504,30 @@ def main() -> None:
 
     try:
         for epoch in range(start_epoch, total_epochs):
-            active_refiner_training_stage = apply_refiner_head_warmup_stage(
-                model,
-                epoch=epoch,
-                warmup_epochs=refiner_head_warmup_epochs,
-                original_trainability=original_parameter_trainability,
+            previous_stage_name = str(active_refiner_training_stage["name"])
+            active_refiner_training_stage = (
+                apply_scratch_training_stage(
+                    model,
+                    epoch=epoch,
+                    schedule=parameter_stage_schedule,
+                    original_trainability=original_parameter_trainability,
+                )
+                if scratch_stage_epochs is not None
+                else apply_refiner_head_warmup_stage(
+                    model,
+                    epoch=epoch,
+                    warmup_epochs=refiner_head_warmup_epochs,
+                    original_trainability=original_parameter_trainability,
+                )
             )
+            if str(active_refiner_training_stage["name"]) != previous_stage_name:
+                # A new phase optimizes a disjoint parameter family.  Do not
+                # let a plateau in the prior phase prematurely stop it.
+                stale_epochs = 0
             provenance["active_refiner_training_stage"] = active_refiner_training_stage
+            provenance["active_parameter_stage"] = active_refiner_training_stage
             run_state["active_refiner_training_stage"] = active_refiner_training_stage
+            run_state["active_parameter_stage"] = active_refiner_training_stage
             run_state["last_started_epoch"] = epoch
             run_state_path.write_text(
                 json.dumps(run_state, indent=2, ensure_ascii=False) + "\n",
@@ -1183,6 +1537,11 @@ def main() -> None:
             seed_everything(epoch_seed)
             train_generator.manual_seed(epoch_seed)
             model.train()
+            if scratch_stage_epochs is not None:
+                apply_scratch_stage_module_modes(
+                    model,
+                    str(active_refiner_training_stage["name"]),
+                )
             criterion.set_epoch(epoch)
             epoch_learning_rate = float(optimizer.param_groups[0]["lr"])
             epoch_learning_rates = {
@@ -1242,6 +1601,7 @@ def main() -> None:
                 "validation_inference_seed": validation_inference_seed,
                 "validation_loader_generator_seed": (applied_validation_loader_seed),
                 "refiner_training_stage": active_refiner_training_stage,
+                "parameter_training_stage": active_refiner_training_stage,
                 "learning_rate": epoch_learning_rate,
                 "learning_rates": epoch_learning_rates,
                 "next_learning_rate": float(optimizer.param_groups[0]["lr"]),

@@ -311,13 +311,22 @@ def build_global_ifc_envelope_scene(
     merged_vertices = np.concatenate(vertices)
     merged_triangles = np.concatenate(triangles)
     merged_categories = np.concatenate(triangle_categories)
+    if included == GLOBAL_CORE_CATEGORIES:
+        filter_policy = "global-area-fixed-core-envelope-v1"
+        dynamic_state_rationale = "door/window omitted: capture state is unsynchronized"
+    elif included == ENVELOPE_CATEGORIES:
+        filter_policy = "global-area-fixed-envelope-v2"
+        dynamic_state_rationale = "door/window retained; non-envelope foreground remains excluded"
+    else:
+        filter_policy = "global-area-custom-envelope-v1"
+        dynamic_state_rationale = "explicit caller-provided envelope allow-list"
     audit: dict[str, Any] = {
         "schema_version": 1,
         "coordinate_frame": "Stanford Area_1 world, metres, Z-up",
-        "filter_policy": "global-area-fixed-core-envelope-v1",
+        "filter_policy": filter_policy,
         "included_categories": list(included),
         "excluded_envelope_categories": sorted(set(ENVELOPE_CATEGORIES) - set(included)),
-        "dynamic_state_rationale": "door/window omitted: capture state is unsynchronized",
+        "dynamic_state_rationale": dynamic_state_rationale,
         "rooms": rooms,
         "room_sources": room_audits,
         "included_triangle_counts": dict(sorted(included_triangle_counts.items())),

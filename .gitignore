@@ -17,3 +17,4 @@ wandb/
 # Generated from licensed 2D-3D-S pixels; keep local and reproduce under the
 # dataset terms instead of redistributing RGB/GT/derived dense arrays.
 docs/assets/paper_evaluation/qualitative/
+docs/assets/pano_evaluation/qualitative/

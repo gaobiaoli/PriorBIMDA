@@ -18,11 +18,20 @@ from bim_priorda3.baselines import (
 )
 from bim_priorda3.config import Config, resolve_project_path, resolve_slabim_root
 
+from .da3_features import load_cached_features, load_feature_cache_manifest, sha256_file
 from .splits import (
     ACTIVE_SPLITS,
     manifest_preparation_identity,
     resolve_annotation_splits,
 )
+from .stanford2d3ds import load_stanford_all_valid_depth, official_regular_depth_path
+
+PREPARED_GROUND_TRUTH_SUPPORT = "prepared"
+OFFICIAL_ALL_VALID_GROUND_TRUTH_SUPPORT = "official_all_valid"
+GROUND_TRUTH_SUPPORT_MODES = {
+    PREPARED_GROUND_TRUTH_SUPPORT,
+    OFFICIAL_ALL_VALID_GROUND_TRUTH_SUPPORT,
+}
 
 
 def _read_manifest(path: Path) -> list[dict[str, Any]]:
@@ -122,8 +131,18 @@ class BIMDepthDataset(Dataset):
         self.split = split or "inference"
         self.require_ground_truth = require_ground_truth
         self.augment = split == "train" if augment is None else augment
+        self.ground_truth_support = str(
+            cfg.data.get("ground_truth_support", PREPARED_GROUND_TRUTH_SUPPORT)
+        )
+        if self.ground_truth_support not in GROUND_TRUTH_SUPPORT_MODES:
+            raise ValueError(
+                "data.ground_truth_support must be one of "
+                f"{sorted(GROUND_TRUTH_SUPPORT_MODES)}; got {self.ground_truth_support!r}"
+            )
         root = resolve_project_path(cfg, cfg.data.processed_root)
-        records = _read_manifest(root / "manifest.jsonl")
+        source_manifest = root / "manifest.jsonl"
+        records = _read_manifest(source_manifest)
+        all_record_ids = [str(record["id"]) for record in records]
         source_value = cfg.data.get("source_root")
         source_root = resolve_project_path(cfg, source_value) if source_value else None
         slabim_root = resolve_slabim_root(cfg) if cfg.data.get("slabim_root") else source_root
@@ -236,7 +255,75 @@ class BIMDepthDataset(Dataset):
         self.width = int(cfg.data.target_width)
         self.margin = float(cfg.loss.trust_margin)
         self.temperature = float(cfg.loss.trust_temperature)
+        if self.ground_truth_support == OFFICIAL_ALL_VALID_GROUND_TRUTH_SUPPORT:
+            self.split_provenance["ground_truth_support"] = {
+                "mode": OFFICIAL_ALL_VALID_GROUND_TRUTH_SUPPORT,
+                "encoding": "official regular-view z-depth uint16/512 metres",
+                "validity": "raw != 0 and raw != 65535; no metric depth cutoff",
+                "resize": "OpenCV nearest-exact",
+            }
         self.scale_estimator = resolve_scale_estimator_config(cfg.model.get("scale_estimator"))
+        feature_config = Config(cfg.model.get("da3_feature_fusion", {}))
+        shared_feature_fusion = bool(feature_config.get("enabled", False))
+        self.da3_feature_fusion_enabled = bool(
+            feature_config.get("scale_enabled", shared_feature_fusion)
+        ) or bool(feature_config.get("refiner_enabled", shared_feature_fusion))
+        self.da3_feature_cache_root: Path | None = None
+        self.da3_feature_layers: tuple[int, int] = (11, 23)
+        self.da3_feature_channels = 0
+        self.da3_feature_grid_shape: tuple[int, int] = (0, 0)
+        if self.da3_feature_fusion_enabled:
+            cache_value = cfg.data.get("da3_feature_cache_root")
+            if not cache_value:
+                raise ValueError(
+                    "data.da3_feature_cache_root is required when "
+                    "model.da3_feature_fusion.enabled is true"
+                )
+            self.da3_feature_cache_root = resolve_project_path(cfg, cache_value)
+            configured_layers = tuple(
+                int(value) for value in feature_config.get("layers", (11, 23))
+            )
+            if len(configured_layers) != 2:
+                raise ValueError("model.da3_feature_fusion.layers must contain two layers")
+            self.da3_feature_layers = configured_layers
+            self.da3_feature_channels = int(feature_config.get("channels", 1024))
+            feature_manifest = load_feature_cache_manifest(
+                self.da3_feature_cache_root,
+                source_manifest=source_manifest,
+                expected_record_ids=all_record_ids,
+                model_name=str(cfg.data.da3_model),
+                model_revision=str(cfg.data.da3_revision),
+                process_res=int(cfg.data.da3_process_res),
+                layers=self.da3_feature_layers,
+                channels=self.da3_feature_channels,
+            )
+            self.da3_feature_grid_shape = tuple(
+                int(value) for value in feature_manifest["grid_shape"]
+            )
+            self.split_provenance["da3_feature_cache"] = {
+                "manifest_sha256": sha256_file(
+                    self.da3_feature_cache_root / "manifest.json"
+                ),
+                "source_manifest_sha256": feature_manifest["source_manifest_sha256"],
+                "model_name": feature_manifest["model_name"],
+                "model_revision": feature_manifest["model_revision"],
+                "process_res": feature_manifest["process_res"],
+                "layers": feature_manifest["layers"],
+                "channels": feature_manifest["channels"],
+                "grid_shape": feature_manifest["grid_shape"],
+                "dtype": feature_manifest.get("dtype", "float16"),
+            }
+            if self.augment:
+                aug = cfg.train.augment
+                crop_shape = (
+                    int(aug.get("crop_height", self.height)),
+                    int(aug.get("crop_width", self.width)),
+                )
+                if crop_shape != (self.height, self.width):
+                    raise ValueError(
+                        "Cached DA3 feature fusion currently requires full-image training "
+                        "crops so feature/image geometry stays exact"
+                    )
 
     def __len__(self) -> int:
         return len(self.records)
@@ -283,14 +370,30 @@ class BIMDepthDataset(Dataset):
             sample_id=str(record["id"]),
         )
         gt_keys = {"gt_depth", "gt_valid", "gt_weight"}
-        has_ground_truth = gt_keys.issubset(item.files)
+        prepared_has_ground_truth = gt_keys.issubset(item.files)
+        has_ground_truth = (
+            prepared_has_ground_truth
+            or self.ground_truth_support == OFFICIAL_ALL_VALID_GROUND_TRUTH_SUPPORT
+        )
         if self.require_ground_truth and not has_ground_truth:
             missing = sorted(gt_keys - set(item.files))
             raise RuntimeError(
                 f"{record['id']}: prepared sample lacks training/evaluation "
                 f"fields {missing}; use inference mode or prepare GT"
             )
-        if has_ground_truth:
+        if self.ground_truth_support == OFFICIAL_ALL_VALID_GROUND_TRUTH_SUPPORT:
+            gt_depth, gt_valid = load_stanford_all_valid_depth(
+                official_regular_depth_path(record["image"]),
+                (self.height, self.width),
+            )
+            arrays.update(
+                {
+                    "gt_depth": gt_depth.astype(np.float32)[None],
+                    "gt_valid": gt_valid.astype(np.float32)[None],
+                    "gt_weight": gt_valid.astype(np.float32)[None],
+                }
+            )
+        elif prepared_has_ground_truth:
             arrays.update(
                 {
                     "gt_depth": item["gt_depth"].astype(np.float32)[None],
@@ -327,6 +430,7 @@ class BIMDepthDataset(Dataset):
                 arrays["anchor_depth"] = anchor[None]
             arrays["scaled_depth"] = scaled[None]
 
+        feature_horizontal_flip = False
         if self.augment:
             rgb = self._augment_rgb(rgb)
             aug = self.cfg.train.augment
@@ -387,6 +491,7 @@ class BIMDepthDataset(Dataset):
                 for key in arrays:
                     arrays[key] = arrays[key][..., ::-1].copy()
                 arrays["bim_normals"][0] *= -1
+                feature_horizontal_flip = True
             crop_height = int(aug.get("crop_height", self.height))
             crop_width = int(aug.get("crop_width", self.width))
             if crop_height < self.height or crop_width < self.width:
@@ -412,6 +517,20 @@ class BIMDepthDataset(Dataset):
             "image_timestamp": float(record.get("image_timestamp", index)),
             "frame_index": int(record.get("lidar_index", index)),
         }
+        if self.da3_feature_fusion_enabled:
+            assert self.da3_feature_cache_root is not None
+            feature_mid, feature_deep = load_cached_features(
+                self.da3_feature_cache_root,
+                str(record["id"]),
+                layers=self.da3_feature_layers,
+                channels=self.da3_feature_channels,
+                grid_shape=self.da3_feature_grid_shape,
+            )
+            if feature_horizontal_flip:
+                feature_mid = feature_mid[..., ::-1].copy()
+                feature_deep = feature_deep[..., ::-1].copy()
+            output["da3_feature_mid"] = torch.from_numpy(feature_mid.copy())
+            output["da3_feature_deep"] = torch.from_numpy(feature_deep.copy())
         if has_ground_truth:
             base = arrays["scaled_depth"]
             bim = arrays["bim_depth"]

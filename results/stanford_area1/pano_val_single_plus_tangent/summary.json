@@ -1,0 +1,383 @@
+{
+  "artifacts": {
+    "per_room_csv": "results/stanford_area1/pano_val_single_plus_tangent/per_room.csv",
+    "per_room_csv_sha256": "70890a970671d1333ddaaca79d72a06b5a4a2855ca03baaaef4791abe9ae31f5",
+    "per_station_csv": "results/stanford_area1/pano_val_single_plus_tangent/per_station.csv",
+    "per_station_csv_sha256": "f24f634e288331ed93007f7069e8a9c828ff5534b2a9aa7f27b6b3c439ba4a36",
+    "provenance": "results/stanford_area1/pano_val_single_plus_tangent/provenance.json",
+    "provenance_sha256": "95c18fd5ef82582923d9ff4680c6de32bf6cb43ce77e352999671b0cd7c4b615"
+  },
+  "claim": "Raw DA3 from one GT-free selected whole regular frame versus that same frame jointly fused with 6 or 14 deterministic pano tangents.",
+  "contrasts": [
+    {
+      "candidate": {
+        "method": "strict_single_plus_tangent6"
+      },
+      "kind": "strict_single_plus_pano_tangent_over_strict_single",
+      "primary_abs_rel_absolute_reduction": -0.048686441882000164,
+      "primary_abs_rel_candidate": 0.1645430356219374,
+      "primary_abs_rel_reference": 0.11585659373993723,
+      "primary_abs_rel_relative_reduction_percent": -42.02302200536501,
+      "primary_metric": "equal-station macro exact-solid-angle AbsRel",
+      "reference": {
+        "method": "strict_single"
+      },
+      "room_cluster_paired_bootstrap_primary_abs_rel": {
+        "bootstrap_repetitions": 10000,
+        "candidate_better_room_fraction": 0.14285714285714285,
+        "confidence_interval_95": [
+          0.024897949357310437,
+          0.05946641713275593
+        ],
+        "difference_definition": "candidate - reference (negative is better)",
+        "mean_difference": 0.04868644188200019,
+        "median_difference": 0.052968748442469446,
+        "resampling_unit": "room cluster",
+        "room_count": 7,
+        "room_ids": [
+          "hallway_2",
+          "hallway_5",
+          "office_14",
+          "office_24",
+          "office_28",
+          "office_31",
+          "office_6"
+        ],
+        "seed": 42,
+        "station_count": 30
+      }
+    },
+    {
+      "candidate": {
+        "method": "strict_single_plus_tangent14"
+      },
+      "kind": "strict_single_plus_pano_tangent_over_strict_single",
+      "primary_abs_rel_absolute_reduction": -0.20273509264718453,
+      "primary_abs_rel_candidate": 0.31859168638712176,
+      "primary_abs_rel_reference": 0.11585659373993723,
+      "primary_abs_rel_relative_reduction_percent": -174.9879623616961,
+      "primary_metric": "equal-station macro exact-solid-angle AbsRel",
+      "reference": {
+        "method": "strict_single"
+      },
+      "room_cluster_paired_bootstrap_primary_abs_rel": {
+        "bootstrap_repetitions": 10000,
+        "candidate_better_room_fraction": 0.0,
+        "confidence_interval_95": [
+          0.09855890385617044,
+          0.26421837316617114
+        ],
+        "difference_definition": "candidate - reference (negative is better)",
+        "mean_difference": 0.20273509264718453,
+        "median_difference": 0.19040086040674048,
+        "resampling_unit": "room cluster",
+        "room_count": 7,
+        "room_ids": [
+          "hallway_2",
+          "hallway_5",
+          "office_14",
+          "office_24",
+          "office_28",
+          "office_31",
+          "office_6"
+        ],
+        "seed": 42,
+        "station_count": 30
+      }
+    },
+    {
+      "candidate": {
+        "method": "strict_single_plus_tangent14"
+      },
+      "kind": "strict_single_plus_pano_tangent_over_strict_single",
+      "primary_abs_rel_absolute_reduction": -0.15404865076518437,
+      "primary_abs_rel_candidate": 0.31859168638712176,
+      "primary_abs_rel_reference": 0.1645430356219374,
+      "primary_abs_rel_relative_reduction_percent": -93.62210328921762,
+      "primary_metric": "equal-station macro exact-solid-angle AbsRel",
+      "reference": {
+        "method": "strict_single_plus_tangent6"
+      },
+      "room_cluster_paired_bootstrap_primary_abs_rel": {
+        "bootstrap_repetitions": 10000,
+        "candidate_better_room_fraction": 0.14285714285714285,
+        "confidence_interval_95": [
+          0.0596356741249782,
+          0.2066894830410417
+        ],
+        "difference_definition": "candidate - reference (negative is better)",
+        "mean_difference": 0.15404865076518431,
+        "median_difference": 0.14578436669732525,
+        "resampling_unit": "room cluster",
+        "room_count": 7,
+        "room_ids": [
+          "hallway_2",
+          "hallway_5",
+          "office_14",
+          "office_24",
+          "office_28",
+          "office_31",
+          "office_6"
+        ],
+        "seed": 42,
+        "station_count": 30
+      }
+    }
+  ],
+  "evaluation_protocol": {
+    "bootstrap": {
+      "repetitions": 10000,
+      "resampling_unit": "room cluster",
+      "seed": 42
+    },
+    "coverage_support": "per-method native union",
+    "depth_range_m": [
+      0.2,
+      5.0
+    ],
+    "pano_shape": [
+      512,
+      1024
+    ],
+    "pixel_weighting": "exact ERP pixel solid angle",
+    "quality_support": "common strict selected-frame support",
+    "room_macro": "equal room after within-room station mean",
+    "station_aggregation": "equal-station macro"
+  },
+  "fixed_support_audit": {
+    "same_count_for_all_methods_per_station": true,
+    "station_fixed_pixel_counts": {
+      "0004591bfdc749a88db196a5d8b345cb": 44615,
+      "00d10d86db1e435081a837ced388375f": 41962,
+      "042fab82b3a94af9bea3c80984bc2583": 37696,
+      "0cf489f7d9fe412bbe9f64ab7f5cc0fb": 42502,
+      "1ec8ed7b336844ff9d8edff0e32ed850": 41669,
+      "208aa93cc6b342e5806026f0f6f34110": 45342,
+      "2439b3f7bc184152bf89e6012a511aa6": 38181,
+      "2679368bf8354598abff5d47c38cfcdd": 42439,
+      "2fb7a2dcf8004578a541ee750dda0ed6": 39281,
+      "335899b8d3ba4526a3c3b2a7b7380de5": 31614,
+      "4a41b27118ac4c6aad24f60a04f3a559": 39307,
+      "4bae4264d885478d9c280932a1e9ecdd": 42300,
+      "5cb8151c7baf4f54aa1c89a45624b07b": 35467,
+      "613d201e991744799556e737bdb89c89": 27008,
+      "61cd01735f12449180dccb65232acd8c": 25644,
+      "6922fce99b0a4f9da148f76a8d57c089": 40578,
+      "75361aff0171457b964ad17a696d1fef": 30206,
+      "7b74e08d4ec04383b737b5f5b166f5d7": 43706,
+      "9084f217cb10409bb1ec15e8fa1f7299": 24014,
+      "95fab66e5ca643cc97aaab4647f145e3": 35972,
+      "a77fba57be66411c908077c69d803797": 38258,
+      "b3377659e8c9434daa75ed42fd56eb09": 31268,
+      "c116e049d9c24baaa3cc01d88d48a5fa": 40546,
+      "c40ca55cdb2640a1a71871ea97856427": 25401,
+      "c6655e566bca4de983fc3affab814587": 42710,
+      "cfe68c10e7bf43d9b66ab2356eccec62": 41645,
+      "da4629d565a3435fb701f56f46005a66": 27236,
+      "ebf135a2826f44c5972b2ad48c26e4d1": 41751,
+      "ecf7fb476c2444e4bcd61d8f859ce93e": 43215,
+      "f4b0a073ae04462f8be38d2ecd0d8f9d": 43917
+    }
+  },
+  "formal_v3_artifacts_mutated": false,
+  "formal_v3_result": false,
+  "method_scope": {
+    "BIM": false,
+    "GT_scale": false,
+    "checkpoint": false,
+    "depth_method": "raw_da3",
+    "fusion_method": "joint_huber",
+    "fusion_parameters_frozen": true,
+    "learned": false,
+    "training_free_only": true
+  },
+  "methods": [
+    "strict_single",
+    "strict_single_plus_tangent6",
+    "strict_single_plus_tangent14"
+  ],
+  "metrics": {
+    "strict_single": {
+      "common_strict_support": {
+        "fixed_pixels": 1125450,
+        "mean_pixel_fraction": 0.07634978176602342,
+        "mean_solid_angle_fraction": 0.1087083108209313
+      },
+      "native_union_coverage": {
+        "mean_pixel_fraction": 0.07634978176602342,
+        "mean_solid_angle_fraction": 0.1087083108209313
+      },
+      "pixel_micro": {
+        "abs_rel": 0.11806368778838955,
+        "count": 1125450,
+        "delta1": 0.8904464880714381,
+        "delta2": 0.9859247412146253,
+        "delta3": 0.9937020747256653,
+        "mae": 0.2788562565318503,
+        "rmse": 0.4631533727774073
+      },
+      "room_macro": {
+        "room_count": 7,
+        "spherical_abs_rel": 0.13152487599871138,
+        "spherical_delta1": 0.8537821259147845,
+        "spherical_delta2": 0.9850012158186846,
+        "spherical_delta3": 0.9916270666700971,
+        "spherical_mae": 0.2955076184654647,
+        "spherical_rmse": 0.4401520276095269
+      },
+      "spherical_pixel_micro": {
+        "abs_rel": 0.1201935844702604,
+        "count": 1125450,
+        "delta1": 0.887151988660438,
+        "delta2": 0.9853434590571327,
+        "delta3": 0.9932779367372808,
+        "mae": 0.2864839272895595,
+        "rmse": 0.4806681971400967
+      },
+      "station_macro": {
+        "abs_rel": 0.11430171956155687,
+        "delta1": 0.8943804070524354,
+        "delta2": 0.9858638315803819,
+        "delta3": 0.9937918895221743,
+        "mae": 0.27296696115716007,
+        "rmse": 0.40189624435909604,
+        "spherical_abs_rel": 0.11585659373993723,
+        "spherical_delta1": 0.8917245329189376,
+        "spherical_delta2": 0.9851894114355505,
+        "spherical_delta3": 0.9934228958011461,
+        "spherical_mae": 0.2797773603974788,
+        "spherical_rmse": 0.4142721907058026,
+        "station_count": 30
+      }
+    },
+    "strict_single_plus_tangent14": {
+      "common_strict_support": {
+        "fixed_pixels": 1125450,
+        "mean_pixel_fraction": 0.07634978176602342,
+        "mean_solid_angle_fraction": 0.1087083108209313
+      },
+      "native_union_coverage": {
+        "mean_pixel_fraction": 0.9988157255782556,
+        "mean_solid_angle_fraction": 0.9985434178578535
+      },
+      "pixel_micro": {
+        "abs_rel": 0.3085024538421137,
+        "count": 1125450,
+        "delta1": 0.35195788351326135,
+        "delta2": 0.9680314540850327,
+        "delta3": 0.9926971433648762,
+        "mae": 0.7372866164305478,
+        "rmse": 0.9169519488032675
+      },
+      "room_macro": {
+        "room_count": 7,
+        "spherical_abs_rel": 0.28612539507973284,
+        "spherical_delta1": 0.41500599939337157,
+        "spherical_delta2": 0.97240025853431,
+        "spherical_delta3": 0.9919462102034327,
+        "spherical_mae": 0.6510034863586072,
+        "spherical_rmse": 0.7717709711762594
+      },
+      "spherical_pixel_micro": {
+        "abs_rel": 0.3056914096885939,
+        "count": 1125450,
+        "delta1": 0.36080469752083494,
+        "delta2": 0.9681823703762747,
+        "delta3": 0.9923921797614665,
+        "mae": 0.7372169767958677,
+        "rmse": 0.9254251502017529
+      },
+      "station_macro": {
+        "abs_rel": 0.3193661224266486,
+        "delta1": 0.3312201712941512,
+        "delta2": 0.9661305324516716,
+        "delta3": 0.9923182497548545,
+        "mae": 0.7794540840035417,
+        "rmse": 0.8888543554969457,
+        "spherical_abs_rel": 0.31859168638712176,
+        "spherical_delta1": 0.3361830898581888,
+        "spherical_delta2": 0.9659313281103874,
+        "spherical_delta3": 0.9919896075575586,
+        "spherical_mae": 0.7892927689281948,
+        "spherical_rmse": 0.9045248817140902,
+        "station_count": 30
+      }
+    },
+    "strict_single_plus_tangent6": {
+      "common_strict_support": {
+        "fixed_pixels": 1125450,
+        "mean_pixel_fraction": 0.07634978176602342,
+        "mean_solid_angle_fraction": 0.1087083108209313
+      },
+      "native_union_coverage": {
+        "mean_pixel_fraction": 0.9941758351504315,
+        "mean_solid_angle_fraction": 0.9937505567643155
+      },
+      "pixel_micro": {
+        "abs_rel": 0.1640899369583772,
+        "count": 1125450,
+        "delta1": 0.7882811319916477,
+        "delta2": 0.9804851392776223,
+        "delta3": 0.993553689635257,
+        "mae": 0.38741827700151227,
+        "rmse": 0.6449078787608911
+      },
+      "room_macro": {
+        "room_count": 7,
+        "spherical_abs_rel": 0.17217401342779506,
+        "spherical_delta1": 0.7714200172884841,
+        "spherical_delta2": 0.981710944500369,
+        "spherical_delta3": 0.9921391512424156,
+        "spherical_mae": 0.3895717837773039,
+        "spherical_rmse": 0.596620955028797
+      },
+      "spherical_pixel_micro": {
+        "abs_rel": 0.16647429895537,
+        "count": 1125450,
+        "delta1": 0.7851495762430916,
+        "delta2": 0.9800544068634636,
+        "delta3": 0.9931526333202372,
+        "mae": 0.39727857904408803,
+        "rmse": 0.6663868862506014
+      },
+      "station_macro": {
+        "abs_rel": 0.16194317549448778,
+        "delta1": 0.7924174048382431,
+        "delta2": 0.9792327512730373,
+        "delta3": 0.9934862507776159,
+        "mae": 0.3876926648428679,
+        "rmse": 0.5873634442170546,
+        "spherical_abs_rel": 0.16454303562193737,
+        "spherical_delta1": 0.7884267814136675,
+        "spherical_delta2": 0.9783336561158367,
+        "spherical_delta3": 0.9930885120158365,
+        "spherical_mae": 0.39928473785412194,
+        "spherical_rmse": 0.605785565512997,
+        "station_count": 30
+      }
+    }
+  },
+  "native_union_mean_solid_angle_coverage": {
+    "strict_single": 0.1087083108209313,
+    "strict_single_plus_tangent14": 0.9985434178578535,
+    "strict_single_plus_tangent6": 0.9937505567643155
+  },
+  "pano_only_excluded_count": 2,
+  "pano_only_excluded_ids": [
+    "24f42d6efff54b09a34897f69fa11064",
+    "684b940fafd64fd98aef16157c8a96e2"
+  ],
+  "primary_spherical_abs_rel": {
+    "strict_single": 0.11585659373993723,
+    "strict_single_plus_tangent14": 0.31859168638712176,
+    "strict_single_plus_tangent6": 0.16454303562193737
+  },
+  "protocol": "stanford-area1-val-strict-single-plus-pano-tangent-v4-candidate-v1",
+  "publication_status": "candidate_for_future_preregistration",
+  "room_count": 7,
+  "schema_version": 1,
+  "split": "val",
+  "station_count": 30,
+  "status": "exploratory_validation_only",
+  "test_data_or_csv_accessed": false
+}

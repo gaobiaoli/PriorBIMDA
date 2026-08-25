@@ -11,6 +11,7 @@ from bim_priorda3.data.ifc_envelope import envelope_category
 from bim_priorda3.data.stanford2d3ds import (
     FURNITURE_CLASS_IDS,
     UNKNOWN_SEMANTIC_ID,
+    load_stanford_all_valid_depth,
     load_stanford_depth,
     load_stanford_semantics,
     pose_matrices,
@@ -101,6 +102,9 @@ def test_depth_and_semantic_decoding(tmp_path: Path) -> None:
     )
     np.testing.assert_allclose(depth, [[1.0, 2.0], [0.0, 0.0]])
     np.testing.assert_array_equal(valid, [[True, True], [False, False]])
+    all_depth, all_valid = load_stanford_all_valid_depth(depth_path, (2, 2))
+    np.testing.assert_allclose(all_depth, [[1.0, 2.0], [0.0, 50 / 512]])
+    np.testing.assert_array_equal(all_valid, [[True, True], [False, True]])
 
     labels_path = tmp_path / "semantic_labels.json"
     labels = ["<UNK>_0_<UNK>_0_0", "chair_1_office_1_1", "wall_1_office_1_1"]

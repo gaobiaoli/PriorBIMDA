@@ -1,0 +1,3147 @@
+{
+  "checkpoint": {
+    "dataset_validation": {
+      "accepted": true,
+      "checkpoint_split_identity": {
+        "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+        "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+        "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+        "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+        "manifest_preparation": {
+          "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+          "status": "verified"
+        },
+        "mode": "annotations",
+        "selected_regions": [
+          "WC_1",
+          "conferenceRoom_1",
+          "conferenceRoom_2",
+          "copyRoom_1",
+          "hallway_1",
+          "hallway_2",
+          "hallway_3",
+          "hallway_4",
+          "hallway_5",
+          "hallway_6",
+          "hallway_7",
+          "hallway_8",
+          "office_1",
+          "office_10",
+          "office_11",
+          "office_12",
+          "office_13",
+          "office_14",
+          "office_15",
+          "office_16",
+          "office_17",
+          "office_18",
+          "office_19",
+          "office_2",
+          "office_20",
+          "office_21",
+          "office_22",
+          "office_23",
+          "office_24",
+          "office_25",
+          "office_26",
+          "office_27",
+          "office_28",
+          "office_29",
+          "office_3",
+          "office_30",
+          "office_31",
+          "office_4",
+          "office_5",
+          "office_6",
+          "office_7",
+          "office_8",
+          "office_9",
+          "pantry_1"
+        ]
+      },
+      "cross_dataset": false,
+      "dataset_match": true,
+      "explicit_cross_dataset_opt_in": false,
+      "runtime_split_identity": {
+        "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+        "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+        "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+        "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+        "manifest_preparation": {
+          "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+          "status": "verified"
+        },
+        "mode": "annotations",
+        "selected_regions": [
+          "WC_1",
+          "conferenceRoom_1",
+          "conferenceRoom_2",
+          "copyRoom_1",
+          "hallway_1",
+          "hallway_2",
+          "hallway_3",
+          "hallway_4",
+          "hallway_5",
+          "hallway_6",
+          "hallway_7",
+          "hallway_8",
+          "office_1",
+          "office_10",
+          "office_11",
+          "office_12",
+          "office_13",
+          "office_14",
+          "office_15",
+          "office_16",
+          "office_17",
+          "office_18",
+          "office_19",
+          "office_2",
+          "office_20",
+          "office_21",
+          "office_22",
+          "office_23",
+          "office_24",
+          "office_25",
+          "office_26",
+          "office_27",
+          "office_28",
+          "office_29",
+          "office_3",
+          "office_30",
+          "office_31",
+          "office_4",
+          "office_5",
+          "office_6",
+          "office_7",
+          "office_8",
+          "office_9",
+          "pantry_1"
+        ]
+      },
+      "source": {
+        "dataset_provenance": {
+          "schema_version": 1,
+          "split_identities": {
+            "train": {
+              "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+              "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+              "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+              "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+              "manifest_preparation": {
+                "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+                "status": "verified"
+              },
+              "mode": "annotations",
+              "selected_regions": [
+                "WC_1",
+                "conferenceRoom_1",
+                "conferenceRoom_2",
+                "copyRoom_1",
+                "hallway_1",
+                "hallway_2",
+                "hallway_3",
+                "hallway_4",
+                "hallway_5",
+                "hallway_6",
+                "hallway_7",
+                "hallway_8",
+                "office_1",
+                "office_10",
+                "office_11",
+                "office_12",
+                "office_13",
+                "office_14",
+                "office_15",
+                "office_16",
+                "office_17",
+                "office_18",
+                "office_19",
+                "office_2",
+                "office_20",
+                "office_21",
+                "office_22",
+                "office_23",
+                "office_24",
+                "office_25",
+                "office_26",
+                "office_27",
+                "office_28",
+                "office_29",
+                "office_3",
+                "office_30",
+                "office_31",
+                "office_4",
+                "office_5",
+                "office_6",
+                "office_7",
+                "office_8",
+                "office_9",
+                "pantry_1"
+              ]
+            },
+            "val": {
+              "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+              "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+              "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+              "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+              "manifest_preparation": {
+                "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+                "status": "verified"
+              },
+              "mode": "annotations",
+              "selected_regions": [
+                "WC_1",
+                "conferenceRoom_1",
+                "conferenceRoom_2",
+                "copyRoom_1",
+                "hallway_1",
+                "hallway_2",
+                "hallway_3",
+                "hallway_4",
+                "hallway_5",
+                "hallway_6",
+                "hallway_7",
+                "hallway_8",
+                "office_1",
+                "office_10",
+                "office_11",
+                "office_12",
+                "office_13",
+                "office_14",
+                "office_15",
+                "office_16",
+                "office_17",
+                "office_18",
+                "office_19",
+                "office_2",
+                "office_20",
+                "office_21",
+                "office_22",
+                "office_23",
+                "office_24",
+                "office_25",
+                "office_26",
+                "office_27",
+                "office_28",
+                "office_29",
+                "office_3",
+                "office_30",
+                "office_31",
+                "office_4",
+                "office_5",
+                "office_6",
+                "office_7",
+                "office_8",
+                "office_9",
+                "pantry_1"
+              ]
+            }
+          },
+          "split_provenance": {
+            "train": {
+              "annotation_file": "/home/bgao491/PriorBIMDA/data/annotations/stanford_area1_room_v1.jsonl",
+              "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+              "annotation_record_count": 10327,
+              "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+              "excluded_reasons": {},
+              "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+              "fused_lidar_validation": {
+                "disjoint": true,
+                "unique_source_counts": {
+                  "test": 0,
+                  "train": 0,
+                  "val": 0
+                }
+              },
+              "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+              "manifest_preparation_fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+              "manifest_preparation_fingerprint_status": "verified",
+              "manifest_record_count": 10327,
+              "mode": "annotations",
+              "ordered_ids_sha256": {
+                "excluded": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "test": "b7d6d7ea4fbd3a15ef74494cda16532fdf284b050618064e206317e30316404f",
+                "train": "b2aec61d770b08e32eb920d76cc40c77031fb1f58ecd525c402aa3fbeb7d543f",
+                "val": "cf475a95336872579aad4c7a1762f781c7ec3146474fed119d955b92e3d35bfc"
+              },
+              "schema_version": 1,
+              "selected_regions": [
+                "WC_1",
+                "conferenceRoom_1",
+                "conferenceRoom_2",
+                "copyRoom_1",
+                "hallway_1",
+                "hallway_2",
+                "hallway_3",
+                "hallway_4",
+                "hallway_5",
+                "hallway_6",
+                "hallway_7",
+                "hallway_8",
+                "office_1",
+                "office_10",
+                "office_11",
+                "office_12",
+                "office_13",
+                "office_14",
+                "office_15",
+                "office_16",
+                "office_17",
+                "office_18",
+                "office_19",
+                "office_2",
+                "office_20",
+                "office_21",
+                "office_22",
+                "office_23",
+                "office_24",
+                "office_25",
+                "office_26",
+                "office_27",
+                "office_28",
+                "office_29",
+                "office_3",
+                "office_30",
+                "office_31",
+                "office_4",
+                "office_5",
+                "office_6",
+                "office_7",
+                "office_8",
+                "office_9",
+                "pantry_1"
+              ],
+              "split_counts": {
+                "excluded": 0,
+                "test": 1641,
+                "train": 7013,
+                "val": 1673
+              },
+              "split_region_counts": {
+                "excluded": {
+                  "WC_1": 0,
+                  "conferenceRoom_1": 0,
+                  "conferenceRoom_2": 0,
+                  "copyRoom_1": 0,
+                  "hallway_1": 0,
+                  "hallway_2": 0,
+                  "hallway_3": 0,
+                  "hallway_4": 0,
+                  "hallway_5": 0,
+                  "hallway_6": 0,
+                  "hallway_7": 0,
+                  "hallway_8": 0,
+                  "office_1": 0,
+                  "office_10": 0,
+                  "office_11": 0,
+                  "office_12": 0,
+                  "office_13": 0,
+                  "office_14": 0,
+                  "office_15": 0,
+                  "office_16": 0,
+                  "office_17": 0,
+                  "office_18": 0,
+                  "office_19": 0,
+                  "office_2": 0,
+                  "office_20": 0,
+                  "office_21": 0,
+                  "office_22": 0,
+                  "office_23": 0,
+                  "office_24": 0,
+                  "office_25": 0,
+                  "office_26": 0,
+                  "office_27": 0,
+                  "office_28": 0,
+                  "office_29": 0,
+                  "office_3": 0,
+                  "office_30": 0,
+                  "office_31": 0,
+                  "office_4": 0,
+                  "office_5": 0,
+                  "office_6": 0,
+                  "office_7": 0,
+                  "office_8": 0,
+                  "office_9": 0,
+                  "pantry_1": 0
+                },
+                "test": {
+                  "WC_1": 0,
+                  "conferenceRoom_1": 280,
+                  "conferenceRoom_2": 0,
+                  "copyRoom_1": 0,
+                  "hallway_1": 0,
+                  "hallway_2": 0,
+                  "hallway_3": 0,
+                  "hallway_4": 0,
+                  "hallway_5": 0,
+                  "hallway_6": 0,
+                  "hallway_7": 0,
+                  "hallway_8": 72,
+                  "office_1": 0,
+                  "office_10": 0,
+                  "office_11": 0,
+                  "office_12": 0,
+                  "office_13": 0,
+                  "office_14": 0,
+                  "office_15": 0,
+                  "office_16": 289,
+                  "office_17": 0,
+                  "office_18": 0,
+                  "office_19": 0,
+                  "office_2": 0,
+                  "office_20": 190,
+                  "office_21": 0,
+                  "office_22": 200,
+                  "office_23": 152,
+                  "office_24": 0,
+                  "office_25": 0,
+                  "office_26": 0,
+                  "office_27": 0,
+                  "office_28": 0,
+                  "office_29": 0,
+                  "office_3": 0,
+                  "office_30": 458,
+                  "office_31": 0,
+                  "office_4": 0,
+                  "office_5": 0,
+                  "office_6": 0,
+                  "office_7": 0,
+                  "office_8": 0,
+                  "office_9": 0,
+                  "pantry_1": 0
+                },
+                "train": {
+                  "WC_1": 298,
+                  "conferenceRoom_1": 0,
+                  "conferenceRoom_2": 361,
+                  "copyRoom_1": 127,
+                  "hallway_1": 64,
+                  "hallway_2": 0,
+                  "hallway_3": 118,
+                  "hallway_4": 17,
+                  "hallway_5": 0,
+                  "hallway_6": 1411,
+                  "hallway_7": 1553,
+                  "hallway_8": 0,
+                  "office_1": 167,
+                  "office_10": 112,
+                  "office_11": 112,
+                  "office_12": 115,
+                  "office_13": 120,
+                  "office_14": 0,
+                  "office_15": 85,
+                  "office_16": 0,
+                  "office_17": 175,
+                  "office_18": 182,
+                  "office_19": 141,
+                  "office_2": 139,
+                  "office_20": 0,
+                  "office_21": 186,
+                  "office_22": 0,
+                  "office_23": 0,
+                  "office_24": 0,
+                  "office_25": 114,
+                  "office_26": 221,
+                  "office_27": 229,
+                  "office_28": 0,
+                  "office_29": 101,
+                  "office_3": 172,
+                  "office_30": 0,
+                  "office_31": 0,
+                  "office_4": 116,
+                  "office_5": 123,
+                  "office_6": 0,
+                  "office_7": 110,
+                  "office_8": 99,
+                  "office_9": 121,
+                  "pantry_1": 124
+                },
+                "val": {
+                  "WC_1": 0,
+                  "conferenceRoom_1": 0,
+                  "conferenceRoom_2": 0,
+                  "copyRoom_1": 0,
+                  "hallway_1": 0,
+                  "hallway_2": 97,
+                  "hallway_3": 0,
+                  "hallway_4": 0,
+                  "hallway_5": 77,
+                  "hallway_6": 0,
+                  "hallway_7": 0,
+                  "hallway_8": 0,
+                  "office_1": 0,
+                  "office_10": 0,
+                  "office_11": 0,
+                  "office_12": 0,
+                  "office_13": 0,
+                  "office_14": 93,
+                  "office_15": 0,
+                  "office_16": 0,
+                  "office_17": 0,
+                  "office_18": 0,
+                  "office_19": 0,
+                  "office_2": 0,
+                  "office_20": 0,
+                  "office_21": 0,
+                  "office_22": 0,
+                  "office_23": 0,
+                  "office_24": 161,
+                  "office_25": 0,
+                  "office_26": 0,
+                  "office_27": 0,
+                  "office_28": 233,
+                  "office_29": 0,
+                  "office_3": 0,
+                  "office_30": 0,
+                  "office_31": 901,
+                  "office_4": 0,
+                  "office_5": 0,
+                  "office_6": 111,
+                  "office_7": 0,
+                  "office_8": 0,
+                  "office_9": 0,
+                  "pantry_1": 0
+                }
+              }
+            },
+            "val": {
+              "annotation_file": "/home/bgao491/PriorBIMDA/data/annotations/stanford_area1_room_v1.jsonl",
+              "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+              "annotation_record_count": 10327,
+              "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+              "excluded_reasons": {},
+              "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+              "fused_lidar_validation": {
+                "disjoint": true,
+                "unique_source_counts": {
+                  "test": 0,
+                  "train": 0,
+                  "val": 0
+                }
+              },
+              "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+              "manifest_preparation_fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+              "manifest_preparation_fingerprint_status": "verified",
+              "manifest_record_count": 10327,
+              "mode": "annotations",
+              "ordered_ids_sha256": {
+                "excluded": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "test": "b7d6d7ea4fbd3a15ef74494cda16532fdf284b050618064e206317e30316404f",
+                "train": "b2aec61d770b08e32eb920d76cc40c77031fb1f58ecd525c402aa3fbeb7d543f",
+                "val": "cf475a95336872579aad4c7a1762f781c7ec3146474fed119d955b92e3d35bfc"
+              },
+              "schema_version": 1,
+              "selected_regions": [
+                "WC_1",
+                "conferenceRoom_1",
+                "conferenceRoom_2",
+                "copyRoom_1",
+                "hallway_1",
+                "hallway_2",
+                "hallway_3",
+                "hallway_4",
+                "hallway_5",
+                "hallway_6",
+                "hallway_7",
+                "hallway_8",
+                "office_1",
+                "office_10",
+                "office_11",
+                "office_12",
+                "office_13",
+                "office_14",
+                "office_15",
+                "office_16",
+                "office_17",
+                "office_18",
+                "office_19",
+                "office_2",
+                "office_20",
+                "office_21",
+                "office_22",
+                "office_23",
+                "office_24",
+                "office_25",
+                "office_26",
+                "office_27",
+                "office_28",
+                "office_29",
+                "office_3",
+                "office_30",
+                "office_31",
+                "office_4",
+                "office_5",
+                "office_6",
+                "office_7",
+                "office_8",
+                "office_9",
+                "pantry_1"
+              ],
+              "split_counts": {
+                "excluded": 0,
+                "test": 1641,
+                "train": 7013,
+                "val": 1673
+              },
+              "split_region_counts": {
+                "excluded": {
+                  "WC_1": 0,
+                  "conferenceRoom_1": 0,
+                  "conferenceRoom_2": 0,
+                  "copyRoom_1": 0,
+                  "hallway_1": 0,
+                  "hallway_2": 0,
+                  "hallway_3": 0,
+                  "hallway_4": 0,
+                  "hallway_5": 0,
+                  "hallway_6": 0,
+                  "hallway_7": 0,
+                  "hallway_8": 0,
+                  "office_1": 0,
+                  "office_10": 0,
+                  "office_11": 0,
+                  "office_12": 0,
+                  "office_13": 0,
+                  "office_14": 0,
+                  "office_15": 0,
+                  "office_16": 0,
+                  "office_17": 0,
+                  "office_18": 0,
+                  "office_19": 0,
+                  "office_2": 0,
+                  "office_20": 0,
+                  "office_21": 0,
+                  "office_22": 0,
+                  "office_23": 0,
+                  "office_24": 0,
+                  "office_25": 0,
+                  "office_26": 0,
+                  "office_27": 0,
+                  "office_28": 0,
+                  "office_29": 0,
+                  "office_3": 0,
+                  "office_30": 0,
+                  "office_31": 0,
+                  "office_4": 0,
+                  "office_5": 0,
+                  "office_6": 0,
+                  "office_7": 0,
+                  "office_8": 0,
+                  "office_9": 0,
+                  "pantry_1": 0
+                },
+                "test": {
+                  "WC_1": 0,
+                  "conferenceRoom_1": 280,
+                  "conferenceRoom_2": 0,
+                  "copyRoom_1": 0,
+                  "hallway_1": 0,
+                  "hallway_2": 0,
+                  "hallway_3": 0,
+                  "hallway_4": 0,
+                  "hallway_5": 0,
+                  "hallway_6": 0,
+                  "hallway_7": 0,
+                  "hallway_8": 72,
+                  "office_1": 0,
+                  "office_10": 0,
+                  "office_11": 0,
+                  "office_12": 0,
+                  "office_13": 0,
+                  "office_14": 0,
+                  "office_15": 0,
+                  "office_16": 289,
+                  "office_17": 0,
+                  "office_18": 0,
+                  "office_19": 0,
+                  "office_2": 0,
+                  "office_20": 190,
+                  "office_21": 0,
+                  "office_22": 200,
+                  "office_23": 152,
+                  "office_24": 0,
+                  "office_25": 0,
+                  "office_26": 0,
+                  "office_27": 0,
+                  "office_28": 0,
+                  "office_29": 0,
+                  "office_3": 0,
+                  "office_30": 458,
+                  "office_31": 0,
+                  "office_4": 0,
+                  "office_5": 0,
+                  "office_6": 0,
+                  "office_7": 0,
+                  "office_8": 0,
+                  "office_9": 0,
+                  "pantry_1": 0
+                },
+                "train": {
+                  "WC_1": 298,
+                  "conferenceRoom_1": 0,
+                  "conferenceRoom_2": 361,
+                  "copyRoom_1": 127,
+                  "hallway_1": 64,
+                  "hallway_2": 0,
+                  "hallway_3": 118,
+                  "hallway_4": 17,
+                  "hallway_5": 0,
+                  "hallway_6": 1411,
+                  "hallway_7": 1553,
+                  "hallway_8": 0,
+                  "office_1": 167,
+                  "office_10": 112,
+                  "office_11": 112,
+                  "office_12": 115,
+                  "office_13": 120,
+                  "office_14": 0,
+                  "office_15": 85,
+                  "office_16": 0,
+                  "office_17": 175,
+                  "office_18": 182,
+                  "office_19": 141,
+                  "office_2": 139,
+                  "office_20": 0,
+                  "office_21": 186,
+                  "office_22": 0,
+                  "office_23": 0,
+                  "office_24": 0,
+                  "office_25": 114,
+                  "office_26": 221,
+                  "office_27": 229,
+                  "office_28": 0,
+                  "office_29": 101,
+                  "office_3": 172,
+                  "office_30": 0,
+                  "office_31": 0,
+                  "office_4": 116,
+                  "office_5": 123,
+                  "office_6": 0,
+                  "office_7": 110,
+                  "office_8": 99,
+                  "office_9": 121,
+                  "pantry_1": 124
+                },
+                "val": {
+                  "WC_1": 0,
+                  "conferenceRoom_1": 0,
+                  "conferenceRoom_2": 0,
+                  "copyRoom_1": 0,
+                  "hallway_1": 0,
+                  "hallway_2": 97,
+                  "hallway_3": 0,
+                  "hallway_4": 0,
+                  "hallway_5": 77,
+                  "hallway_6": 0,
+                  "hallway_7": 0,
+                  "hallway_8": 0,
+                  "office_1": 0,
+                  "office_10": 0,
+                  "office_11": 0,
+                  "office_12": 0,
+                  "office_13": 0,
+                  "office_14": 93,
+                  "office_15": 0,
+                  "office_16": 0,
+                  "office_17": 0,
+                  "office_18": 0,
+                  "office_19": 0,
+                  "office_2": 0,
+                  "office_20": 0,
+                  "office_21": 0,
+                  "office_22": 0,
+                  "office_23": 0,
+                  "office_24": 161,
+                  "office_25": 0,
+                  "office_26": 0,
+                  "office_27": 0,
+                  "office_28": 233,
+                  "office_29": 0,
+                  "office_3": 0,
+                  "office_30": 0,
+                  "office_31": 901,
+                  "office_4": 0,
+                  "office_5": 0,
+                  "office_6": 111,
+                  "office_7": 0,
+                  "office_8": 0,
+                  "office_9": 0,
+                  "pantry_1": 0
+                }
+              }
+            }
+          }
+        },
+        "expected_evaluation_split_identity": {
+          "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+          "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+          "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+          "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+          "manifest_preparation": {
+            "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+            "status": "verified"
+          },
+          "mode": "annotations",
+          "selected_regions": [
+            "WC_1",
+            "conferenceRoom_1",
+            "conferenceRoom_2",
+            "copyRoom_1",
+            "hallway_1",
+            "hallway_2",
+            "hallway_3",
+            "hallway_4",
+            "hallway_5",
+            "hallway_6",
+            "hallway_7",
+            "hallway_8",
+            "office_1",
+            "office_10",
+            "office_11",
+            "office_12",
+            "office_13",
+            "office_14",
+            "office_15",
+            "office_16",
+            "office_17",
+            "office_18",
+            "office_19",
+            "office_2",
+            "office_20",
+            "office_21",
+            "office_22",
+            "office_23",
+            "office_24",
+            "office_25",
+            "office_26",
+            "office_27",
+            "office_28",
+            "office_29",
+            "office_3",
+            "office_30",
+            "office_31",
+            "office_4",
+            "office_5",
+            "office_6",
+            "office_7",
+            "office_8",
+            "office_9",
+            "pantry_1"
+          ]
+        },
+        "kind": "checkpoint_training_dataset",
+        "training_split_identities": {
+          "train": {
+            "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+            "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+            "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+            "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+            "manifest_preparation": {
+              "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+              "status": "verified"
+            },
+            "mode": "annotations",
+            "selected_regions": [
+              "WC_1",
+              "conferenceRoom_1",
+              "conferenceRoom_2",
+              "copyRoom_1",
+              "hallway_1",
+              "hallway_2",
+              "hallway_3",
+              "hallway_4",
+              "hallway_5",
+              "hallway_6",
+              "hallway_7",
+              "hallway_8",
+              "office_1",
+              "office_10",
+              "office_11",
+              "office_12",
+              "office_13",
+              "office_14",
+              "office_15",
+              "office_16",
+              "office_17",
+              "office_18",
+              "office_19",
+              "office_2",
+              "office_20",
+              "office_21",
+              "office_22",
+              "office_23",
+              "office_24",
+              "office_25",
+              "office_26",
+              "office_27",
+              "office_28",
+              "office_29",
+              "office_3",
+              "office_30",
+              "office_31",
+              "office_4",
+              "office_5",
+              "office_6",
+              "office_7",
+              "office_8",
+              "office_9",
+              "pantry_1"
+            ]
+          },
+          "val": {
+            "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+            "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+            "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+            "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+            "manifest_preparation": {
+              "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+              "status": "verified"
+            },
+            "mode": "annotations",
+            "selected_regions": [
+              "WC_1",
+              "conferenceRoom_1",
+              "conferenceRoom_2",
+              "copyRoom_1",
+              "hallway_1",
+              "hallway_2",
+              "hallway_3",
+              "hallway_4",
+              "hallway_5",
+              "hallway_6",
+              "hallway_7",
+              "hallway_8",
+              "office_1",
+              "office_10",
+              "office_11",
+              "office_12",
+              "office_13",
+              "office_14",
+              "office_15",
+              "office_16",
+              "office_17",
+              "office_18",
+              "office_19",
+              "office_2",
+              "office_20",
+              "office_21",
+              "office_22",
+              "office_23",
+              "office_24",
+              "office_25",
+              "office_26",
+              "office_27",
+              "office_28",
+              "office_29",
+              "office_3",
+              "office_30",
+              "office_31",
+              "office_4",
+              "office_5",
+              "office_6",
+              "office_7",
+              "office_8",
+              "office_9",
+              "pantry_1"
+            ]
+          }
+        }
+      },
+      "split": "val",
+      "status": "verified",
+      "target": {
+        "kind": "runtime_evaluation_dataset",
+        "split": "val",
+        "split_identity": {
+          "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+          "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+          "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+          "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+          "manifest_preparation": {
+            "fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+            "status": "verified"
+          },
+          "mode": "annotations",
+          "selected_regions": [
+            "WC_1",
+            "conferenceRoom_1",
+            "conferenceRoom_2",
+            "copyRoom_1",
+            "hallway_1",
+            "hallway_2",
+            "hallway_3",
+            "hallway_4",
+            "hallway_5",
+            "hallway_6",
+            "hallway_7",
+            "hallway_8",
+            "office_1",
+            "office_10",
+            "office_11",
+            "office_12",
+            "office_13",
+            "office_14",
+            "office_15",
+            "office_16",
+            "office_17",
+            "office_18",
+            "office_19",
+            "office_2",
+            "office_20",
+            "office_21",
+            "office_22",
+            "office_23",
+            "office_24",
+            "office_25",
+            "office_26",
+            "office_27",
+            "office_28",
+            "office_29",
+            "office_3",
+            "office_30",
+            "office_31",
+            "office_4",
+            "office_5",
+            "office_6",
+            "office_7",
+            "office_8",
+            "office_9",
+            "pantry_1"
+          ]
+        },
+        "split_provenance": {
+          "annotation_file": "/home/bgao491/PriorBIMDA/data/annotations/stanford_area1_room_v1.jsonl",
+          "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+          "annotation_record_count": 10327,
+          "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+          "excluded_reasons": {},
+          "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+          "fused_lidar_validation": {
+            "disjoint": true,
+            "unique_source_counts": {
+              "test": 0,
+              "train": 0,
+              "val": 0
+            }
+          },
+          "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+          "manifest_preparation_fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+          "manifest_preparation_fingerprint_status": "verified",
+          "manifest_record_count": 10327,
+          "mode": "annotations",
+          "ordered_ids_sha256": {
+            "excluded": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "test": "b7d6d7ea4fbd3a15ef74494cda16532fdf284b050618064e206317e30316404f",
+            "train": "b2aec61d770b08e32eb920d76cc40c77031fb1f58ecd525c402aa3fbeb7d543f",
+            "val": "cf475a95336872579aad4c7a1762f781c7ec3146474fed119d955b92e3d35bfc"
+          },
+          "schema_version": 1,
+          "selected_regions": [
+            "WC_1",
+            "conferenceRoom_1",
+            "conferenceRoom_2",
+            "copyRoom_1",
+            "hallway_1",
+            "hallway_2",
+            "hallway_3",
+            "hallway_4",
+            "hallway_5",
+            "hallway_6",
+            "hallway_7",
+            "hallway_8",
+            "office_1",
+            "office_10",
+            "office_11",
+            "office_12",
+            "office_13",
+            "office_14",
+            "office_15",
+            "office_16",
+            "office_17",
+            "office_18",
+            "office_19",
+            "office_2",
+            "office_20",
+            "office_21",
+            "office_22",
+            "office_23",
+            "office_24",
+            "office_25",
+            "office_26",
+            "office_27",
+            "office_28",
+            "office_29",
+            "office_3",
+            "office_30",
+            "office_31",
+            "office_4",
+            "office_5",
+            "office_6",
+            "office_7",
+            "office_8",
+            "office_9",
+            "pantry_1"
+          ],
+          "split_counts": {
+            "excluded": 0,
+            "test": 1641,
+            "train": 7013,
+            "val": 1673
+          },
+          "split_region_counts": {
+            "excluded": {
+              "WC_1": 0,
+              "conferenceRoom_1": 0,
+              "conferenceRoom_2": 0,
+              "copyRoom_1": 0,
+              "hallway_1": 0,
+              "hallway_2": 0,
+              "hallway_3": 0,
+              "hallway_4": 0,
+              "hallway_5": 0,
+              "hallway_6": 0,
+              "hallway_7": 0,
+              "hallway_8": 0,
+              "office_1": 0,
+              "office_10": 0,
+              "office_11": 0,
+              "office_12": 0,
+              "office_13": 0,
+              "office_14": 0,
+              "office_15": 0,
+              "office_16": 0,
+              "office_17": 0,
+              "office_18": 0,
+              "office_19": 0,
+              "office_2": 0,
+              "office_20": 0,
+              "office_21": 0,
+              "office_22": 0,
+              "office_23": 0,
+              "office_24": 0,
+              "office_25": 0,
+              "office_26": 0,
+              "office_27": 0,
+              "office_28": 0,
+              "office_29": 0,
+              "office_3": 0,
+              "office_30": 0,
+              "office_31": 0,
+              "office_4": 0,
+              "office_5": 0,
+              "office_6": 0,
+              "office_7": 0,
+              "office_8": 0,
+              "office_9": 0,
+              "pantry_1": 0
+            },
+            "test": {
+              "WC_1": 0,
+              "conferenceRoom_1": 280,
+              "conferenceRoom_2": 0,
+              "copyRoom_1": 0,
+              "hallway_1": 0,
+              "hallway_2": 0,
+              "hallway_3": 0,
+              "hallway_4": 0,
+              "hallway_5": 0,
+              "hallway_6": 0,
+              "hallway_7": 0,
+              "hallway_8": 72,
+              "office_1": 0,
+              "office_10": 0,
+              "office_11": 0,
+              "office_12": 0,
+              "office_13": 0,
+              "office_14": 0,
+              "office_15": 0,
+              "office_16": 289,
+              "office_17": 0,
+              "office_18": 0,
+              "office_19": 0,
+              "office_2": 0,
+              "office_20": 190,
+              "office_21": 0,
+              "office_22": 200,
+              "office_23": 152,
+              "office_24": 0,
+              "office_25": 0,
+              "office_26": 0,
+              "office_27": 0,
+              "office_28": 0,
+              "office_29": 0,
+              "office_3": 0,
+              "office_30": 458,
+              "office_31": 0,
+              "office_4": 0,
+              "office_5": 0,
+              "office_6": 0,
+              "office_7": 0,
+              "office_8": 0,
+              "office_9": 0,
+              "pantry_1": 0
+            },
+            "train": {
+              "WC_1": 298,
+              "conferenceRoom_1": 0,
+              "conferenceRoom_2": 361,
+              "copyRoom_1": 127,
+              "hallway_1": 64,
+              "hallway_2": 0,
+              "hallway_3": 118,
+              "hallway_4": 17,
+              "hallway_5": 0,
+              "hallway_6": 1411,
+              "hallway_7": 1553,
+              "hallway_8": 0,
+              "office_1": 167,
+              "office_10": 112,
+              "office_11": 112,
+              "office_12": 115,
+              "office_13": 120,
+              "office_14": 0,
+              "office_15": 85,
+              "office_16": 0,
+              "office_17": 175,
+              "office_18": 182,
+              "office_19": 141,
+              "office_2": 139,
+              "office_20": 0,
+              "office_21": 186,
+              "office_22": 0,
+              "office_23": 0,
+              "office_24": 0,
+              "office_25": 114,
+              "office_26": 221,
+              "office_27": 229,
+              "office_28": 0,
+              "office_29": 101,
+              "office_3": 172,
+              "office_30": 0,
+              "office_31": 0,
+              "office_4": 116,
+              "office_5": 123,
+              "office_6": 0,
+              "office_7": 110,
+              "office_8": 99,
+              "office_9": 121,
+              "pantry_1": 124
+            },
+            "val": {
+              "WC_1": 0,
+              "conferenceRoom_1": 0,
+              "conferenceRoom_2": 0,
+              "copyRoom_1": 0,
+              "hallway_1": 0,
+              "hallway_2": 97,
+              "hallway_3": 0,
+              "hallway_4": 0,
+              "hallway_5": 77,
+              "hallway_6": 0,
+              "hallway_7": 0,
+              "hallway_8": 0,
+              "office_1": 0,
+              "office_10": 0,
+              "office_11": 0,
+              "office_12": 0,
+              "office_13": 0,
+              "office_14": 93,
+              "office_15": 0,
+              "office_16": 0,
+              "office_17": 0,
+              "office_18": 0,
+              "office_19": 0,
+              "office_2": 0,
+              "office_20": 0,
+              "office_21": 0,
+              "office_22": 0,
+              "office_23": 0,
+              "office_24": 161,
+              "office_25": 0,
+              "office_26": 0,
+              "office_27": 0,
+              "office_28": 233,
+              "office_29": 0,
+              "office_3": 0,
+              "office_30": 0,
+              "office_31": 901,
+              "office_4": 0,
+              "office_5": 0,
+              "office_6": 111,
+              "office_7": 0,
+              "office_8": 0,
+              "office_9": 0,
+              "pantry_1": 0
+            }
+          }
+        }
+      },
+      "verified": true
+    },
+    "epoch": 9,
+    "learned_method_evaluated": true,
+    "model_config_differences": {},
+    "path": "/home/bgao491/PriorBIMDA/outputs/stanford_area1/accepted.pt",
+    "sha256": "ffc69e51bfca6e0619d19c1665f2748d35b24c48c33f67303f646ae74cdcc711",
+    "status": "verified"
+  },
+  "config": {
+    "path": "/home/bgao491/PriorBIMDA/configs/stanford_area1.yaml",
+    "sha256": "c2478535ab990bd170fa5eba14a0154d0276d7d4ae88c00da972af3e7143e703"
+  },
+  "dataset_split_provenance": {
+    "annotation_file": "/home/bgao491/PriorBIMDA/data/annotations/stanford_area1_room_v1.jsonl",
+    "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+    "annotation_record_count": 10327,
+    "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+    "excluded_reasons": {},
+    "fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+    "fused_lidar_validation": {
+      "disjoint": true,
+      "unique_source_counts": {
+        "test": 0,
+        "train": 0,
+        "val": 0
+      }
+    },
+    "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+    "manifest_preparation_fingerprint_sha256": "e844ff92071b60170d174dd3536e34b379438463408e08015da375a36611fb2f",
+    "manifest_preparation_fingerprint_status": "verified",
+    "manifest_record_count": 10327,
+    "mode": "annotations",
+    "ordered_ids_sha256": {
+      "excluded": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "test": "b7d6d7ea4fbd3a15ef74494cda16532fdf284b050618064e206317e30316404f",
+      "train": "b2aec61d770b08e32eb920d76cc40c77031fb1f58ecd525c402aa3fbeb7d543f",
+      "val": "cf475a95336872579aad4c7a1762f781c7ec3146474fed119d955b92e3d35bfc"
+    },
+    "schema_version": 1,
+    "selected_regions": [
+      "WC_1",
+      "conferenceRoom_1",
+      "conferenceRoom_2",
+      "copyRoom_1",
+      "hallway_1",
+      "hallway_2",
+      "hallway_3",
+      "hallway_4",
+      "hallway_5",
+      "hallway_6",
+      "hallway_7",
+      "hallway_8",
+      "office_1",
+      "office_10",
+      "office_11",
+      "office_12",
+      "office_13",
+      "office_14",
+      "office_15",
+      "office_16",
+      "office_17",
+      "office_18",
+      "office_19",
+      "office_2",
+      "office_20",
+      "office_21",
+      "office_22",
+      "office_23",
+      "office_24",
+      "office_25",
+      "office_26",
+      "office_27",
+      "office_28",
+      "office_29",
+      "office_3",
+      "office_30",
+      "office_31",
+      "office_4",
+      "office_5",
+      "office_6",
+      "office_7",
+      "office_8",
+      "office_9",
+      "pantry_1"
+    ],
+    "split_counts": {
+      "excluded": 0,
+      "test": 1641,
+      "train": 7013,
+      "val": 1673
+    },
+    "split_region_counts": {
+      "excluded": {
+        "WC_1": 0,
+        "conferenceRoom_1": 0,
+        "conferenceRoom_2": 0,
+        "copyRoom_1": 0,
+        "hallway_1": 0,
+        "hallway_2": 0,
+        "hallway_3": 0,
+        "hallway_4": 0,
+        "hallway_5": 0,
+        "hallway_6": 0,
+        "hallway_7": 0,
+        "hallway_8": 0,
+        "office_1": 0,
+        "office_10": 0,
+        "office_11": 0,
+        "office_12": 0,
+        "office_13": 0,
+        "office_14": 0,
+        "office_15": 0,
+        "office_16": 0,
+        "office_17": 0,
+        "office_18": 0,
+        "office_19": 0,
+        "office_2": 0,
+        "office_20": 0,
+        "office_21": 0,
+        "office_22": 0,
+        "office_23": 0,
+        "office_24": 0,
+        "office_25": 0,
+        "office_26": 0,
+        "office_27": 0,
+        "office_28": 0,
+        "office_29": 0,
+        "office_3": 0,
+        "office_30": 0,
+        "office_31": 0,
+        "office_4": 0,
+        "office_5": 0,
+        "office_6": 0,
+        "office_7": 0,
+        "office_8": 0,
+        "office_9": 0,
+        "pantry_1": 0
+      },
+      "test": {
+        "WC_1": 0,
+        "conferenceRoom_1": 280,
+        "conferenceRoom_2": 0,
+        "copyRoom_1": 0,
+        "hallway_1": 0,
+        "hallway_2": 0,
+        "hallway_3": 0,
+        "hallway_4": 0,
+        "hallway_5": 0,
+        "hallway_6": 0,
+        "hallway_7": 0,
+        "hallway_8": 72,
+        "office_1": 0,
+        "office_10": 0,
+        "office_11": 0,
+        "office_12": 0,
+        "office_13": 0,
+        "office_14": 0,
+        "office_15": 0,
+        "office_16": 289,
+        "office_17": 0,
+        "office_18": 0,
+        "office_19": 0,
+        "office_2": 0,
+        "office_20": 190,
+        "office_21": 0,
+        "office_22": 200,
+        "office_23": 152,
+        "office_24": 0,
+        "office_25": 0,
+        "office_26": 0,
+        "office_27": 0,
+        "office_28": 0,
+        "office_29": 0,
+        "office_3": 0,
+        "office_30": 458,
+        "office_31": 0,
+        "office_4": 0,
+        "office_5": 0,
+        "office_6": 0,
+        "office_7": 0,
+        "office_8": 0,
+        "office_9": 0,
+        "pantry_1": 0
+      },
+      "train": {
+        "WC_1": 298,
+        "conferenceRoom_1": 0,
+        "conferenceRoom_2": 361,
+        "copyRoom_1": 127,
+        "hallway_1": 64,
+        "hallway_2": 0,
+        "hallway_3": 118,
+        "hallway_4": 17,
+        "hallway_5": 0,
+        "hallway_6": 1411,
+        "hallway_7": 1553,
+        "hallway_8": 0,
+        "office_1": 167,
+        "office_10": 112,
+        "office_11": 112,
+        "office_12": 115,
+        "office_13": 120,
+        "office_14": 0,
+        "office_15": 85,
+        "office_16": 0,
+        "office_17": 175,
+        "office_18": 182,
+        "office_19": 141,
+        "office_2": 139,
+        "office_20": 0,
+        "office_21": 186,
+        "office_22": 0,
+        "office_23": 0,
+        "office_24": 0,
+        "office_25": 114,
+        "office_26": 221,
+        "office_27": 229,
+        "office_28": 0,
+        "office_29": 101,
+        "office_3": 172,
+        "office_30": 0,
+        "office_31": 0,
+        "office_4": 116,
+        "office_5": 123,
+        "office_6": 0,
+        "office_7": 110,
+        "office_8": 99,
+        "office_9": 121,
+        "pantry_1": 124
+      },
+      "val": {
+        "WC_1": 0,
+        "conferenceRoom_1": 0,
+        "conferenceRoom_2": 0,
+        "copyRoom_1": 0,
+        "hallway_1": 0,
+        "hallway_2": 97,
+        "hallway_3": 0,
+        "hallway_4": 0,
+        "hallway_5": 77,
+        "hallway_6": 0,
+        "hallway_7": 0,
+        "hallway_8": 0,
+        "office_1": 0,
+        "office_10": 0,
+        "office_11": 0,
+        "office_12": 0,
+        "office_13": 0,
+        "office_14": 93,
+        "office_15": 0,
+        "office_16": 0,
+        "office_17": 0,
+        "office_18": 0,
+        "office_19": 0,
+        "office_2": 0,
+        "office_20": 0,
+        "office_21": 0,
+        "office_22": 0,
+        "office_23": 0,
+        "office_24": 161,
+        "office_25": 0,
+        "office_26": 0,
+        "office_27": 0,
+        "office_28": 233,
+        "office_29": 0,
+        "office_3": 0,
+        "office_30": 0,
+        "office_31": 901,
+        "office_4": 0,
+        "office_5": 0,
+        "office_6": 111,
+        "office_7": 0,
+        "office_8": 0,
+        "office_9": 0,
+        "pantry_1": 0
+      }
+    }
+  },
+  "evaluation_support": {
+    "definition": "pano GT valid and covered by at least one regular view",
+    "depth_range_m": [
+      0.2,
+      5.0
+    ],
+    "exact_erp_pixel_solid_angle_metrics_reported": true,
+    "formal_primary": "equal-station macro of exact solid-angle-weighted metrics",
+    "identical_for_every_depth_and_fusion_method": true,
+    "pixel_micro_role": "secondary diagnostic",
+    "uncertainty_resampling_unit": "room cluster"
+  },
+  "evaluator": {
+    "path": "/home/bgao491/PriorBIMDA/scripts/model/evaluate_stanford_pano.py",
+    "sha256": "0d699f0c4d5b1cdea53289fa8af024cf8a48391133a52c87348f94652dcc992c"
+  },
+  "formal_protocol_eligible": true,
+  "fusion": {
+    "consistency_log_threshold": 0.25,
+    "domain": "log radial range",
+    "huber_log_delta": 0.08,
+    "methods": [
+      "single_best_view",
+      "joint_weighted_log",
+      "joint_huber",
+      "joint_photo_huber",
+      "joint_synchronized_huber"
+    ],
+    "overlap_scale_synchronization": {
+      "graph_constraint": "weighted least squares, registered-anchor zero-mean KKT constraint, L2-to-zero",
+      "huber_log_delta": 0.08,
+      "input": "prediction overlap plus centrality/confidence only; no GT",
+      "l2": 1e-06,
+      "max_abs_log_offset": 0.5,
+      "min_overlap": 256,
+      "pair_location": "median initialization plus three Huber IRLS iterations",
+      "pair_max_deterministic_samples": 4096
+    },
+    "photometric_exposure_alignment": "per-view median log-luminance gain, clipped [0.5,2]",
+    "photometric_sigma": 0.12,
+    "station_bim_scale": {
+      "local_variant": "same registered deterministic local correction per view",
+      "samples_per_view_cap": 50000,
+      "sampling": "deterministic evenly spaced valid raster-order indices",
+      "scope": "one universal BIM/DA3 scale shared by all regular views"
+    }
+  },
+  "geometry": {
+    "centrality_power": 4.0,
+    "confidence_floor": 0.05,
+    "pano_shape": [
+      512,
+      1024
+    ],
+    "projection": "pinhole z-depth to same-center equirectangular radial range",
+    "single_best_view_semantics": "per-ray single-source mosaic: independently choose the maximum centrality/confidence contributor at each ERP pixel"
+  },
+  "per_room_csv": {
+    "path": "/home/bgao491/PriorBIMDA/results/stanford_area1/pano_val/per_room.csv",
+    "sha256": "b4b6870766a616e2113efd84e78ba4d0a7b03df684880efa1d796ad1436c5fa2"
+  },
+  "per_station_csv": {
+    "path": "/home/bgao491/PriorBIMDA/results/stanford_area1/pano_val/per_station.csv",
+    "sha256": "d9c24b7ee08a204f0c676fbb5500c09078e1ab5873e868d31a6c0c4d330ef0d7"
+  },
+  "prediction_input_contract": {
+    "cached_da3_depth_and_confidence": true,
+    "pano_depth_runtime_role": "evaluation target only",
+    "pano_depth_used_only_after_all_predictions_are_frozen": true,
+    "pano_rgb_for_photometric_weight_only": true,
+    "regular_bim_render": true,
+    "regular_ground_truth_arrays_loaded": false,
+    "regular_rgb": true
+  },
+  "prepared_manifest": {
+    "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/manifest.jsonl",
+    "sha256": "6bdf397abe30984c3e920068a03c09d5982d4b72e28a142be5c51f25794ba4df"
+  },
+  "protocol": "stanford-area1-regular-and-pano-tangent-depth-v3",
+  "regular_pano_joint_per_station_csv": {
+    "path": "/home/bgao491/PriorBIMDA/results/stanford_area1/pano_val/regular_pano_joint_per_station.csv",
+    "sha256": "ba736bc9b5f8c4e9ae30d4a3018a908d259757834161617f221e5c91b0a2184d"
+  },
+  "route_p_tangent_inputs": {
+    "cache_schema_version": 2,
+    "claim_boundary": "Route-P uses raw DA3 only and is reported independently from Route-R BIM/direct/learned comparisons",
+    "combined_supports": {
+      "common_regular": "regular-only coverage intersected with valid pano GT; fixed across regular-only and both combined source sets",
+      "native_union": "valid pano GT intersected with each source set's own coverage"
+    },
+    "evaluation_scope": {
+      "evaluated_station_count": 32,
+      "evaluated_station_ids": [
+        "042fab82b3a94af9bea3c80984bc2583",
+        "2fb7a2dcf8004578a541ee750dda0ed6",
+        "c6655e566bca4de983fc3affab814587",
+        "1ec8ed7b336844ff9d8edff0e32ed850",
+        "24f42d6efff54b09a34897f69fa11064",
+        "684b940fafd64fd98aef16157c8a96e2",
+        "6922fce99b0a4f9da148f76a8d57c089",
+        "95fab66e5ca643cc97aaab4647f145e3",
+        "2679368bf8354598abff5d47c38cfcdd",
+        "cfe68c10e7bf43d9b66ab2356eccec62",
+        "00d10d86db1e435081a837ced388375f",
+        "4bae4264d885478d9c280932a1e9ecdd",
+        "ebf135a2826f44c5972b2ad48c26e4d1",
+        "0cf489f7d9fe412bbe9f64ab7f5cc0fb",
+        "208aa93cc6b342e5806026f0f6f34110",
+        "c116e049d9c24baaa3cc01d88d48a5fa",
+        "f4b0a073ae04462f8be38d2ecd0d8f9d",
+        "335899b8d3ba4526a3c3b2a7b7380de5",
+        "4a41b27118ac4c6aad24f60a04f3a559",
+        "5cb8151c7baf4f54aa1c89a45624b07b",
+        "613d201e991744799556e737bdb89c89",
+        "61cd01735f12449180dccb65232acd8c",
+        "75361aff0171457b964ad17a696d1fef",
+        "7b74e08d4ec04383b737b5f5b166f5d7",
+        "9084f217cb10409bb1ec15e8fa1f7299",
+        "a77fba57be66411c908077c69d803797",
+        "b3377659e8c9434daa75ed42fd56eb09",
+        "c40ca55cdb2640a1a71871ea97856427",
+        "da4629d565a3435fb701f56f46005a66",
+        "ecf7fb476c2444e4bcd61d8f859ce93e",
+        "0004591bfdc749a88db196a5d8b345cb",
+        "2439b3f7bc184152bf89e6012a511aa6"
+      ],
+      "formal_full_manifest": true,
+      "ordered_prefix_limit": null
+    },
+    "gt_or_bim_used_for_scale_weight_or_selection": false,
+    "identity_checks": [
+      "formal full-split status",
+      "runtime split and explicit test authorization",
+      "config and annotation SHA256",
+      "exact dataset split provenance",
+      "pinned DA3 name/revision/process_res/load policy",
+      "station UUID/room/panorama RGB SHA256",
+      "every tangent PNG and DA3 cache SHA256",
+      "every schema-v2 cache metadata field",
+      "nested14 preset K and T_face_from_pano rebuilt via shared pano_tangent"
+    ],
+    "manifest": {
+      "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/manifests/val_full.json",
+      "protocol": "stanford-area1-pano-tangent-da3-cache-v1",
+      "schema_version": 1,
+      "sha256": "ce16bf6125d60f77a14a966b264488ff25df33959faca13636c0b3a5ca8ff565"
+    },
+    "official_pano_depth_evaluation_targets": {
+      "0004591bfdc749a88db196a5d8b345cb": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_0004591bfdc749a88db196a5d8b345cb_office_6_frame_equirectangular_domain_depth.png",
+        "sha256": "1564226b2c71e939ce76d18087336e81f2a6921774d616338753509f70e7c0cd"
+      },
+      "00d10d86db1e435081a837ced388375f": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_00d10d86db1e435081a837ced388375f_office_24_frame_equirectangular_domain_depth.png",
+        "sha256": "aab374e75fda3053aef3980eaf7e9d5fab8cf6f7ae5bfe88193c675f31515bf1"
+      },
+      "042fab82b3a94af9bea3c80984bc2583": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_042fab82b3a94af9bea3c80984bc2583_hallway_2_frame_equirectangular_domain_depth.png",
+        "sha256": "c556882c923d54668ad6ac0b3739e33f510e05d2cf8feea99100627181bcbd23"
+      },
+      "0cf489f7d9fe412bbe9f64ab7f5cc0fb": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_0cf489f7d9fe412bbe9f64ab7f5cc0fb_office_28_frame_equirectangular_domain_depth.png",
+        "sha256": "d41b3b85fadd2a708761338c821ce86fcff703c678999a004de3253754c36c04"
+      },
+      "1ec8ed7b336844ff9d8edff0e32ed850": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_1ec8ed7b336844ff9d8edff0e32ed850_hallway_5_frame_equirectangular_domain_depth.png",
+        "sha256": "e628d5dd7ec77e3e90f774b383c8dc7ad0646e0d72e124a5cd98bf302e244991"
+      },
+      "208aa93cc6b342e5806026f0f6f34110": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_208aa93cc6b342e5806026f0f6f34110_office_28_frame_equirectangular_domain_depth.png",
+        "sha256": "f9dceb9fb97cca109bade5b2f1419ca69a182131ef0d13db7ca501f131302202"
+      },
+      "2439b3f7bc184152bf89e6012a511aa6": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_2439b3f7bc184152bf89e6012a511aa6_office_6_frame_equirectangular_domain_depth.png",
+        "sha256": "0661b6847bde1a12c040f8b082d02b5596041cbc92ca2bb2e061bb952286f708"
+      },
+      "24f42d6efff54b09a34897f69fa11064": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_24f42d6efff54b09a34897f69fa11064_hallway_5_frame_equirectangular_domain_depth.png",
+        "sha256": "554cced64dbd4d14c6ffceef7731c4ae85bdac1d1a1f8bb81e99cafc72455728"
+      },
+      "2679368bf8354598abff5d47c38cfcdd": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_2679368bf8354598abff5d47c38cfcdd_office_14_frame_equirectangular_domain_depth.png",
+        "sha256": "20c239ef455e931e32210df74ae4ca377d03835824fe0ff212809f036fd0514a"
+      },
+      "2fb7a2dcf8004578a541ee750dda0ed6": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_2fb7a2dcf8004578a541ee750dda0ed6_hallway_2_frame_equirectangular_domain_depth.png",
+        "sha256": "1a1f69cfab4321962ae924d0ff45f513606e5a225f2c21777b1b5ff4940236fc"
+      },
+      "335899b8d3ba4526a3c3b2a7b7380de5": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_335899b8d3ba4526a3c3b2a7b7380de5_office_31_frame_equirectangular_domain_depth.png",
+        "sha256": "6296a04d80eb57ab6d769d37ba06f4e0abfe8ba385d977174f2153499f8440bf"
+      },
+      "4a41b27118ac4c6aad24f60a04f3a559": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_4a41b27118ac4c6aad24f60a04f3a559_office_31_frame_equirectangular_domain_depth.png",
+        "sha256": "f8e18cb1aec8eb661616a4dc29c9454304bf2de51ab665b8b2280c99e525bd27"
+      },
+      "4bae4264d885478d9c280932a1e9ecdd": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_4bae4264d885478d9c280932a1e9ecdd_office_24_frame_equirectangular_domain_depth.png",
+        "sha256": "6e4e479db67b085efcd61c7ad653c168a640026e9457154df662267f877e6b58"
+      },
+      "5cb8151c7baf4f54aa1c89a45624b07b": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_5cb8151c7baf4f54aa1c89a45624b07b_office_31_frame_equirectangular_domain_depth.png",
+        "sha256": "35017327e055c993fe5ac7446a325621f06d264cdea2d89a36c068c4570db324"
+      },
+      "613d201e991744799556e737bdb89c89": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_613d201e991744799556e737bdb89c89_office_31_frame_equirectangular_domain_depth.png",
+        "sha256": "c6d1224781846484f816ae139e40ed55537c67964dcc49615d05ed7a149fb66c"
+      },
+      "61cd01735f12449180dccb65232acd8c": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_61cd01735f12449180dccb65232acd8c_office_31_frame_equirectangular_domain_depth.png",
+        "sha256": "8f9775db46a5d6ebbbc3fa85b73ba38f2fad6120a9aea2fd26d6e5b246bc8129"
+      },
+      "684b940fafd64fd98aef16157c8a96e2": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_684b940fafd64fd98aef16157c8a96e2_hallway_5_frame_equirectangular_domain_depth.png",
+        "sha256": "024aaa951dd7433dd3834f32f724b3f06a057a2be7ab4de57bb45182a8832e64"
+      },
+      "6922fce99b0a4f9da148f76a8d57c089": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_6922fce99b0a4f9da148f76a8d57c089_hallway_5_frame_equirectangular_domain_depth.png",
+        "sha256": "8264a316c673a221fcb8adb6a89e4b218609230638616723d29327c288bfaaee"
+      },
+      "75361aff0171457b964ad17a696d1fef": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_75361aff0171457b964ad17a696d1fef_office_31_frame_equirectangular_domain_depth.png",
+        "sha256": "674641596800b0c10e8cf7e3dbec6e4e41c40498e8f6e6aeb54c3735e4d49d6a"
+      },
+      "7b74e08d4ec04383b737b5f5b166f5d7": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_7b74e08d4ec04383b737b5f5b166f5d7_office_31_frame_equirectangular_domain_depth.png",
+        "sha256": "2bc1f2e5a6a16a8039660eccb10fd15064115e137b0e595965c7deab3a84300f"
+      },
+      "9084f217cb10409bb1ec15e8fa1f7299": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_9084f217cb10409bb1ec15e8fa1f7299_office_31_frame_equirectangular_domain_depth.png",
+        "sha256": "de8a471e70cd370ea7a677d45248a37cd43ced15158e00f6568be3d8263a3c0b"
+      },
+      "95fab66e5ca643cc97aaab4647f145e3": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_95fab66e5ca643cc97aaab4647f145e3_hallway_5_frame_equirectangular_domain_depth.png",
+        "sha256": "0e66203e1800af805feb563df9c80dcf25707d3e47f78b350d8f216b9f56f0a0"
+      },
+      "a77fba57be66411c908077c69d803797": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_a77fba57be66411c908077c69d803797_office_31_frame_equirectangular_domain_depth.png",
+        "sha256": "b0daee254a7b6999d99474ff8b2c576b2dedda6b825064fed3bf1c8922b574f5"
+      },
+      "b3377659e8c9434daa75ed42fd56eb09": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_b3377659e8c9434daa75ed42fd56eb09_office_31_frame_equirectangular_domain_depth.png",
+        "sha256": "0bde4c4d7bbe139e63cdc6f699b617b73f4486e23d9070191993ab7f58eae105"
+      },
+      "c116e049d9c24baaa3cc01d88d48a5fa": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_c116e049d9c24baaa3cc01d88d48a5fa_office_28_frame_equirectangular_domain_depth.png",
+        "sha256": "4623ea47265ed7148beff0638198c1746ee732767825f17611c5945a5a770b9a"
+      },
+      "c40ca55cdb2640a1a71871ea97856427": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_c40ca55cdb2640a1a71871ea97856427_office_31_frame_equirectangular_domain_depth.png",
+        "sha256": "2e6628254efc20a0a52ea71ec46572ed536a1b15c1f19614ce1308cd133a9b65"
+      },
+      "c6655e566bca4de983fc3affab814587": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_c6655e566bca4de983fc3affab814587_hallway_2_frame_equirectangular_domain_depth.png",
+        "sha256": "673005482181a9564c988694e6ab15b5d707195090e8805a4466660e833b839d"
+      },
+      "cfe68c10e7bf43d9b66ab2356eccec62": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_cfe68c10e7bf43d9b66ab2356eccec62_office_14_frame_equirectangular_domain_depth.png",
+        "sha256": "71a960ff8ede29ef0f00fcd3fba1aedc06fc7e24b8c863f8f019281fa756ebc9"
+      },
+      "da4629d565a3435fb701f56f46005a66": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_da4629d565a3435fb701f56f46005a66_office_31_frame_equirectangular_domain_depth.png",
+        "sha256": "a6cf236921a0e7ed208e4f4e327300085aea0d4bfd82ba913113ac6adc69f3ea"
+      },
+      "ebf135a2826f44c5972b2ad48c26e4d1": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_ebf135a2826f44c5972b2ad48c26e4d1_office_24_frame_equirectangular_domain_depth.png",
+        "sha256": "8ad3c36cb76b570e00798eaa38e141c4ad2f0034649469ee322264ae8f65bed3"
+      },
+      "ecf7fb476c2444e4bcd61d8f859ce93e": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_ecf7fb476c2444e4bcd61d8f859ce93e_office_31_frame_equirectangular_domain_depth.png",
+        "sha256": "2961aba4ed670b902dda4455744b53487c1b4176be195122faa262c570b987c9"
+      },
+      "f4b0a073ae04462f8be38d2ecd0d8f9d": {
+        "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_f4b0a073ae04462f8be38d2ecd0d8f9d_office_28_frame_equirectangular_domain_depth.png",
+        "sha256": "87615b1ca434ff439268fc382ed0dad1831a2c7084c655bb8c730680c9178927"
+      }
+    },
+    "pano_only_file_identities": {
+      "24f42d6efff54b09a34897f69fa11064": {
+        "pano_depth_evaluation_target": {
+          "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_24f42d6efff54b09a34897f69fa11064_hallway_5_frame_equirectangular_domain_depth.png",
+          "sha256": "554cced64dbd4d14c6ffceef7731c4ae85bdac1d1a1f8bb81e99cafc72455728"
+        },
+        "pano_rgb": {
+          "manifest_recorded_path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_24f42d6efff54b09a34897f69fa11064_hallway_5_frame_equirectangular_domain_rgb.png",
+          "resolved_path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_24f42d6efff54b09a34897f69fa11064_hallway_5_frame_equirectangular_domain_rgb.png",
+          "sha256": "66e1f3459e765939e5578f1bc894325d4005321c82e24d456952e0fa4dc32f67"
+        },
+        "room": "hallway_5",
+        "tangent_views": [
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "141ebee78c531a5aafad83c0e95df2988b3d9ff8e2ffcde7bc762cf15e14d009",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__00_front.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__00_front.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "fabd347608caa0d3d3c81188fd03ef4e197ccd7219546c8900ac88d138d4a38c",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 0,
+            "name": "front",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__00_front.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__00_front.png",
+              "sha256": "141ebee78c531a5aafad83c0e95df2988b3d9ff8e2ffcde7bc762cf15e14d009"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "d351eb8e25e4d681a6a128d503b775097f35f6900582d4bafa3462c62b7b6e6f",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__01_right.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__01_right.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "569d3d88f959b60e41f1b764fb38ad506e479c10da5e9be102d2b752d08938d8",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 1,
+            "name": "right",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__01_right.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__01_right.png",
+              "sha256": "d351eb8e25e4d681a6a128d503b775097f35f6900582d4bafa3462c62b7b6e6f"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "b8865685a0ab5a0fc02170be43429f968141c933353dde856eae59a0b13d9782",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__02_back.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__02_back.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "921a3e8aed072b1cc135c5a51d8cf85ab44e82c27112d0d2e8c91e6b574488db",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 2,
+            "name": "back",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__02_back.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__02_back.png",
+              "sha256": "b8865685a0ab5a0fc02170be43429f968141c933353dde856eae59a0b13d9782"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "c441baf7d9b6f7f9d2f0bf0421d60b403a652562b15bc631dd5f978f8798373f",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__03_left.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__03_left.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "51634958dbc73585e827327831a782dd6f60c391851542264d8ef194ffd6d1a4",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 3,
+            "name": "left",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__03_left.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__03_left.png",
+              "sha256": "c441baf7d9b6f7f9d2f0bf0421d60b403a652562b15bc631dd5f978f8798373f"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "a189b50121bfe949147b30c0c01036d0c0a9179fed8da281b5e57b9d922ea89d",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__04_up.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__04_up.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "d335077b45a82e6b3bedf2f85f18453282ffb868154a85cf6ac524329383e361",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 4,
+            "name": "up",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__04_up.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__04_up.png",
+              "sha256": "a189b50121bfe949147b30c0c01036d0c0a9179fed8da281b5e57b9d922ea89d"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "b27013fcd7b68ce459613054c4c74ba2123942465a95820f51fe731810a51f9f",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__05_down.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__05_down.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "76d10e8929640a9264fd487d9c17da4ce18836bd2a64946d68f5628870630bbc",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 5,
+            "name": "down",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__05_down.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__05_down.png",
+              "sha256": "b27013fcd7b68ce459613054c4c74ba2123942465a95820f51fe731810a51f9f"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "7db2f2803a66cc59948120573d2d8d32b708f428ad62f8274c1df1b58d1cfdb1",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__06_corner_right_up_front.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__06_corner_right_up_front.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "f96d0110e1bf6febc5ae8803501e7e238f061a65bf6a525efee59c35ffc2b81e",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 6,
+            "name": "corner_right_up_front",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__06_corner_right_up_front.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__06_corner_right_up_front.png",
+              "sha256": "7db2f2803a66cc59948120573d2d8d32b708f428ad62f8274c1df1b58d1cfdb1"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "26d32a117dc76dd913128900a0adccaced29b4078a77fba6a406b95221cc530e",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__07_corner_right_up_back.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__07_corner_right_up_back.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "acc37926fe3968639bb468c0e16717de834fe4ed9214e45546f7c0e379f700f6",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 7,
+            "name": "corner_right_up_back",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__07_corner_right_up_back.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__07_corner_right_up_back.png",
+              "sha256": "26d32a117dc76dd913128900a0adccaced29b4078a77fba6a406b95221cc530e"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "7b0664d7cb59e1614f9099e1f8a1262ff4465efc0786b2f036798699939305e0",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__08_corner_left_up_back.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__08_corner_left_up_back.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "d00423247a05da062031a1440ffa9131c51ff3679199335dbbf2d819e00e7df7",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 8,
+            "name": "corner_left_up_back",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__08_corner_left_up_back.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__08_corner_left_up_back.png",
+              "sha256": "7b0664d7cb59e1614f9099e1f8a1262ff4465efc0786b2f036798699939305e0"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "0030bdadc9ddabf2eed33db89109480ab635552719bac9f55608c330859715ed",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__09_corner_left_up_front.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__09_corner_left_up_front.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "4652f4399caa0556bdda104d5bf700a6e9838fd2460802304eb70531b12955bf",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 9,
+            "name": "corner_left_up_front",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__09_corner_left_up_front.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__09_corner_left_up_front.png",
+              "sha256": "0030bdadc9ddabf2eed33db89109480ab635552719bac9f55608c330859715ed"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "e4c699e63e16eb6759845364d655c43fcede0bfc34f2ab2e5d0b3c472b6f0b61",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__10_corner_right_down_front.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__10_corner_right_down_front.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "544589c9fa07086fbd09afb30a9b0c9ec0ee0d461c2298df2d55eea0d9e245a6",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 10,
+            "name": "corner_right_down_front",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__10_corner_right_down_front.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__10_corner_right_down_front.png",
+              "sha256": "e4c699e63e16eb6759845364d655c43fcede0bfc34f2ab2e5d0b3c472b6f0b61"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "a1dd29b48633b326f71105f1b197d70f815c937ba1c961a9586c0fcc3a95226c",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__11_corner_right_down_back.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__11_corner_right_down_back.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "1544fc4972ddca9bd464a37c681d1f48579686dbb0ce98b29a3241d7d429fcc9",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 11,
+            "name": "corner_right_down_back",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__11_corner_right_down_back.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__11_corner_right_down_back.png",
+              "sha256": "a1dd29b48633b326f71105f1b197d70f815c937ba1c961a9586c0fcc3a95226c"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "c72f6c6df39d698082f2c8d2745f156e5aea6494a99afbd9000999442fa328d6",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__12_corner_left_down_back.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__12_corner_left_down_back.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "e0a993556cd565bcf293cddd6a8ddf5890e944dd8dc9f1a0eeb9521d4243cb78",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 12,
+            "name": "corner_left_down_back",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__12_corner_left_down_back.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__12_corner_left_down_back.png",
+              "sha256": "c72f6c6df39d698082f2c8d2745f156e5aea6494a99afbd9000999442fa328d6"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "a79d909d38bdfbda4b17277af1ee9dbbef622b25f1875b7aa5fce5564979f191",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__13_corner_left_down_front.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__13_corner_left_down_front.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "f4111d7a4d2bcd2b2200ea5112163c97687664ee5f95c216562345cb2eabb03f",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 13,
+            "name": "corner_left_down_front",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__13_corner_left_down_front.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/24f42d6efff54b09a34897f69fa11064/pano_24f42d6efff54b09a34897f69fa11064__nested14_r504_737a5fa1b07a__13_corner_left_down_front.png",
+              "sha256": "a79d909d38bdfbda4b17277af1ee9dbbef622b25f1875b7aa5fce5564979f191"
+            }
+          }
+        ]
+      },
+      "684b940fafd64fd98aef16157c8a96e2": {
+        "pano_depth_evaluation_target": {
+          "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_684b940fafd64fd98aef16157c8a96e2_hallway_5_frame_equirectangular_domain_depth.png",
+          "sha256": "024aaa951dd7433dd3834f32f724b3f06a057a2be7ab4de57bb45182a8832e64"
+        },
+        "pano_rgb": {
+          "manifest_recorded_path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_684b940fafd64fd98aef16157c8a96e2_hallway_5_frame_equirectangular_domain_rgb.png",
+          "resolved_path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_684b940fafd64fd98aef16157c8a96e2_hallway_5_frame_equirectangular_domain_rgb.png",
+          "sha256": "c44768256a828ce217beeca36a98350a01b81fed919a0070e7a68bbda7218826"
+        },
+        "room": "hallway_5",
+        "tangent_views": [
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "b2dab41e45b479dfbd2e1fcefe1124058d93546c8c38b14a87140028784ce846",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__00_front.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__00_front.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "a08631c7677091a2d6b3bfacc1903f003a94d1e08afeebf18c74e787a7d7fe82",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 0,
+            "name": "front",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__00_front.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__00_front.png",
+              "sha256": "b2dab41e45b479dfbd2e1fcefe1124058d93546c8c38b14a87140028784ce846"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "796cb412acb07cb2bdd10aa53ddb75d9834eb9b24b29632060d5c81eb1bb109b",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__01_right.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__01_right.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "ddd86e6d2c70de22df4e5a9cc63569cd217f0dfc99e52d98d176ce8f79706a64",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 1,
+            "name": "right",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__01_right.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__01_right.png",
+              "sha256": "796cb412acb07cb2bdd10aa53ddb75d9834eb9b24b29632060d5c81eb1bb109b"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "fa593333d39a6cfd666e8ac824f1bd46e956ff1fba269a9abbca76feac471584",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__02_back.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__02_back.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "cccbe04815afa2dfe4cc49d8a41dbc08b54520654d43d291e5b16535772ed0a9",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 2,
+            "name": "back",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__02_back.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__02_back.png",
+              "sha256": "fa593333d39a6cfd666e8ac824f1bd46e956ff1fba269a9abbca76feac471584"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "c82745c4414874a37bea30b649d0d6900b2aaefea91e99b8453017f5742f2ca1",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__03_left.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__03_left.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "7006e358a26b5b61e510acb3fb2d2d1523b12551f369fd9f2e76a598f929e17a",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 3,
+            "name": "left",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__03_left.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__03_left.png",
+              "sha256": "c82745c4414874a37bea30b649d0d6900b2aaefea91e99b8453017f5742f2ca1"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "84ce98571f9fc99a82b186af4e4ed7cab406c135f6f355e58211427210da3437",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__04_up.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__04_up.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "cef809c6137f0d923ed5484d38f336ae3d94ad5024042ef9e3f6ab8185ab9007",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 4,
+            "name": "up",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__04_up.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__04_up.png",
+              "sha256": "84ce98571f9fc99a82b186af4e4ed7cab406c135f6f355e58211427210da3437"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "438a0835564cb268d09f7cd216a51343ed89361b8859a89a4b791deff4e30ce6",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__05_down.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__05_down.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "0af95930e9025ff6107dd177344590deee70d91f50f92cabf16ae162e0216d9b",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 5,
+            "name": "down",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__05_down.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__05_down.png",
+              "sha256": "438a0835564cb268d09f7cd216a51343ed89361b8859a89a4b791deff4e30ce6"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "56361620118d92ba32a48274d5c872d636828958c2494aba41d8e35bba8a321f",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__06_corner_right_up_front.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__06_corner_right_up_front.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "58089b448fd87ffc86eaea2438732e70fab94b8ff1e84178b51f508f6a4bf312",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 6,
+            "name": "corner_right_up_front",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__06_corner_right_up_front.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__06_corner_right_up_front.png",
+              "sha256": "56361620118d92ba32a48274d5c872d636828958c2494aba41d8e35bba8a321f"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "4f3ab4b7df1d2a34f9ecfa9778fe4b8f0c6f7084219e9c50e327f0c2a3a23a18",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__07_corner_right_up_back.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__07_corner_right_up_back.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "0daabe96f2e3ca146a0ea21b01dc30365713acc5d69b7747464edb90f82abfe7",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 7,
+            "name": "corner_right_up_back",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__07_corner_right_up_back.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__07_corner_right_up_back.png",
+              "sha256": "4f3ab4b7df1d2a34f9ecfa9778fe4b8f0c6f7084219e9c50e327f0c2a3a23a18"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "f9f5195de99dab6f374bdc0ed4fc788ec72710bb1f0c5f8d8a69ca79a16370fe",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__08_corner_left_up_back.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__08_corner_left_up_back.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "f8c1a9c24bcb65bd229a7f225668fd6685b242afab231fd7e564cffe4b9aacb0",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 8,
+            "name": "corner_left_up_back",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__08_corner_left_up_back.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__08_corner_left_up_back.png",
+              "sha256": "f9f5195de99dab6f374bdc0ed4fc788ec72710bb1f0c5f8d8a69ca79a16370fe"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "299588e6d2862408c6b56377ef11d828a816b30fa7b9093b48f0dee40aaec9ec",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__09_corner_left_up_front.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__09_corner_left_up_front.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "13663637a6a50e0436ba254edeb65cc6ec197062bd21702e50e30d8ae94cb1f9",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 9,
+            "name": "corner_left_up_front",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__09_corner_left_up_front.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__09_corner_left_up_front.png",
+              "sha256": "299588e6d2862408c6b56377ef11d828a816b30fa7b9093b48f0dee40aaec9ec"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "6ba1de12f3bb0af1dcf55949bdeaeecffc105c8e99fa696e6f1d82ef2bf151af",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__10_corner_right_down_front.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__10_corner_right_down_front.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "7ff42f83a220accd0f95e55d7d71ef32860dccc1ae9452678977dad44500cd4a",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 10,
+            "name": "corner_right_down_front",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__10_corner_right_down_front.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__10_corner_right_down_front.png",
+              "sha256": "6ba1de12f3bb0af1dcf55949bdeaeecffc105c8e99fa696e6f1d82ef2bf151af"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "0c63fe9c1da157678bf70519b8e7efa1f294f162cfec858579777a18084aa4f2",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__11_corner_right_down_back.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__11_corner_right_down_back.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "365f92c1f93a5b92b373bcc1d3efb45e93a16fea4d62e9d23b4e4a497fda9c85",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 11,
+            "name": "corner_right_down_back",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__11_corner_right_down_back.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__11_corner_right_down_back.png",
+              "sha256": "0c63fe9c1da157678bf70519b8e7efa1f294f162cfec858579777a18084aa4f2"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "5dc4f4c437a8dab8ef5dc7295834cd22a31c5188c9284dd3b23c34f38a2e25e4",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__12_corner_left_down_back.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__12_corner_left_down_back.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "0e4b46f67e78d7709900b2f241bd852bbb823678b7fe6a13e393c80311314e2b",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 12,
+            "name": "corner_left_down_back",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__12_corner_left_down_back.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__12_corner_left_down_back.png",
+              "sha256": "5dc4f4c437a8dab8ef5dc7295834cd22a31c5188c9284dd3b23c34f38a2e25e4"
+            }
+          },
+          {
+            "da3_cache": {
+              "depth_quantity": "perspective_z_depth_m",
+              "image_sha256": "fa3e7fcd855d13d258e4a19f61cd48b06c631b109c107e938e7a3dc33a0dbf85",
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__13_corner_left_down_front.npz",
+              "model_name": "depth-anything/da3metric-large",
+              "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+              "path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/da3_cache/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__13_corner_left_down_front.npz",
+              "process_res": 504,
+              "provenance_status": "direct_inference",
+              "sha256": "6b5307aa8a6f000edcf461f581501cc172f992d47ee14190c395eeb18d9a56c2",
+              "target_shape": [
+                504,
+                504
+              ]
+            },
+            "index": 13,
+            "name": "corner_left_down_front",
+            "tangent_rgb": {
+              "manifest_recorded_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__13_corner_left_down_front.png",
+              "resolved_path": "/home/bgao491/PriorBIMDA/data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/tangent_rgb/684b940fafd64fd98aef16157c8a96e2/pano_684b940fafd64fd98aef16157c8a96e2__nested14_r504_737a5fa1b07a__13_corner_left_down_front.png",
+              "sha256": "fa3e7fcd855d13d258e4a19f61cd48b06c631b109c107e938e7a3dc33a0dbf85"
+            }
+          }
+        ]
+      }
+    },
+    "photometric_method": "not applicable: all tangent RGB views are deterministic resamplings of the same panorama RGB",
+    "prediction_quantity": "cached tangent perspective z-depth converted to ERP radial range",
+    "status": "verified_formal_manifest",
+    "synchronization_gauge": {
+      "purpose": "prevent view-count changes from introducing an arbitrary global log-scale shift",
+      "regular_plus_tangent": "base-weighted zero mean over the ordered regular contributors, matching the regular-only anchor set",
+      "tangent6_and_tangent14": "base-weighted zero mean over the identical first-six cubemap views"
+    },
+    "tangent_only_supports": {
+      "common_tangent6_tangent14": "valid pano GT intersected with both variants; view-count quality claim",
+      "native": "valid pano GT intersected with each variant's own coverage"
+    },
+    "view_count_ablation": {
+      "tangent14": "all nested14 views",
+      "tangent6": "first six nested14 views; exactly shared cubemap6 geometry"
+    },
+    "weight": "face_centrality**centrality_power * cached_DA3_confidence"
+  },
+  "schema_version": 3,
+  "seed": 42,
+  "selected_pano_files": {
+    "0004591bfdc749a88db196a5d8b345cb/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_0004591bfdc749a88db196a5d8b345cb_office_6_frame_equirectangular_domain_depth.png",
+      "sha256": "1564226b2c71e939ce76d18087336e81f2a6921774d616338753509f70e7c0cd"
+    },
+    "0004591bfdc749a88db196a5d8b345cb/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_0004591bfdc749a88db196a5d8b345cb_office_6_frame_equirectangular_domain_pose.json",
+      "sha256": "82acb7a76813f831b9d539f6dea35801287637d375857fa25a120a412f95c7c9"
+    },
+    "0004591bfdc749a88db196a5d8b345cb/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_0004591bfdc749a88db196a5d8b345cb_office_6_frame_equirectangular_domain_rgb.png",
+      "sha256": "b350ff7a833cf160352ddb25ce1f07c2edc77982f23cfacd54544d60026bfa6f"
+    },
+    "0004591bfdc749a88db196a5d8b345cb/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_0004591bfdc749a88db196a5d8b345cb_office_6_frame_equirectangular_domain_semantic.png",
+      "sha256": "3c434d259c5516152df8defe804b7854f255f8ea1ac8117181d6edd0f779c235"
+    },
+    "00d10d86db1e435081a837ced388375f/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_00d10d86db1e435081a837ced388375f_office_24_frame_equirectangular_domain_depth.png",
+      "sha256": "aab374e75fda3053aef3980eaf7e9d5fab8cf6f7ae5bfe88193c675f31515bf1"
+    },
+    "00d10d86db1e435081a837ced388375f/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_00d10d86db1e435081a837ced388375f_office_24_frame_equirectangular_domain_pose.json",
+      "sha256": "13b91408c84d4e3e11309025f084bbdf645d072421c1a13261964b0aa7a44d8e"
+    },
+    "00d10d86db1e435081a837ced388375f/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_00d10d86db1e435081a837ced388375f_office_24_frame_equirectangular_domain_rgb.png",
+      "sha256": "ce3c9ed304df10dfad7733de0173b7b6756915f55c7239a3f572c0d2fcd5653d"
+    },
+    "00d10d86db1e435081a837ced388375f/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_00d10d86db1e435081a837ced388375f_office_24_frame_equirectangular_domain_semantic.png",
+      "sha256": "d6707fdb6c5e25bd510bf5ff56df337270fcabc085b62affb0bf377c3d5a7010"
+    },
+    "042fab82b3a94af9bea3c80984bc2583/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_042fab82b3a94af9bea3c80984bc2583_hallway_2_frame_equirectangular_domain_depth.png",
+      "sha256": "c556882c923d54668ad6ac0b3739e33f510e05d2cf8feea99100627181bcbd23"
+    },
+    "042fab82b3a94af9bea3c80984bc2583/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_042fab82b3a94af9bea3c80984bc2583_hallway_2_frame_equirectangular_domain_pose.json",
+      "sha256": "7dc5d9b98ade68b313a25c8bcf19505e870b5ae27a85b65142548f49361c3e6c"
+    },
+    "042fab82b3a94af9bea3c80984bc2583/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_042fab82b3a94af9bea3c80984bc2583_hallway_2_frame_equirectangular_domain_rgb.png",
+      "sha256": "5397c408924358f3d51a94aa92f9b9cdab9bd157b2d0f0820c5ddc6719ad9d9c"
+    },
+    "042fab82b3a94af9bea3c80984bc2583/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_042fab82b3a94af9bea3c80984bc2583_hallway_2_frame_equirectangular_domain_semantic.png",
+      "sha256": "37fb97dfd735c216d9ab1d7086ed0ab11fbd0b388bbd7dd24dd03fefce9ddf48"
+    },
+    "0cf489f7d9fe412bbe9f64ab7f5cc0fb/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_0cf489f7d9fe412bbe9f64ab7f5cc0fb_office_28_frame_equirectangular_domain_depth.png",
+      "sha256": "d41b3b85fadd2a708761338c821ce86fcff703c678999a004de3253754c36c04"
+    },
+    "0cf489f7d9fe412bbe9f64ab7f5cc0fb/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_0cf489f7d9fe412bbe9f64ab7f5cc0fb_office_28_frame_equirectangular_domain_pose.json",
+      "sha256": "57931a69d2041dc0dd7881e0d08164b3ef9fd8e8773b211b1dffd38088816d0c"
+    },
+    "0cf489f7d9fe412bbe9f64ab7f5cc0fb/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_0cf489f7d9fe412bbe9f64ab7f5cc0fb_office_28_frame_equirectangular_domain_rgb.png",
+      "sha256": "fc082e5b331877de5adb0a58908cf5d6c71b807c4f14a35ecd21b091d202657d"
+    },
+    "0cf489f7d9fe412bbe9f64ab7f5cc0fb/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_0cf489f7d9fe412bbe9f64ab7f5cc0fb_office_28_frame_equirectangular_domain_semantic.png",
+      "sha256": "6dedbd0bcbfc3f6755b2e17319ed0074030b66728b1c0ca37f41689a6b6aaefd"
+    },
+    "1ec8ed7b336844ff9d8edff0e32ed850/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_1ec8ed7b336844ff9d8edff0e32ed850_hallway_5_frame_equirectangular_domain_depth.png",
+      "sha256": "e628d5dd7ec77e3e90f774b383c8dc7ad0646e0d72e124a5cd98bf302e244991"
+    },
+    "1ec8ed7b336844ff9d8edff0e32ed850/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_1ec8ed7b336844ff9d8edff0e32ed850_hallway_5_frame_equirectangular_domain_pose.json",
+      "sha256": "e13911c8a76489efd6379da9a11854ad35bde3124d55d4cc4b450507f600f731"
+    },
+    "1ec8ed7b336844ff9d8edff0e32ed850/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_1ec8ed7b336844ff9d8edff0e32ed850_hallway_5_frame_equirectangular_domain_rgb.png",
+      "sha256": "e1a1591eb70f5c8a55ed7c776b6683aafd439010eccba564905415956ec32eaf"
+    },
+    "1ec8ed7b336844ff9d8edff0e32ed850/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_1ec8ed7b336844ff9d8edff0e32ed850_hallway_5_frame_equirectangular_domain_semantic.png",
+      "sha256": "a6ee6d8e1ec962435b0f9d3ebc7449e5b53dba202a94d4fb9f450c4c7c09376a"
+    },
+    "208aa93cc6b342e5806026f0f6f34110/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_208aa93cc6b342e5806026f0f6f34110_office_28_frame_equirectangular_domain_depth.png",
+      "sha256": "f9dceb9fb97cca109bade5b2f1419ca69a182131ef0d13db7ca501f131302202"
+    },
+    "208aa93cc6b342e5806026f0f6f34110/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_208aa93cc6b342e5806026f0f6f34110_office_28_frame_equirectangular_domain_pose.json",
+      "sha256": "ef1b7ef4f88fa16e1c9a38d883fac5e4e3a643a4579cda9791f54a1161ea9e0e"
+    },
+    "208aa93cc6b342e5806026f0f6f34110/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_208aa93cc6b342e5806026f0f6f34110_office_28_frame_equirectangular_domain_rgb.png",
+      "sha256": "d815c3347de56129515d5ac6aaaf19b171bae45e2e0236d3c1ce723d4c00d85e"
+    },
+    "208aa93cc6b342e5806026f0f6f34110/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_208aa93cc6b342e5806026f0f6f34110_office_28_frame_equirectangular_domain_semantic.png",
+      "sha256": "c019d8a34862fd3d0271c97f59b706489870fe585b08aee25b60383cc1710852"
+    },
+    "2439b3f7bc184152bf89e6012a511aa6/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_2439b3f7bc184152bf89e6012a511aa6_office_6_frame_equirectangular_domain_depth.png",
+      "sha256": "0661b6847bde1a12c040f8b082d02b5596041cbc92ca2bb2e061bb952286f708"
+    },
+    "2439b3f7bc184152bf89e6012a511aa6/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_2439b3f7bc184152bf89e6012a511aa6_office_6_frame_equirectangular_domain_pose.json",
+      "sha256": "5a864157dd10a38fb88d70ad0e163f73095bc8e1626f819f01cfb707acc7b07b"
+    },
+    "2439b3f7bc184152bf89e6012a511aa6/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_2439b3f7bc184152bf89e6012a511aa6_office_6_frame_equirectangular_domain_rgb.png",
+      "sha256": "48b7a0f70cf56e8cad9a09b7f9f262a994bab456ef87835b48686a3191cebec3"
+    },
+    "2439b3f7bc184152bf89e6012a511aa6/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_2439b3f7bc184152bf89e6012a511aa6_office_6_frame_equirectangular_domain_semantic.png",
+      "sha256": "bd96185d65535b0528c58961f1464b01dae309bb5e7244fcf8b8ca99d4ebd3a6"
+    },
+    "2679368bf8354598abff5d47c38cfcdd/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_2679368bf8354598abff5d47c38cfcdd_office_14_frame_equirectangular_domain_depth.png",
+      "sha256": "20c239ef455e931e32210df74ae4ca377d03835824fe0ff212809f036fd0514a"
+    },
+    "2679368bf8354598abff5d47c38cfcdd/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_2679368bf8354598abff5d47c38cfcdd_office_14_frame_equirectangular_domain_pose.json",
+      "sha256": "5badc40851ea2860ee705d5835ba67fe5ccd6dad608eb139e7f5459ba3dfa3b7"
+    },
+    "2679368bf8354598abff5d47c38cfcdd/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_2679368bf8354598abff5d47c38cfcdd_office_14_frame_equirectangular_domain_rgb.png",
+      "sha256": "d7c78c65a27e3ee6071aa54ef4072e99194a2eeb3d4b324c05caee546a22d8a6"
+    },
+    "2679368bf8354598abff5d47c38cfcdd/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_2679368bf8354598abff5d47c38cfcdd_office_14_frame_equirectangular_domain_semantic.png",
+      "sha256": "f16c0234b4b911b52b5ca40179aecf1afdf86f22e2e30edccd4a87ded9fb970c"
+    },
+    "2fb7a2dcf8004578a541ee750dda0ed6/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_2fb7a2dcf8004578a541ee750dda0ed6_hallway_2_frame_equirectangular_domain_depth.png",
+      "sha256": "1a1f69cfab4321962ae924d0ff45f513606e5a225f2c21777b1b5ff4940236fc"
+    },
+    "2fb7a2dcf8004578a541ee750dda0ed6/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_2fb7a2dcf8004578a541ee750dda0ed6_hallway_2_frame_equirectangular_domain_pose.json",
+      "sha256": "7e299dc529a2f878920ab4e73dcaf90e5a9f2ff9b68bd0be045ddf1274958b3b"
+    },
+    "2fb7a2dcf8004578a541ee750dda0ed6/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_2fb7a2dcf8004578a541ee750dda0ed6_hallway_2_frame_equirectangular_domain_rgb.png",
+      "sha256": "374a9a3971e92b3d5c4fe6c2f22df5cec195afa1da9a2dd890e1a600d46a3d32"
+    },
+    "2fb7a2dcf8004578a541ee750dda0ed6/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_2fb7a2dcf8004578a541ee750dda0ed6_hallway_2_frame_equirectangular_domain_semantic.png",
+      "sha256": "d30fc58826a47cbdc85929c4b839c90bc3f6a18de3a53b80d77f27e5a336582d"
+    },
+    "335899b8d3ba4526a3c3b2a7b7380de5/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_335899b8d3ba4526a3c3b2a7b7380de5_office_31_frame_equirectangular_domain_depth.png",
+      "sha256": "6296a04d80eb57ab6d769d37ba06f4e0abfe8ba385d977174f2153499f8440bf"
+    },
+    "335899b8d3ba4526a3c3b2a7b7380de5/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_335899b8d3ba4526a3c3b2a7b7380de5_office_31_frame_equirectangular_domain_pose.json",
+      "sha256": "2c80749101a4601256b4836634df5ee4b427e1222912a97b00feddcc8d91bac0"
+    },
+    "335899b8d3ba4526a3c3b2a7b7380de5/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_335899b8d3ba4526a3c3b2a7b7380de5_office_31_frame_equirectangular_domain_rgb.png",
+      "sha256": "9067ad7a892e88da0dee6530fe0e44975e69677dd5a70fa188a32b5d79d18948"
+    },
+    "335899b8d3ba4526a3c3b2a7b7380de5/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_335899b8d3ba4526a3c3b2a7b7380de5_office_31_frame_equirectangular_domain_semantic.png",
+      "sha256": "9236b042d4f9bc00eeef772a0a22179234846bb0470f2b75a7b5fca1a0c4d0d4"
+    },
+    "4a41b27118ac4c6aad24f60a04f3a559/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_4a41b27118ac4c6aad24f60a04f3a559_office_31_frame_equirectangular_domain_depth.png",
+      "sha256": "f8e18cb1aec8eb661616a4dc29c9454304bf2de51ab665b8b2280c99e525bd27"
+    },
+    "4a41b27118ac4c6aad24f60a04f3a559/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_4a41b27118ac4c6aad24f60a04f3a559_office_31_frame_equirectangular_domain_pose.json",
+      "sha256": "699b006faa48b465223c53260d760fc798537bff0b0c26f3347d3bd2efd39eae"
+    },
+    "4a41b27118ac4c6aad24f60a04f3a559/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_4a41b27118ac4c6aad24f60a04f3a559_office_31_frame_equirectangular_domain_rgb.png",
+      "sha256": "56ba0887a2cc649a4df2224abaac51137baaeae8b6d5603be3aa5dd7288b86fe"
+    },
+    "4a41b27118ac4c6aad24f60a04f3a559/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_4a41b27118ac4c6aad24f60a04f3a559_office_31_frame_equirectangular_domain_semantic.png",
+      "sha256": "b18d9c40e352809143a57bf179a9d8e2f24d6b838da972a506d4eb943accd759"
+    },
+    "4bae4264d885478d9c280932a1e9ecdd/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_4bae4264d885478d9c280932a1e9ecdd_office_24_frame_equirectangular_domain_depth.png",
+      "sha256": "6e4e479db67b085efcd61c7ad653c168a640026e9457154df662267f877e6b58"
+    },
+    "4bae4264d885478d9c280932a1e9ecdd/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_4bae4264d885478d9c280932a1e9ecdd_office_24_frame_equirectangular_domain_pose.json",
+      "sha256": "c3d7b763ec325141c964f0c75b3ec01b98022057d48c10b00a1e2da7f0c35897"
+    },
+    "4bae4264d885478d9c280932a1e9ecdd/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_4bae4264d885478d9c280932a1e9ecdd_office_24_frame_equirectangular_domain_rgb.png",
+      "sha256": "2554399641ad050927967da1247f792791c8419ea492ad0f48ae450458d0b58d"
+    },
+    "4bae4264d885478d9c280932a1e9ecdd/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_4bae4264d885478d9c280932a1e9ecdd_office_24_frame_equirectangular_domain_semantic.png",
+      "sha256": "582d310fb8fd5a4a70ea6a01f51bd43fa79261277a97921fe79b73be90970f37"
+    },
+    "5cb8151c7baf4f54aa1c89a45624b07b/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_5cb8151c7baf4f54aa1c89a45624b07b_office_31_frame_equirectangular_domain_depth.png",
+      "sha256": "35017327e055c993fe5ac7446a325621f06d264cdea2d89a36c068c4570db324"
+    },
+    "5cb8151c7baf4f54aa1c89a45624b07b/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_5cb8151c7baf4f54aa1c89a45624b07b_office_31_frame_equirectangular_domain_pose.json",
+      "sha256": "984422256f475c20facc4a875ff8a70f3828557edd47b942c51b740decc9d028"
+    },
+    "5cb8151c7baf4f54aa1c89a45624b07b/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_5cb8151c7baf4f54aa1c89a45624b07b_office_31_frame_equirectangular_domain_rgb.png",
+      "sha256": "13ed2522208cbdc724aa12e5f01df1e8b38c64023da39642cacc190e0cb09ec7"
+    },
+    "5cb8151c7baf4f54aa1c89a45624b07b/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_5cb8151c7baf4f54aa1c89a45624b07b_office_31_frame_equirectangular_domain_semantic.png",
+      "sha256": "34d45786a79ecb26de0b401cb74a220504e55cd63f2720e8da001a31d15f0432"
+    },
+    "613d201e991744799556e737bdb89c89/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_613d201e991744799556e737bdb89c89_office_31_frame_equirectangular_domain_depth.png",
+      "sha256": "c6d1224781846484f816ae139e40ed55537c67964dcc49615d05ed7a149fb66c"
+    },
+    "613d201e991744799556e737bdb89c89/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_613d201e991744799556e737bdb89c89_office_31_frame_equirectangular_domain_pose.json",
+      "sha256": "406b0bf4e52476dada3ae14d6dc0cf464044bf761878c07bffbd9ee829aa5859"
+    },
+    "613d201e991744799556e737bdb89c89/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_613d201e991744799556e737bdb89c89_office_31_frame_equirectangular_domain_rgb.png",
+      "sha256": "ce05e2a9f2c9dd719b99491aaad1a4f53e7ebfff103afa63af683de32cbca7dd"
+    },
+    "613d201e991744799556e737bdb89c89/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_613d201e991744799556e737bdb89c89_office_31_frame_equirectangular_domain_semantic.png",
+      "sha256": "761d5dac4e51e4def6f44e38a5e2ed16c529a2fd8fba8f472d3c44cbf64db3b4"
+    },
+    "61cd01735f12449180dccb65232acd8c/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_61cd01735f12449180dccb65232acd8c_office_31_frame_equirectangular_domain_depth.png",
+      "sha256": "8f9775db46a5d6ebbbc3fa85b73ba38f2fad6120a9aea2fd26d6e5b246bc8129"
+    },
+    "61cd01735f12449180dccb65232acd8c/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_61cd01735f12449180dccb65232acd8c_office_31_frame_equirectangular_domain_pose.json",
+      "sha256": "b7ef094da76cee6536ffedc80d85953bda5fd8be0e41598c0b78ea9938b65ad9"
+    },
+    "61cd01735f12449180dccb65232acd8c/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_61cd01735f12449180dccb65232acd8c_office_31_frame_equirectangular_domain_rgb.png",
+      "sha256": "bfe716ec84e498ade3c72795dc9f6407ccd158470c2db5a439792b4f05a05ce2"
+    },
+    "61cd01735f12449180dccb65232acd8c/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_61cd01735f12449180dccb65232acd8c_office_31_frame_equirectangular_domain_semantic.png",
+      "sha256": "2e9e4098527118512818c5bc4d798d73a584475e3bdeca42a9595605ae270654"
+    },
+    "6922fce99b0a4f9da148f76a8d57c089/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_6922fce99b0a4f9da148f76a8d57c089_hallway_5_frame_equirectangular_domain_depth.png",
+      "sha256": "8264a316c673a221fcb8adb6a89e4b218609230638616723d29327c288bfaaee"
+    },
+    "6922fce99b0a4f9da148f76a8d57c089/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_6922fce99b0a4f9da148f76a8d57c089_hallway_5_frame_equirectangular_domain_pose.json",
+      "sha256": "785753c68d80228a16927a3d3282d98c811f50c0b4d26ffb26a21712bf778214"
+    },
+    "6922fce99b0a4f9da148f76a8d57c089/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_6922fce99b0a4f9da148f76a8d57c089_hallway_5_frame_equirectangular_domain_rgb.png",
+      "sha256": "fcc726cc1bf1c9031f0a7bbb762177dcc53091fc11e2d51285035a4a56b102a9"
+    },
+    "6922fce99b0a4f9da148f76a8d57c089/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_6922fce99b0a4f9da148f76a8d57c089_hallway_5_frame_equirectangular_domain_semantic.png",
+      "sha256": "020ee4693188d392366dd8d1d812517f0889d012205b0c5b3540b33fc976c38b"
+    },
+    "75361aff0171457b964ad17a696d1fef/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_75361aff0171457b964ad17a696d1fef_office_31_frame_equirectangular_domain_depth.png",
+      "sha256": "674641596800b0c10e8cf7e3dbec6e4e41c40498e8f6e6aeb54c3735e4d49d6a"
+    },
+    "75361aff0171457b964ad17a696d1fef/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_75361aff0171457b964ad17a696d1fef_office_31_frame_equirectangular_domain_pose.json",
+      "sha256": "fa05a7a0208a5671c74a4358b473711b2a2e768a7d97305aa47094e733932924"
+    },
+    "75361aff0171457b964ad17a696d1fef/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_75361aff0171457b964ad17a696d1fef_office_31_frame_equirectangular_domain_rgb.png",
+      "sha256": "9b8ffa6bc459dfba0e9e53c6ec68e2b12126cdcd8a7666f33ce7b6f484790be0"
+    },
+    "75361aff0171457b964ad17a696d1fef/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_75361aff0171457b964ad17a696d1fef_office_31_frame_equirectangular_domain_semantic.png",
+      "sha256": "bf6fecbd40f99d8e9ad28d816d0f7b9a953667e6852414595bc96482ae9ae4b8"
+    },
+    "7b74e08d4ec04383b737b5f5b166f5d7/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_7b74e08d4ec04383b737b5f5b166f5d7_office_31_frame_equirectangular_domain_depth.png",
+      "sha256": "2bc1f2e5a6a16a8039660eccb10fd15064115e137b0e595965c7deab3a84300f"
+    },
+    "7b74e08d4ec04383b737b5f5b166f5d7/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_7b74e08d4ec04383b737b5f5b166f5d7_office_31_frame_equirectangular_domain_pose.json",
+      "sha256": "2b6617a49e67bb33c3f1fd48f22194322511d6a76d2b3a7795a370fb7720de1b"
+    },
+    "7b74e08d4ec04383b737b5f5b166f5d7/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_7b74e08d4ec04383b737b5f5b166f5d7_office_31_frame_equirectangular_domain_rgb.png",
+      "sha256": "436df14113c07753778b3fb81b7cb87e67ad0da104bf6e4a3f13a27231dfd111"
+    },
+    "7b74e08d4ec04383b737b5f5b166f5d7/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_7b74e08d4ec04383b737b5f5b166f5d7_office_31_frame_equirectangular_domain_semantic.png",
+      "sha256": "b954ee2119a0355d0e4cc7b22e49d008015ac5c7acc728ec06edbae7d762763a"
+    },
+    "9084f217cb10409bb1ec15e8fa1f7299/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_9084f217cb10409bb1ec15e8fa1f7299_office_31_frame_equirectangular_domain_depth.png",
+      "sha256": "de8a471e70cd370ea7a677d45248a37cd43ced15158e00f6568be3d8263a3c0b"
+    },
+    "9084f217cb10409bb1ec15e8fa1f7299/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_9084f217cb10409bb1ec15e8fa1f7299_office_31_frame_equirectangular_domain_pose.json",
+      "sha256": "1215710dbb8f7727c174e11bf1f22d9faef892805889be6e231526f87f7ed333"
+    },
+    "9084f217cb10409bb1ec15e8fa1f7299/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_9084f217cb10409bb1ec15e8fa1f7299_office_31_frame_equirectangular_domain_rgb.png",
+      "sha256": "12f19896707f3734b54c9b581ebab9e5415ebfde537cac8de1fed92263d25740"
+    },
+    "9084f217cb10409bb1ec15e8fa1f7299/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_9084f217cb10409bb1ec15e8fa1f7299_office_31_frame_equirectangular_domain_semantic.png",
+      "sha256": "b7209acccb973c5c306b0301db09a99d2eb07fea51270bc9e67afbacfa7b57c3"
+    },
+    "95fab66e5ca643cc97aaab4647f145e3/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_95fab66e5ca643cc97aaab4647f145e3_hallway_5_frame_equirectangular_domain_depth.png",
+      "sha256": "0e66203e1800af805feb563df9c80dcf25707d3e47f78b350d8f216b9f56f0a0"
+    },
+    "95fab66e5ca643cc97aaab4647f145e3/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_95fab66e5ca643cc97aaab4647f145e3_hallway_5_frame_equirectangular_domain_pose.json",
+      "sha256": "bf3b67199fc2d0973ee0e680550688b972dc705f32d3b55181bcfb1aa33b61a0"
+    },
+    "95fab66e5ca643cc97aaab4647f145e3/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_95fab66e5ca643cc97aaab4647f145e3_hallway_5_frame_equirectangular_domain_rgb.png",
+      "sha256": "d2584cdea46061ba786083c2f7dfa38dfe58ac073f7457982087aacacfb2d803"
+    },
+    "95fab66e5ca643cc97aaab4647f145e3/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_95fab66e5ca643cc97aaab4647f145e3_hallway_5_frame_equirectangular_domain_semantic.png",
+      "sha256": "7cf33d8805bd9bd7ef8516321764071994c7d88599cee3ad8579caef4ace03fe"
+    },
+    "a77fba57be66411c908077c69d803797/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_a77fba57be66411c908077c69d803797_office_31_frame_equirectangular_domain_depth.png",
+      "sha256": "b0daee254a7b6999d99474ff8b2c576b2dedda6b825064fed3bf1c8922b574f5"
+    },
+    "a77fba57be66411c908077c69d803797/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_a77fba57be66411c908077c69d803797_office_31_frame_equirectangular_domain_pose.json",
+      "sha256": "ecff7f04f0e7885a461103ad6cc3b52a996c93409f82f3f9c25eb5557ea6f2ad"
+    },
+    "a77fba57be66411c908077c69d803797/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_a77fba57be66411c908077c69d803797_office_31_frame_equirectangular_domain_rgb.png",
+      "sha256": "060c749d07d1a99b5db9b4663b557f334c4fc728bbd8741efe87d211285a0c27"
+    },
+    "a77fba57be66411c908077c69d803797/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_a77fba57be66411c908077c69d803797_office_31_frame_equirectangular_domain_semantic.png",
+      "sha256": "2004edf3d36e9340524b6dcada4a1590be0f6be8929c30e617ebe5d47e06de9e"
+    },
+    "b3377659e8c9434daa75ed42fd56eb09/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_b3377659e8c9434daa75ed42fd56eb09_office_31_frame_equirectangular_domain_depth.png",
+      "sha256": "0bde4c4d7bbe139e63cdc6f699b617b73f4486e23d9070191993ab7f58eae105"
+    },
+    "b3377659e8c9434daa75ed42fd56eb09/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_b3377659e8c9434daa75ed42fd56eb09_office_31_frame_equirectangular_domain_pose.json",
+      "sha256": "57573cb3bb87489cbe5f720b797dcb3011e39a7d3eea30af5c78693e6af66985"
+    },
+    "b3377659e8c9434daa75ed42fd56eb09/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_b3377659e8c9434daa75ed42fd56eb09_office_31_frame_equirectangular_domain_rgb.png",
+      "sha256": "4b50df00265f784432c04eb85df396194e5f63971defe6647318a33950fd545d"
+    },
+    "b3377659e8c9434daa75ed42fd56eb09/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_b3377659e8c9434daa75ed42fd56eb09_office_31_frame_equirectangular_domain_semantic.png",
+      "sha256": "5bd334abd61d6ab364b8fe60df7081ae0abb2f501f43698a030a6f8a0144beae"
+    },
+    "c116e049d9c24baaa3cc01d88d48a5fa/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_c116e049d9c24baaa3cc01d88d48a5fa_office_28_frame_equirectangular_domain_depth.png",
+      "sha256": "4623ea47265ed7148beff0638198c1746ee732767825f17611c5945a5a770b9a"
+    },
+    "c116e049d9c24baaa3cc01d88d48a5fa/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_c116e049d9c24baaa3cc01d88d48a5fa_office_28_frame_equirectangular_domain_pose.json",
+      "sha256": "1fbce6f0d86c0e026b4e84d7e3b96a1a83598c34cda358b6f3eb1adc36d7ec96"
+    },
+    "c116e049d9c24baaa3cc01d88d48a5fa/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_c116e049d9c24baaa3cc01d88d48a5fa_office_28_frame_equirectangular_domain_rgb.png",
+      "sha256": "327a8bcd3859c3d2bf0c7dbde0fa1617c8e61dd4437e437ebf38432e2dcfc23a"
+    },
+    "c116e049d9c24baaa3cc01d88d48a5fa/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_c116e049d9c24baaa3cc01d88d48a5fa_office_28_frame_equirectangular_domain_semantic.png",
+      "sha256": "52066bbfd239afda29848ba55bdb36fad9717bb30029a53db9805e3846d51e92"
+    },
+    "c40ca55cdb2640a1a71871ea97856427/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_c40ca55cdb2640a1a71871ea97856427_office_31_frame_equirectangular_domain_depth.png",
+      "sha256": "2e6628254efc20a0a52ea71ec46572ed536a1b15c1f19614ce1308cd133a9b65"
+    },
+    "c40ca55cdb2640a1a71871ea97856427/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_c40ca55cdb2640a1a71871ea97856427_office_31_frame_equirectangular_domain_pose.json",
+      "sha256": "f76cd6b94ec8ff18b03d8db9d64b96b892850915ebe2253e2c50e75b8907252a"
+    },
+    "c40ca55cdb2640a1a71871ea97856427/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_c40ca55cdb2640a1a71871ea97856427_office_31_frame_equirectangular_domain_rgb.png",
+      "sha256": "b52b1dd843f2c9454b1afdf6bd3d88f8b4b7f777360768fe07b3e7fc529644f0"
+    },
+    "c40ca55cdb2640a1a71871ea97856427/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_c40ca55cdb2640a1a71871ea97856427_office_31_frame_equirectangular_domain_semantic.png",
+      "sha256": "1a7539b4c66b9c32135bfb3b78d0ba1a19fb82d04a0048125dea3402a25ed934"
+    },
+    "c6655e566bca4de983fc3affab814587/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_c6655e566bca4de983fc3affab814587_hallway_2_frame_equirectangular_domain_depth.png",
+      "sha256": "673005482181a9564c988694e6ab15b5d707195090e8805a4466660e833b839d"
+    },
+    "c6655e566bca4de983fc3affab814587/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_c6655e566bca4de983fc3affab814587_hallway_2_frame_equirectangular_domain_pose.json",
+      "sha256": "62c81fb2c79fe47831ae4deec425c9c6d4b9700b4b00086a116b8c06e06896da"
+    },
+    "c6655e566bca4de983fc3affab814587/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_c6655e566bca4de983fc3affab814587_hallway_2_frame_equirectangular_domain_rgb.png",
+      "sha256": "d58ddb687ee48e9b2112a096b2fb6cb15d65800b7a494ee5e797896576f16595"
+    },
+    "c6655e566bca4de983fc3affab814587/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_c6655e566bca4de983fc3affab814587_hallway_2_frame_equirectangular_domain_semantic.png",
+      "sha256": "87682e9c62e3c57610442d53c5dad0f6f2652af1e6d5d41fcf877b1fc18fae92"
+    },
+    "cfe68c10e7bf43d9b66ab2356eccec62/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_cfe68c10e7bf43d9b66ab2356eccec62_office_14_frame_equirectangular_domain_depth.png",
+      "sha256": "71a960ff8ede29ef0f00fcd3fba1aedc06fc7e24b8c863f8f019281fa756ebc9"
+    },
+    "cfe68c10e7bf43d9b66ab2356eccec62/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_cfe68c10e7bf43d9b66ab2356eccec62_office_14_frame_equirectangular_domain_pose.json",
+      "sha256": "0dcc9c819c510711edd48a6dc5d0d88a65b5d7129f2828857c39c564f28f2070"
+    },
+    "cfe68c10e7bf43d9b66ab2356eccec62/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_cfe68c10e7bf43d9b66ab2356eccec62_office_14_frame_equirectangular_domain_rgb.png",
+      "sha256": "f8f303c5afbdbabe90554a1c6a05e3ff47e1518c9d2b2037a6a977fbbeb5217b"
+    },
+    "cfe68c10e7bf43d9b66ab2356eccec62/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_cfe68c10e7bf43d9b66ab2356eccec62_office_14_frame_equirectangular_domain_semantic.png",
+      "sha256": "fea118829452e48526dc7522f9fc4d5fbe21acca518fefca7d6a942f0ab46722"
+    },
+    "da4629d565a3435fb701f56f46005a66/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_da4629d565a3435fb701f56f46005a66_office_31_frame_equirectangular_domain_depth.png",
+      "sha256": "a6cf236921a0e7ed208e4f4e327300085aea0d4bfd82ba913113ac6adc69f3ea"
+    },
+    "da4629d565a3435fb701f56f46005a66/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_da4629d565a3435fb701f56f46005a66_office_31_frame_equirectangular_domain_pose.json",
+      "sha256": "408900626bf4d93098e5d21ccaf2d2c6f42852fcddf36169ad058e1bd8225b70"
+    },
+    "da4629d565a3435fb701f56f46005a66/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_da4629d565a3435fb701f56f46005a66_office_31_frame_equirectangular_domain_rgb.png",
+      "sha256": "d321ea8c8ec3eb8ca4b930c53769bd6e9ab03001404afc672ac662ce7b67c1cf"
+    },
+    "da4629d565a3435fb701f56f46005a66/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_da4629d565a3435fb701f56f46005a66_office_31_frame_equirectangular_domain_semantic.png",
+      "sha256": "65c39d3dc7a23222a24c1dc325b222c026eed56a8ea234574e1a00e374019410"
+    },
+    "ebf135a2826f44c5972b2ad48c26e4d1/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_ebf135a2826f44c5972b2ad48c26e4d1_office_24_frame_equirectangular_domain_depth.png",
+      "sha256": "8ad3c36cb76b570e00798eaa38e141c4ad2f0034649469ee322264ae8f65bed3"
+    },
+    "ebf135a2826f44c5972b2ad48c26e4d1/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_ebf135a2826f44c5972b2ad48c26e4d1_office_24_frame_equirectangular_domain_pose.json",
+      "sha256": "d9b71e1837c9275b2fb6c95d651eb60882eaeaeab1e2a28f3b1b7e45d37dd13b"
+    },
+    "ebf135a2826f44c5972b2ad48c26e4d1/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_ebf135a2826f44c5972b2ad48c26e4d1_office_24_frame_equirectangular_domain_rgb.png",
+      "sha256": "86ff50ae69044ee1e7de4291eaa6add6e52b0bc4c7bf8360a2c46e7c268a2639"
+    },
+    "ebf135a2826f44c5972b2ad48c26e4d1/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_ebf135a2826f44c5972b2ad48c26e4d1_office_24_frame_equirectangular_domain_semantic.png",
+      "sha256": "655048b27d4aa60936d7b28fb833d0f8e5e5c07d8153b9b8c77b6cf8fd7b2c94"
+    },
+    "ecf7fb476c2444e4bcd61d8f859ce93e/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_ecf7fb476c2444e4bcd61d8f859ce93e_office_31_frame_equirectangular_domain_depth.png",
+      "sha256": "2961aba4ed670b902dda4455744b53487c1b4176be195122faa262c570b987c9"
+    },
+    "ecf7fb476c2444e4bcd61d8f859ce93e/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_ecf7fb476c2444e4bcd61d8f859ce93e_office_31_frame_equirectangular_domain_pose.json",
+      "sha256": "01e94388cb9ff01962ee6bdd6dbc30d1c18d949e6f83a5f289d852565f93e269"
+    },
+    "ecf7fb476c2444e4bcd61d8f859ce93e/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_ecf7fb476c2444e4bcd61d8f859ce93e_office_31_frame_equirectangular_domain_rgb.png",
+      "sha256": "a6f995c57fefd6b29838af43692ca5736f3a0b05dbb09b201270e0f527257ad2"
+    },
+    "ecf7fb476c2444e4bcd61d8f859ce93e/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_ecf7fb476c2444e4bcd61d8f859ce93e_office_31_frame_equirectangular_domain_semantic.png",
+      "sha256": "5907b583fadc8c169e9cd9e86679f77059ddf1732013dec5ea0e57f1c7128f2e"
+    },
+    "f4b0a073ae04462f8be38d2ecd0d8f9d/depth": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/depth/camera_f4b0a073ae04462f8be38d2ecd0d8f9d_office_28_frame_equirectangular_domain_depth.png",
+      "sha256": "87615b1ca434ff439268fc382ed0dad1831a2c7084c655bb8c730680c9178927"
+    },
+    "f4b0a073ae04462f8be38d2ecd0d8f9d/pose": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/pose/camera_f4b0a073ae04462f8be38d2ecd0d8f9d_office_28_frame_equirectangular_domain_pose.json",
+      "sha256": "f58dc3a022d23f7fceaeba07418a73eb0f074c57bb1727dd404537087dd69151"
+    },
+    "f4b0a073ae04462f8be38d2ecd0d8f9d/rgb": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/rgb/camera_f4b0a073ae04462f8be38d2ecd0d8f9d_office_28_frame_equirectangular_domain_rgb.png",
+      "sha256": "216032047d22bbf108004d6f5d0c86fd04d9d9eb2da18c282c7758332d96ea55"
+    },
+    "f4b0a073ae04462f8be38d2ecd0d8f9d/semantic": {
+      "path": "/home/bgao491/Stanford2D3DS/no_xyz/area_1/pano/semantic/camera_f4b0a073ae04462f8be38d2ecd0d8f9d_office_28_frame_equirectangular_domain_semantic.png",
+      "sha256": "63d72565dddfcd96700a01de829d01068bce41e6a58bae19f09e32f974ebbc45"
+    }
+  },
+  "shared_geometry_code_identity": {
+    "pano_tangent": {
+      "path": "/home/bgao491/PriorBIMDA/src/bim_priorda3/data/pano_tangent.py",
+      "sha256": "38e66ae31db9ee282176ac4b50dff8258805009e4c32f66a7ecc4af439520035"
+    },
+    "stanford_pano": {
+      "path": "/home/bgao491/PriorBIMDA/src/bim_priorda3/data/stanford_pano.py",
+      "sha256": "cccfd7ea34a5960585490c91d310c1bbbde4d6382f77c7cf465b7ee35ea21f9f"
+    }
+  },
+  "split": "val",
+  "split_annotation": {
+    "path": "/home/bgao491/PriorBIMDA/data/annotations/stanford_area1_room_v1.jsonl",
+    "sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59"
+  },
+  "station_selection": {
+    "all_discovered_pano_stations": 190,
+    "all_paired_pano_stations": 186,
+    "all_pano_only_station_ids": [
+      "1edba7eece574027bab1fa5459fd8cd4",
+      "24f42d6efff54b09a34897f69fa11064",
+      "684b940fafd64fd98aef16157c8a96e2",
+      "e0c041d3b2a94769b1dc86935f983f34"
+    ],
+    "max_stations_ordered_prefix": null,
+    "regular_stations_missing_pano": [],
+    "selected_paired_stations": 30,
+    "selected_station_ids": [
+      "042fab82b3a94af9bea3c80984bc2583",
+      "2fb7a2dcf8004578a541ee750dda0ed6",
+      "c6655e566bca4de983fc3affab814587",
+      "1ec8ed7b336844ff9d8edff0e32ed850",
+      "6922fce99b0a4f9da148f76a8d57c089",
+      "95fab66e5ca643cc97aaab4647f145e3",
+      "2679368bf8354598abff5d47c38cfcdd",
+      "cfe68c10e7bf43d9b66ab2356eccec62",
+      "00d10d86db1e435081a837ced388375f",
+      "4bae4264d885478d9c280932a1e9ecdd",
+      "ebf135a2826f44c5972b2ad48c26e4d1",
+      "0cf489f7d9fe412bbe9f64ab7f5cc0fb",
+      "208aa93cc6b342e5806026f0f6f34110",
+      "c116e049d9c24baaa3cc01d88d48a5fa",
+      "f4b0a073ae04462f8be38d2ecd0d8f9d",
+      "335899b8d3ba4526a3c3b2a7b7380de5",
+      "4a41b27118ac4c6aad24f60a04f3a559",
+      "5cb8151c7baf4f54aa1c89a45624b07b",
+      "613d201e991744799556e737bdb89c89",
+      "61cd01735f12449180dccb65232acd8c",
+      "75361aff0171457b964ad17a696d1fef",
+      "7b74e08d4ec04383b737b5f5b166f5d7",
+      "9084f217cb10409bb1ec15e8fa1f7299",
+      "a77fba57be66411c908077c69d803797",
+      "b3377659e8c9434daa75ed42fd56eb09",
+      "c40ca55cdb2640a1a71871ea97856427",
+      "da4629d565a3435fb701f56f46005a66",
+      "ecf7fb476c2444e4bcd61d8f859ce93e",
+      "0004591bfdc749a88db196a5d8b345cb",
+      "2439b3f7bc184152bf89e6012a511aa6"
+    ],
+    "shared_station_fraction_of_split_panos": 0.9375,
+    "split_pano_only_station_ids": [
+      "24f42d6efff54b09a34897f69fa11064",
+      "684b940fafd64fd98aef16157c8a96e2"
+    ],
+    "split_regular_stations": 30,
+    "split_total_pano_stations": 32
+  },
+  "strict_single_frame_protocol": {
+    "bim_used_by_selector": false,
+    "gt_used_by_selector": false,
+    "identical_support_for_all_depth_and_strict_comparison_methods": true,
+    "joint_comparators": [
+      "joint_weighted_log",
+      "joint_huber",
+      "joint_photo_huber",
+      "joint_synchronized_huber"
+    ],
+    "pano_rgb_used_by_selector": false,
+    "selector": "one projected regular frame with maximum sum(base_weights)",
+    "selector_inputs": "projection centrality and cached DA3 confidence only",
+    "support": "selected frame coverage intersected with valid pano GT",
+    "tie_break": "lexicographically smallest stable frame_id"
+  },
+  "strict_single_per_station_csv": {
+    "path": "/home/bgao491/PriorBIMDA/results/stanford_area1/pano_val/strict_single_per_station.csv",
+    "sha256": "a73c68029cc79edafc4c75f7a3c1464fd6ed023ce26260ba71da7fd34d77b061"
+  },
+  "tangent_per_station_csv": {
+    "path": "/home/bgao491/PriorBIMDA/results/stanford_area1/pano_val/tangent_per_station.csv",
+    "sha256": "1a6364131853ebcf977d39a66da1b6e20cb1ff9825f8d6aee5a3314278f87a72"
+  },
+  "test_access_explicitly_authorized": false,
+  "universal_scale_protocol": {
+    "path": "/home/bgao491/PriorBIMDA/data/provenance/universal_scale_estimator_v1.json",
+    "per_dataset_overrides_allowed": false,
+    "refinement_anchor": "universally scaled DA3 depth",
+    "scale_estimator": {
+      "min_samples": 100,
+      "name": "log_upper_cap_v1",
+      "q10_log_cap": "inf",
+      "q25_log_cap": 0.05,
+      "ratio_max": 5.0,
+      "ratio_min": 0.2
+    },
+    "sha256": "361fc2c97ffca9dde1a3a1b6b97fcd1d894003809a01935205f16cb4043c3ba1",
+    "status": "verified"
+  }
+}

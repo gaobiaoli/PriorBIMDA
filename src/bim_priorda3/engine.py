@@ -219,6 +219,8 @@ def validate(
     base_predictions, scaled_predictions, anchor_predictions = [], [], []
     live_da3_predictions, live_scale_predictions = [], []
     live_bim_direct_predictions = []
+    learned_scale_predictions = []
+    proportional_predictions = []
     refined_predictions, targets, masks = [], [], []
     uses_live_da3: bool | None = None
     refined_frame_abs_rel: list[float] = []
@@ -226,6 +228,13 @@ def validate(
     residual_rms: list[float] = []
     robust_scale_enabled = uses_robust_scale_estimator(model)
     live_direct_output_key = "live_robust_bim_direct" if robust_scale_enabled else "live_bim_direct"
+    model_output_max_depth = float(
+        getattr(
+            model,
+            "output_max_depth",
+            float(getattr(model, "max_depth", 5.0)) * 2.0,
+        )
+    )
     for batch in loader:
         batch = move_batch(batch, device)
         # E2E inference skips the CPU OpenCV comparator by default. Validation
@@ -246,6 +255,15 @@ def validate(
             "anchor": batch["anchor_depth"],
             "refined": output["depth"],
         }
+        if bool(getattr(model, "additive_residual_enabled", False)):
+            support_predictions["proportional_refined"] = output[
+                "proportional_depth"
+            ].clamp(
+                1e-3,
+                model_output_max_depth,
+            )
+        if "attention_scale" in output:
+            support_predictions["learned_scale"] = output["scaled_depth"]
         if batch_uses_live_da3:
             if live_direct_output_key not in output:
                 raise KeyError(
@@ -269,11 +287,22 @@ def validate(
         base_predictions.append(batch["base_depth"].cpu())
         scaled_predictions.append(batch["scaled_depth"].cpu())
         anchor_predictions.append(batch["anchor_depth"].cpu())
+        if "attention_scale" in output:
+            learned_scale_predictions.append(output["scaled_depth"].cpu())
         if batch_uses_live_da3:
             live_da3_predictions.append(output["base_depth"].cpu())
             live_scale_predictions.append(output["scaled_depth"].cpu())
             live_bim_direct_predictions.append(output[live_direct_output_key].cpu())
         refined_predictions.append(output["depth"].cpu())
+        if bool(getattr(model, "additive_residual_enabled", False)):
+            proportional_predictions.append(
+                output["proportional_depth"]
+                .clamp(
+                    1e-3,
+                    model_output_max_depth,
+                )
+                .cpu()
+            )
         targets.append(batch["gt_depth"].cpu())
         masks.append(support.cpu())
         valid = support
@@ -350,6 +379,48 @@ def validate(
         "fixed_gt_support_count": fixed_support_count,
         "near_fixed_gt_support_count": near_support_count,
     }
+    if proportional_predictions:
+        proportional_tensor = torch.cat(proportional_predictions)
+        proportional = depth_metrics(proportional_tensor, target, mask)
+        proportional_near = depth_metrics(proportional_tensor, target, near_mask)
+        _assert_metric_counts(
+            {"proportional_refined": proportional},
+            expected=fixed_support_count,
+            support_name="fixed_gt_support_count",
+        )
+        metrics.update(
+            {
+                **{f"proportional_refined_{key}": value for key, value in proportional.items()},
+                "proportional_refined_near_abs_rel": proportional_near["abs_rel"],
+                "refined_minus_proportional_abs_rel": (
+                    refined["abs_rel"] - proportional["abs_rel"]
+                ),
+            }
+        )
+    if learned_scale_predictions:
+        learned_scale_tensor = torch.cat(learned_scale_predictions)
+        learned_scale = depth_metrics(learned_scale_tensor, target, mask)
+        learned_scale_near = depth_metrics(learned_scale_tensor, target, near_mask)
+        _assert_metric_counts(
+            {"learned_scale": learned_scale},
+            expected=fixed_support_count,
+            support_name="fixed_gt_support_count",
+        )
+        _assert_metric_counts(
+            {"learned_scale_near": learned_scale_near},
+            expected=near_support_count,
+            support_name="near_fixed_gt_support_count",
+        )
+        metrics.update(
+            {
+                **{f"learned_scale_{key}": value for key, value in learned_scale.items()},
+                "learned_scale_near_abs_rel": learned_scale_near["abs_rel"],
+                "learned_scale_near_count": learned_scale_near["count"],
+                "learned_scale_minus_universal_scale_abs_rel": (
+                    learned_scale["abs_rel"] - scaled["abs_rel"]
+                ),
+            }
+        )
     if robust_scale_enabled:
         metrics.update(
             {

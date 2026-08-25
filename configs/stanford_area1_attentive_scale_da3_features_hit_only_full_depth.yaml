@@ -1,0 +1,17 @@
+extends: stanford_area1_attentive_scale_da3_features_hit_only.yaml
+
+experiment:
+  name: stanford_area1_attentive_scale_da3_features_hit_only_full_depth
+  output_dir: outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth
+
+data:
+  # Reload official regular-view uint16/512 z-depth at sample access time.
+  # Every positive value except the 65535 invalid sentinel participates in
+  # train loss, validation selection, and test metrics. Prepared RGB, frozen
+  # DA3/features, hit-only BIM, semantics, and the room split remain unchanged.
+  ground_truth_support: official_all_valid
+
+model:
+  # The largest representable non-sentinel official value is 65534/512 m.
+  # This prevents the historical 10 m safety clamp from truncating valid GT.
+  output_max_depth_m: 128.0

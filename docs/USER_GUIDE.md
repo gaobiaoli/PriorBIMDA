@@ -145,22 +145,27 @@ E2E 是可选第三阶段；它加载当前 frozen checkpoint，并只微调 DA3
   --stanford-root ../Stanford2D3DS \
   --bimsyn-root ../BIMSyn \
   --accept-stanford-license \
-  --acknowledge-bimsyn-license
+  --acknowledge-bimsyn-license \
+  --include-pano
 ```
 
 默认下载 30.44 GiB `Area_1 noXYZ` TAR，并只解出规则视图的 RGB/depth/pose/semantic 及
-`semantic.obj/.mtl`；还下载 44 个 IFC。`--include-rvt` 会额外下载 44 个 RVT，但计算不用
-RVT。下载器支持续传并验证固定 size/hash manifest。
+`semantic.obj/.mtl`；`--include-pano` 额外解出 equirectangular RGB/depth/pose/semantic；
+还下载 44 个 IFC。`--include-rvt` 会额外下载 44 个 RVT，但计算不用 RVT。下载器支持续传
+并验证固定 size/hash manifest。只运行 regular-view 任务时可省略 `--include-pano`。
 
 ```bash
 .venv/bin/python scripts/data/verify_stanford_bimsyn_sources.py \
   --area-root ../Stanford2D3DS/no_xyz \
   --area-tar ../Stanford2D3DS/no_xyz/area_1_no_xyz.tar \
   --ifc-root ../BIMSyn/BIM_model/ifc \
+  --require-pano \
   --output data/provenance/stanford_area1_sources.local.json
 ```
 
-删除 TAR 后可省略 `--area-tar`；校验仍检查 4×10,327 个模态、语义 mesh 和 IFC manifest。
+删除 TAR 后可省略 `--area-tar`；校验仍检查 4×10,327 个 regular 模态、语义 mesh 和 IFC
+manifest。`--require-pano` 还会严格检查全景四模态清单和一一配对；未下载 pano 时必须省略
+它，不能把 regular-only receipt 当作全景来源证明。
 
 ### 3.2 固定 BIM 配准
 
@@ -171,8 +176,11 @@ data/provenance/stanford_area1_bimsyn_alignment.json
 SHA256 079ff394fbfa9317953e0358d71e0548cd39171278dd16121d6c300c5a23e6d6
 ```
 
-它把 44 个 room-local IFC 合入一个 Area_1 全局坐标系，仅保留 wall/floor/ceiling/
-column/beam，排除 door/window/furniture/proxy/MEP。若需重建配准，不要直接覆盖冻结文件：
+它把 44 个 room-local IFC 合入一个 Area_1 全局坐标系。旧正式 benchmark 使用
+wall/floor/ceiling/column/beam 的 bounded-core prior；当前 hit-only 诊断还保留
+door/window，只排除 furniture/proxy/MEP，并以“有限正值命中”而不是 0.2–5.0 m 生成 BIM
+mask。两者的 GT support 都是 0.2–5.0 m，且 processed root 必须分开。若需重建配准，不要
+直接覆盖冻结文件：
 
 ```bash
 .venv/bin/python scripts/data/register_stanford_bimsyn.py \
@@ -181,7 +189,7 @@ column/beam，排除 door/window/furniture/proxy/MEP。若需重建配准，不�
   --output data/provenance/stanford_area1_alignment.local.json
 
 .venv/bin/python scripts/data/materialize_runtime_config.py \
-  --base-config configs/stanford_area1_transfer.yaml \
+  --base-config configs/stanford_area1_attentive_scale_da3_features_hit_only.yaml \
   --alignment-receipt data/provenance/stanford_area1_alignment.local.json \
   --preparation-only \
   --output configs/local/stanford_area1_prepare.yaml
@@ -202,8 +210,9 @@ oracle-style 协议。`--preparation-only` 在 manifest 尚未生成时只锁定
   --config configs/local/stanford_area1_prepare.yaml
 ```
 
-若使用仓库内冻结 alignment，可跳过 preparation-only child config，上述两条命令
-直接使用 `configs/stanford_area1_transfer.yaml`。
+若使用仓库内冻结 alignment，可跳过 preparation-only child config；重制当前规则时上述两条
+命令直接使用 `configs/stanford_area1_attentive_scale_da3_features_hit_only.yaml`。不要把它的
+输出指向旧 `stanford_area1_504`，否则会混淆两份 preparation fingerprint。
 
 不要用带 `--rooms`、`--max-frames-per-room` 或 `stride!=1` 的 smoke run 发布 canonical
 manifest；过滤运行只生成样本，不会覆盖正式 manifest。
@@ -259,7 +268,28 @@ direct audit，并记录 val/test opened=0：
 若使用重建的 alignment，再给上述命令增加
 `--alignment-receipt data/provenance/stanford_area1_alignment.local.json`。
 
-### 3.5 零样本迁移、训练与最终评测
+### 3.5 可选 pano tangent DA3 缓存
+
+只有全景实验需要这一步。`cache_stanford_pano_da3.py` 从 ERP RGB 生成 perspective tangent
+images，使用配置锁定的 DA3 revision 缓存 z-depth/confidence，并把每个文件和相机几何写入
+不可变 manifest。缓存阶段不读取 pano depth、pano semantic 或 regular GT：
+
+```bash
+.venv/bin/python scripts/data/cache_stanford_pano_da3.py \
+  --config configs/local/stanford_area1.yaml \
+  --split val \
+  --preset nested14 \
+  --face-resolution 504 \
+  --log-every 1
+```
+
+脚本结束时会打印实际 manifest 路径，形如
+`<processed_root>/pano_da3/nested14_r504_<geometry-hash>/manifests/val_full.json`。正式 Route P
+当前要求完整 `nested14` manifest；`cubemap6` 可用于缓存/几何敏感性，但不能替代该正式输入。
+`--max-stations` 生成的 manifest 明确标为 exploratory。test 缓存必须在 protocol 冻结后增加
+`--split test --confirm-test`。
+
+### 3.6 零样本迁移、训练与最终 regular-view 评测
 
 先在 validation 上记录 SLABIM source 模型的零样本迁移；必须显式允许跨数据集 checkpoint：
 
@@ -308,6 +338,177 @@ checkpoint；只在模型、配置和 claim 全部冻结后运行一次 test：
 E2E 是 challenger，而非自动替代。它必须从 target frozen `accepted.pt` 初始化并保留 residual
 heads；若 val 不优于 frozen，则不得访问 test 或发布为主模型。
 
+冻结 DA3 feature 模型属于 Area_1 研究候选，不替代上述公开主模型。当前候选已回退到无加法
+版本。制备完成后，先一次性缓存与同一 pinned DA3 预处理绑定的第 11/23 层 token，再从头
+执行 scale/refiner/joint 三阶段训练：
+
+```bash
+.venv/bin/python scripts/data/cache_stanford_da3_features.py \
+  --config configs/stanford_area1_attentive_scale_da3_features.yaml \
+  --device cuda --batch-size 16
+
+.venv/bin/python scripts/model/train.py \
+  --config configs/stanford_area1_attentive_scale_da3_features.yaml \
+  --device cuda
+
+.venv/bin/python scripts/model/evaluate_stanford_area1.py \
+  --config configs/stanford_area1_attentive_scale_da3_features.yaml \
+  --checkpoint outputs/stanford_area1_attentive_scale_da3_features/accepted.pt \
+  --split val \
+  --output results/stanford_area1/attentive_scale_da3_features_stage_ablation_val \
+  --device cuda --batch-size 8 --inference-seed 42
+```
+
+对 frame-disabled attention 模型，评测器同时报告 `coarse`、`scale_plus_low` 与 `refined`，
+对应 `scale`、`scale+r_low` 与 `scale+r_low+r_detail`。只有在 validation 冻结 checkpoint
+和输出选择后才能执行一次 test；现有 Area_1 test 已揭盲，候选结果只可作诊断。hybrid
+additive 配置和结果仍保留用于复现负实验，但不再作为活动候选。
+
+若复现无 BIM 距离截断的 hit-only 诊断，将上述三个命令的配置替换为
+`configs/stanford_area1_attentive_scale_da3_features_hit_only.yaml`，评测输出使用
+`attentive_scale_da3_features_hit_only_{val,test}`，并显式增加
+`--allow-unverified-robust-comparator`。该标志不是关闭数据 provenance；它只记录旧的
+train-only robust-cap receipt 与新 manifest 不同。现有结果为 val/test
+`0.06306/0.06585`，未超过 bounded-core prior 的 `0.06209/0.06244`，因此不能把 hit-only
+配置替代上面的推荐候选。
+
+若只做“不限制 0.2--5.0 m”的全图诊断，不需要重新制备或训练；在相同评测命令中增加
+`--depth-support all-valid`。该模式从官方 regular 深度 PNG 重新读取 GT，保留全部正深度，
+仅排除 `0` 与无效哨兵 `65535`。输出会显式记录为 out-of-training-support diagnostic，
+不能替代默认 `configured` 模式的论文主表：
+
+```bash
+.venv/bin/python scripts/model/evaluate_stanford_area1.py \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only.yaml \
+  --checkpoint outputs/stanford_area1_attentive_scale_da3_features_hit_only/accepted.pt \
+  --split val --depth-support all-valid \
+  --output results/stanford_area1/attentive_scale_da3_features_hit_only_all_valid_val \
+  --device cuda --batch-size 8 --inference-seed 42 \
+  --bootstrap-repetitions 10000 --bootstrap-seed 42 \
+  --allow-unverified-robust-comparator
+```
+
+当前同一 checkpoint 的 all-valid pixel-micro final AbsRel 为 validation `0.07214`、
+test `0.06744`；默认 0.2--5.0 m 结果分别为 `0.06306`、`0.06585`。原 bounded-core
+checkpoint 在相同 all-valid support 上为 validation `0.07420`、test `0.06433`，结果保存在
+`attentive_scale_da3_features_bounded_prior_all_valid_{val,test}`。
+
+若要求训练监督、validation 选点和最终评测都使用官方全深度，而不只是对旧 checkpoint 做
+全图诊断，使用专用配置：
+
+```bash
+.venv/bin/python scripts/model/train.py \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --device cuda
+
+.venv/bin/python scripts/model/evaluate_stanford_area1.py \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --checkpoint outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt \
+  --split val --depth-support all-valid \
+  --output results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_val \
+  --device cuda --batch-size 8 --inference-seed 42 \
+  --bootstrap-repetitions 10000 --bootstrap-seed 42 \
+  --allow-unverified-robust-comparator
+```
+
+把 `val` 与目录后缀替换为 `test` 即可复现 test。该配置从官方 PNG 动态重载 GT，原始值
+`0`/`65535` 之外的全部深度都进入 loss 和指标，并把模型输出上限提高到 128 m；没有使用
+`0.2--5.0 m` GT mask。现有 pixel-micro final AbsRel 为 validation `0.06861`、test
+`0.06741`。完整逐阶段指标和旧 checkpoint 的同 support 对照见
+[ATTENTIVE_SCALE_EXPERIMENT.md](ATTENTIVE_SCALE_EXPERIMENT.md#full-depth-supervised-retraining)。
+
+### 3.7 全景联合评测
+
+不传 `--tangent-manifest` 时，评测器运行 Route R：把同一 station 的 regular predictions
+变换成 pano radial range，在 regular-covered 固定 support 上比较单来源选择、多来源融合和
+BIM 分支：
+
+```bash
+.venv/bin/python scripts/model/evaluate_stanford_pano.py \
+  --config configs/stanford_area1.yaml \
+  --split val \
+  --output outputs/stanford_area1/pano_val_training_free \
+  --device cuda \
+  --batch-size 8 \
+  --pano-height 512 \
+  --bootstrap-repetitions 10000 \
+  --seed 42
+```
+
+若使用 fresh-data 本机 config，请替换上面的 config 路径。缓存 `nested14` 后，使用缓存
+命令打印的准确路径启用 Route P、pano-only 和 regular+pano raw-DA3 分析：
+
+```bash
+PANO_TANGENT_MANIFEST=/absolute/path/to/printed/val_full.json
+
+.venv/bin/python scripts/model/evaluate_stanford_pano.py \
+  --config configs/local/stanford_area1.yaml \
+  --tangent-manifest "$PANO_TANGENT_MANIFEST" \
+  --split val \
+  --output outputs/stanford_area1/pano_val_route_p_training_free \
+  --device cuda \
+  --batch-size 8 \
+  --pano-height 512 \
+  --bootstrap-repetitions 10000 \
+  --seed 42
+```
+
+当前主协议只验证 training-free pano 联合估计及确定性 `universal_scale`/`bim_direct`，因此
+上述命令故意不加载 checkpoint。`--checkpoint` 只用于复核已归档的 learned 输出，不参与
+fusion 选择、pano 主表或素材图。
+
+`single_best_view` 是在每个 ERP 像素选一个来源的 no-fusion mosaic，并不表示整个 station 只
+输入一张 regular image；论文中的“严格单图”使用独立的整站单帧 support。validation-only
+诊断命令为：
+
+```bash
+.venv/bin/python scripts/analysis/evaluate_stanford_pano_single_plus_tangent.py \
+  --config configs/stanford_area1.yaml \
+  --tangent-manifest "$PANO_TANGENT_MANIFEST" \
+  --output outputs/stanford_area1/pano_val_single_plus_tangent
+```
+
+该脚本没有 test、checkpoint、BIM 或可调 fusion 参数入口；它比较同一 GT-free selected
+whole frame、+tangent6 与 +tangent14。当前 validation 结果显示覆盖率接近整球，但相同单图
+support 上误差显著增加，不能用多 regular 的正结果替代“pano 优于单图”的证据。
+
+上述严格单图实验只在所选一张图对应的窄 ERP support 上评测。若目标是验证全景联合能否改善
+数据集原有的 regular-view 深度，应使用 round-trip 入口：全部同站 regular 预测先投到 ERP，
+加入可选 pano tangent 后联合，再反投影回每一张原始 regular，并在每张图完整、相同的
+`gt_valid` 上计算指标：
+
+```bash
+.venv/bin/python scripts/analysis/evaluate_stanford_pano_regular_roundtrip.py \
+  --config configs/local/stanford_area1.yaml \
+  --tangent-manifest "$PANO_TANGENT_MANIFEST" \
+  --output outputs/stanford_area1/pano_val_regular_roundtrip_reproduction
+```
+
+该脚本固定为 validation-only，不读取 pano GT，不暴露 test/checkpoint/BIM/fusion 参数。正式
+1,673 帧 validation 结果中，同一 weighted-log 融合器加入 tangent14 后 AbsRel
+0.26682→0.18654（−30.09%，7/7 房间改善）；原始逐帧 DA3 为 0.27710。该结论用于冻结未来
+盲测协议，不能作为已经揭盲 test 的事后替换。
+
+若问题是“在每张 regular 已经做相同 BIM scale 后，多 regular ERP 联合还能提高多少”，运行
+不含 tangent/pano 输入的同基线入口：
+
+```bash
+.venv/bin/python scripts/analysis/evaluate_stanford_bim_scale_roundtrip.py \
+  --config configs/local/stanford_area1.yaml \
+  --output outputs/stanford_area1/pano_val_bim_scale_regular_roundtrip
+```
+
+正式 validation 结果为逐帧 universal scale AbsRel 0.08644、同站 joint Huber 回投 0.07595，
+相对下降 12.14%；7/7 房间改善，room-cluster 95% CI 为 [−0.01231,−0.00700]。该脚本固定
+1,673 张原始 regular 的完整相同 GT support，不读取 pano RGB/GT，不加载 tangent、checkpoint
+或 learned 模型。
+
+正式主指标为精确
+solid-angle 加权后的 equal-station macro，并用 room-cluster paired bootstrap 给区间。
+`--max-stations` 只允许 smoke run。test 缓存和 evaluator 都要求 `--confirm-test`，只能在
+validation 参数与方法选择全部冻结后各运行一次。完整的固定 support、pano-only
+coverage 和结论边界见[全景评测协议](PANO_DEPTH_EVALUATION.md)。
+
 ## 4. 评测输出与判定
 
 - `summary.json`：checkpoint/config/data hash、固定支持集聚合、距离子集和统计检验。
@@ -332,10 +533,12 @@ Area_1 主 claim 应同时检查 `all`、`furniture` 和 `bim_foreground_conflic
 | `data/prepare_dataset.py` | 制备 SLABIM supervised 或 inference-only NPZ/manifest |
 | `data/build_global_split.py` | 构建 SLABIM pooled annotation，不复制源文件 |
 | `data/audit_dataset.py` | 审计 manifest、annotation、ignore、stride 和 LiDAR 隔离 |
-| `data/download_stanford_area1.py` | 下载/解压 Area_1，并从 BIMSyn 发布目录下载 IFC/RVT |
-| `data/verify_stanford_bimsyn_sources.py` | 按固定清单验证 Area_1 和 BIMSyn 并写 receipt |
+| `data/download_stanford_area1.py` | 下载/选择性解压 Area_1 regular/pano，并从 BIMSyn 发布目录下载 IFC/RVT |
+| `data/verify_stanford_bimsyn_sources.py` | 按固定清单验证 Area_1 regular、可选 pano 和 BIMSyn 并写 receipt |
 | `data/register_stanford_bimsyn.py` | 估计固定 BIM room → Area 4-DoF 变换 |
 | `data/cache_stanford_da3.py` | 按 pinned revision 缓存 Area_1 单帧 DA3 |
+| `data/cache_stanford_da3_features.py` | 为冻结 DA3-feature 模型缓存第 11/23 层 token，并绑定完整 manifest/revision |
+| `data/cache_stanford_pano_da3.py` | 生成 cubemap6/nested14 tangent RGB，缓存 pinned DA3 并写不可变 split manifest |
 | `data/prepare_stanford_area1.py` | 生成 Area_1 RGB/DA3/global-envelope-BIM/GT/semantic-subset 样本 |
 | `data/build_stanford_room_split.py` | 构建 room/camera-disjoint 30/7/7 annotation |
 | `data/select_stanford_scale_caps.py` | 只用 train split 选择 robust scale cap 并写不可覆盖 receipt |
@@ -351,6 +554,7 @@ Area_1 主 claim 应同时检查 `all`、`furniture` 和 `bim_foreground_conflic
 | `model/train.py` | frozen 或 E2E 训练；严格初始化/resume/provenance/acceptance |
 | `model/evaluate.py` | SLABIM 固定支持集 2D 深度评测 |
 | `model/evaluate_stanford_area1.py` | Area_1 全体/家具/冲突子集及 room-bootstrap 评测 |
+| `model/evaluate_stanford_pano.py` | Area_1 regular-to-pano 融合；可选 nested14 Route P/pano-only/regular+pano 评测 |
 | `model/evaluate_reconstruction.py` | 反投影、融合并评测 3D 重建 |
 | `model/infer.py` | 无 GT 新区域推理与输出保存 |
 
@@ -371,6 +575,14 @@ Area_1 主 claim 应同时检查 `all`、`furniture` 和 `bim_foreground_conflic
 | `analysis/visualize_stanford_sample.py` | 可视化 Area_1 帧、家具/冲突 mask 与预测 |
 | `analysis/generate_paper_assets.py` | 从冻结结果生成量化图、敏感性图和三套过程图素材 |
 | `analysis/export_stanford_qualitative_panels.py` | 按固定 validation 规则导出三套独立定性 panel 与统一色条 |
+| `analysis/ablate_deterministic_bim_direct.py` | 对 non-learning BIM-direct 做逐因素 validation 消融 |
+| `analysis/ablate_oracle_semantic_bim.py` | train/val-only 官方语义 + BIM ray category 的逐帧全局尺度 oracle；禁止 test |
+| `analysis/analyze_scale_residual_distribution.py` | train/val-only 尺度后像素残差诊断；比较固定米制、距离比例和混合误差模型，禁止 test |
+| `analysis/evaluate_stanford_pano_single_plus_tangent.py` | val-only 严格单张 regular + tangent6/14 对照；无 test/learned/BIM |
+| `analysis/evaluate_stanford_pano_regular_roundtrip.py` | val-only 全部 regular→ERP 联合→原 regular 回投评测；固定完整 regular GT support |
+| `analysis/evaluate_stanford_bim_scale_roundtrip.py` | val-only 同一逐帧 BIM-scale 与 regular→ERP joint→regular 的严格配对评测 |
+| `analysis/generate_pano_evaluation_assets.py` | 从冻结 pano 标量产物生成 PNG/SVG/PDF 论文图 |
+| `analysis/export_stanford_pano_panels.py` | 按固定 val 规则导出三套本地 pano panel；不加载 checkpoint |
 
 ## 6. 可恢复性与发布
 

@@ -28,7 +28,11 @@ from bim_priorda3.checkpoints import (
     validate_checkpoint_model_config,
 )
 from bim_priorda3.config import load_config, resolve_project_path
-from bim_priorda3.data import BIMDepthDataset
+from bim_priorda3.data import (
+    BIMDepthDataset,
+    load_stanford_all_valid_depth,
+    official_regular_depth_path,
+)
 from bim_priorda3.engine import build_loader, move_batch, seed_everything
 from bim_priorda3.models import BIMPriorDA3
 from bim_priorda3.scale_protocol import validate_universal_scale_protocol
@@ -226,6 +230,24 @@ def _beats_on_absrel_and_mae(
 
 def _coverage_fraction(hit_pixels: int, gt_pixels: int) -> float:
     return float(hit_pixels / gt_pixels) if gt_pixels > 0 else float("nan")
+
+
+def _official_regular_depth_path(record: Mapping[str, Any]) -> Path:
+    """Resolve an official Stanford regular-view depth PNG from its RGB record."""
+
+    return official_regular_depth_path(str(record["image"]))
+
+
+def _load_all_valid_regular_depth(
+    record: Mapping[str, Any],
+    target_shape: tuple[int, int],
+) -> tuple[np.ndarray, np.ndarray]:
+    """Load every positive, non-sentinel official z-depth value."""
+
+    return load_stanford_all_valid_depth(
+        _official_regular_depth_path(record),
+        target_shape,
+    )
 
 
 def _previous_baseline_tensors(
@@ -1015,6 +1037,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--log-every", type=int, default=50)
     parser.add_argument("--batch-size", type=_positive_int_arg, default=1)
     parser.add_argument(
+        "--depth-support",
+        choices=("configured", "all-valid"),
+        default="configured",
+        help=(
+            "Metric GT support: configured uses data.min_depth--max_depth from the "
+            "prepared samples; all-valid reloads official regular-view z-depth and "
+            "keeps every positive value except the uint16 65535 invalid sentinel"
+        ),
+    )
+    parser.add_argument(
         "--allow-unverified-robust-comparator",
         action="store_true",
         help=(
@@ -1072,8 +1104,27 @@ def main() -> None:
     model = BIMPriorDA3(cfg)
     model.load_state_dict(state["model"], strict=True)
     model.to(device).eval()
+    model_output_max_depth = float(
+        getattr(
+            model,
+            "output_max_depth",
+            float(getattr(model, "max_depth", cfg.data.max_depth)) * 2.0,
+        )
+    )
 
     e2e_enabled = bool(model.e2e_da3_enabled)
+    training_ground_truth_support = str(
+        cfg.data.get("ground_truth_support", "prepared")
+        if hasattr(cfg.data, "get")
+        else getattr(cfg.data, "ground_truth_support", "prepared")
+    )
+    additive_residual_enabled = bool(
+        getattr(model, "additive_residual_enabled", False)
+    )
+    residual_stage_ablation_enabled = bool(
+        getattr(model, "attention_scale_enabled", False)
+        and not getattr(model, "use_frame_residual", True)
+    )
     model_scale_estimator = resolve_scale_estimator_config(cfg.model.get("scale_estimator"))
     model_robust_enabled = model_scale_estimator["name"] == ROBUST_LOG_CAP_SCALE_ESTIMATOR
     robust_comparator, robust_comparator_source = _resolve_robust_comparator(cfg)
@@ -1102,7 +1153,12 @@ def main() -> None:
         )
         if robust_comparison_enabled:
             methods.extend(["live_robust_global_scale", "live_robust_bim_direct"])
-    methods.extend(["coarse", "refined"])
+    methods.append("coarse")
+    if residual_stage_ablation_enabled:
+        methods.append("scale_plus_low")
+    if additive_residual_enabled:
+        methods.append("proportional_refined")
+    methods.append("refined")
     subset_names = (
         "all",
         "furniture",
@@ -1130,6 +1186,14 @@ def main() -> None:
     bim_envelope_frame_coverages: list[float] = []
     bim_envelope_room_support: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     rows: list[dict[str, Any]] = []
+    gt_support_statistics = {
+        "valid_pixels": 0,
+        "below_configured_min_pixels": 0,
+        "within_configured_range_pixels": 0,
+        "above_configured_max_pixels": 0,
+    }
+    evaluated_gt_min = float("inf")
+    evaluated_gt_max = float("-inf")
 
     evaluated_samples = 0
     with torch.no_grad():
@@ -1186,6 +1250,25 @@ def main() -> None:
                 "coarse": output["coarse_depth"],
                 "refined": output["depth"],
             }
+            if residual_stage_ablation_enabled:
+                predictions["scale_plus_low"] = (
+                    output["refinement_anchor_depth"]
+                    * torch.exp(output["low_log_residual"])
+                ).clamp(
+                    min=1e-3,
+                    max=model_output_max_depth,
+                )
+            if additive_residual_enabled:
+                # Isolate the additive head under the exact same model-output
+                # safety bound as the final prediction. The public 0.2--5 m
+                # protocol restricts GT support; it does not clip predictions
+                # to that interval.
+                predictions["proportional_refined"] = output[
+                    "proportional_depth"
+                ].clamp(
+                    min=1e-3,
+                    max=model_output_max_depth,
+                )
             if robust_scaled is not None and robust_direct is not None:
                 predictions.update(
                     robust_global_scale=robust_scaled,
@@ -1258,9 +1341,28 @@ def main() -> None:
                     # live comparator used in its evaluation table.
                     predictions["live_robust_bim_direct"] = output["live_robust_bim_direct"]
 
+            metric_gt = batch["gt_depth"]
+            metric_gt_valid = batch["gt_valid"] > 0
+            if (
+                args.depth_support == "all-valid"
+                and training_ground_truth_support != "official_all_valid"
+            ):
+                all_valid_depths: list[np.ndarray] = []
+                all_valid_masks: list[np.ndarray] = []
+                target_shape = (int(cfg.data.target_height), int(cfg.data.target_width))
+                for sample_id in sample_ids:
+                    depth, valid = _load_all_valid_regular_depth(
+                        records_by_id[sample_id],
+                        target_shape,
+                    )
+                    all_valid_depths.append(depth[None])
+                    all_valid_masks.append(valid[None])
+                metric_gt = torch.from_numpy(np.stack(all_valid_depths)).to(device=device)
+                metric_gt_valid = torch.from_numpy(np.stack(all_valid_masks)).to(device=device)
+
             batched_tensors = {
-                "gt_depth": batch["gt_depth"],
-                "gt_valid": batch["gt_valid"],
+                "gt_depth": metric_gt,
+                "gt_valid": metric_gt_valid,
                 "bim_depth": batch["bim_depth"],
                 "bim_valid": batch["bim_valid"],
                 "furniture_mask": batch["furniture_mask"],
@@ -1280,8 +1382,32 @@ def main() -> None:
 
             for batch_index, (sample_id, room) in enumerate(zip(sample_ids, rooms)):
                 evaluated_samples += 1
-                gt = batch["gt_depth"][batch_index : batch_index + 1]
-                gt_valid = batch["gt_valid"][batch_index : batch_index + 1] > 0
+                gt = metric_gt[batch_index : batch_index + 1]
+                gt_valid = metric_gt_valid[batch_index : batch_index + 1]
+                valid_gt_values = gt[gt_valid]
+                valid_gt_count = int(valid_gt_values.numel())
+                gt_support_statistics["valid_pixels"] += valid_gt_count
+                gt_support_statistics["below_configured_min_pixels"] += int(
+                    (valid_gt_values < float(cfg.data.min_depth)).sum().item()
+                )
+                gt_support_statistics["within_configured_range_pixels"] += int(
+                    (
+                        (valid_gt_values >= float(cfg.data.min_depth))
+                        & (valid_gt_values <= float(cfg.data.max_depth))
+                    ).sum().item()
+                )
+                gt_support_statistics["above_configured_max_pixels"] += int(
+                    (valid_gt_values > float(cfg.data.max_depth)).sum().item()
+                )
+                if valid_gt_count:
+                    evaluated_gt_min = min(
+                        evaluated_gt_min,
+                        float(valid_gt_values.min().item()),
+                    )
+                    evaluated_gt_max = max(
+                        evaluated_gt_max,
+                        float(valid_gt_values.max().item()),
+                    )
                 bim_depth = batch["bim_depth"][batch_index : batch_index + 1]
                 bim_valid = (batch["bim_valid"][batch_index : batch_index + 1] > 0) & (
                     bim_depth > 0
@@ -1614,7 +1740,44 @@ def main() -> None:
             },
             "primary_bim_direct_reference": primary_bim_direct,
         },
-        "depth_protocol_m": [float(cfg.data.min_depth), float(cfg.data.max_depth)],
+        "depth_protocol_m": (
+            [float(cfg.data.min_depth), float(cfg.data.max_depth)]
+            if args.depth_support == "configured"
+            else [0.0, None]
+        ),
+        "training_depth_protocol_m": (
+            [0.0, None]
+            if training_ground_truth_support == "official_all_valid"
+            else [float(cfg.data.min_depth), float(cfg.data.max_depth)]
+        ),
+        "training_ground_truth_support": training_ground_truth_support,
+        "model_output_max_depth_m": model_output_max_depth,
+        "ground_truth_support": {
+            "mode": args.depth_support,
+            "definition": (
+                "prepared official regular-view z-depth within the configured range"
+                if args.depth_support == "configured"
+                else (
+                    "all positive official regular-view z-depth values; uint16 0 and "
+                    "65535 are invalid; no metric depth cutoff"
+                )
+            ),
+            "source_encoding": "official regular-view z-depth uint16/512 metres",
+            "observed_valid_depth_range_m": [
+                (evaluated_gt_min if np.isfinite(evaluated_gt_min) else None),
+                (evaluated_gt_max if np.isfinite(evaluated_gt_max) else None),
+            ],
+            "pixel_counts": gt_support_statistics,
+            "status": (
+                "primary configured benchmark"
+                if args.depth_support == "configured"
+                else (
+                    "primary all-valid benchmark"
+                    if training_ground_truth_support == "official_all_valid"
+                    else "exploratory out-of-training-support diagnostic"
+                )
+            ),
+        },
         "subset_definitions": {
             "all": "all valid official z-depth pixels",
             "furniture": "table/chair/sofa/bookcase semantic pixels",
@@ -1645,6 +1808,28 @@ def main() -> None:
             "coarse": (
                 "model metric-scale input before learned local refinement; exact alias "
                 "of live_scale for E2E checkpoints"
+            ),
+            **(
+                {
+                    "scale_plus_low": (
+                        "attention-scale output after the routed low-frequency log "
+                        "residual but before the detail log residual; frame residual "
+                        "is disabled for this staged ablation"
+                    )
+                }
+                if residual_stage_ablation_enabled
+                else {}
+            ),
+            **(
+                {
+                    "proportional_refined": (
+                        "scale output after multiplicative low/detail log residual but "
+                        "before the pixel-level additive metric residual, with the same "
+                        "model-output safety bound as the final prediction"
+                    )
+                }
+                if additive_residual_enabled
+                else {}
             ),
             "refined": "learned BIM/RGB refinement",
             **(

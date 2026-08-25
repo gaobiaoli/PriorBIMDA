@@ -14,7 +14,7 @@ import numpy as np
 from bim_priorda3.config import Config, resolve_project_path
 from bim_priorda3.data.geometry import depth_edges
 from bim_priorda3.data.ifc_envelope import (
-    GLOBAL_CORE_CATEGORIES,
+    ENVELOPE_CATEGORIES,
     build_global_ifc_envelope_scene,
     render_ifc_envelope,
 )
@@ -29,6 +29,10 @@ from bim_priorda3.data.stanford2d3ds import (
     semantic_label_lut,
     semantic_subset_masks,
 )
+
+STANFORD_BIM_PROTOCOL = "global-area-hit-only-fixed-envelope-v2"
+STANFORD_BIM_VALIDITY_PROTOCOL = "finite-positive-ray-hit-v1"
+STANFORD_BIM_INCLUDED_CATEGORIES = ENVELOPE_CATEGORIES
 
 
 def _sha256(path: Path) -> str:
@@ -128,7 +132,7 @@ def _frame_fingerprint(
 ) -> str:
     return _canonical_sha256(
         {
-            "schema_version": 2,
+            "schema_version": 3,
             "frame_key": frame.key,
             "rgb_sha256": rgb_sha256,
             "depth_sha256": depth_sha256,
@@ -146,9 +150,11 @@ def _frame_fingerprint(
             "da3_process_res": int(da3_process_res),
             "da3_cache_artifact_sha256": da3_cache_sha256,
             "semantic_protocol": "official-24bit-label-index-v1",
-            "bim_protocol": "global-area-fixed-core-envelope-v1",
-            "bim_included_categories": list(GLOBAL_CORE_CATEGORIES),
-            "bim_excluded_categories": ["door", "window"],
+            "bim_protocol": STANFORD_BIM_PROTOCOL,
+            "bim_validity_protocol": STANFORD_BIM_VALIDITY_PROTOCOL,
+            "bim_depth_filter_m": None,
+            "bim_included_categories": list(STANFORD_BIM_INCLUDED_CATEGORIES),
+            "bim_excluded_categories": [],
         }
     )
 
@@ -290,6 +296,7 @@ def _reuse_record(
             "camera_to_area",
             "area_from_bim",
             "bim_scene_coordinate_frame",
+            "bim_validity_protocol",
             "global_bim_fingerprint_sha256",
             "da3_cache_artifact_sha256",
             "semantic_class",
@@ -334,10 +341,12 @@ def _validate_reusable_sample(
     target_shape: tuple[int, int],
 ) -> None:
     scalar_schema = cached["sample_schema_version"]
-    if scalar_schema.shape != () or int(scalar_schema.item()) != 2:
-        raise ValueError(f"{sample_path}: sample_schema_version must be 2")
+    if scalar_schema.shape != () or int(scalar_schema.item()) != 3:
+        raise ValueError(f"{sample_path}: sample_schema_version must be 3")
     if str(cached["bim_scene_coordinate_frame"].item()) != "Stanford Area_1 world":
         raise ValueError(f"{sample_path}: BIM scene is not in the fixed Area_1 frame")
+    if str(cached["bim_validity_protocol"].item()) != STANFORD_BIM_VALIDITY_PROTOCOL:
+        raise ValueError(f"{sample_path}: BIM validity is not the hit-only protocol")
     for key in (
         "global_bim_fingerprint_sha256",
         "da3_cache_artifact_sha256",
@@ -428,6 +437,8 @@ def _validate_reusable_sample(
         masks[key] = value.astype(bool)
     if np.any(cached["bim_depth"][~masks["bim_valid"]] != 0):
         raise ValueError(f"{sample_path}: invalid BIM pixels must have zero depth")
+    if np.any(cached["bim_depth"][masks["bim_valid"]] <= 0):
+        raise ValueError(f"{sample_path}: valid BIM pixels must have positive depth")
     if np.any(cached["bim_normals"][:, ~masks["bim_valid"]] != 0):
         raise ValueError(f"{sample_path}: invalid BIM pixels must have zero normals")
     if np.any(cached["gt_depth"][~masks["gt_valid"]] != 0):
@@ -484,11 +495,14 @@ def prepare_stanford_area1(
     max_frames_per_room: int | None = None,
     stride: int = 1,
     overwrite: bool = False,
+    log_every: int = 1,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     if stride < 1:
         raise ValueError("stride must be positive")
     if max_frames_per_room is not None and max_frames_per_room < 1:
         raise ValueError("max_frames_per_room must be positive")
+    if log_every < 1:
+        raise ValueError("log_every must be positive")
 
     source_root = resolve_project_path(cfg, cfg.data.source_root)
     area_root = resolve_project_path(cfg, cfg.data.stanford_area_root)
@@ -538,7 +552,7 @@ def prepare_stanford_area1(
     global_scene, global_geometry = build_global_ifc_envelope_scene(
         {room: ifc_paths[room] for room in prior_rooms},
         area_from_bim_by_room,
-        included_categories=GLOBAL_CORE_CATEGORIES,
+        included_categories=STANFORD_BIM_INCLUDED_CATEGORIES,
     )
     global_bim_identity = {
         "schema_version": 1,
@@ -615,11 +629,16 @@ def prepare_stanford_area1(
                     target_shape,
                 )
                 records.append(record)
-                print(
-                    f"[{room_index}/{len(selected_rooms)} {room} "
-                    f"{frame_index}/{len(room_frames)}] reuse {sample_path.name}",
-                    flush=True,
-                )
+                if (
+                    frame_index == 1
+                    or frame_index % log_every == 0
+                    or frame_index == len(room_frames)
+                ):
+                    print(
+                        f"[{room_index}/{len(selected_rooms)} {room} "
+                        f"{frame_index}/{len(room_frames)}] reuse {sample_path.name}",
+                        flush=True,
+                    )
                 continue
 
             rgb = cv2.imread(str(frame.rgb_path), cv2.IMREAD_COLOR)
@@ -633,9 +652,9 @@ def prepare_stanford_area1(
                 intrinsic,
                 frame.camera_to_area,
                 *target_shape,
-                max_depth,
+                float("inf"),
             )
-            bim_valid = np.isfinite(bim_depth) & (bim_depth >= min_depth)
+            bim_valid = np.isfinite(bim_depth) & (bim_depth > 0.0)
             bim_category[~bim_valid] = 255
             bim_edge = depth_edges(bim_depth, bim_valid)
             bim_depth[~bim_valid] = 0.0
@@ -654,7 +673,7 @@ def prepare_stanford_area1(
             subset_masks = semantic_subset_masks(semantic_class)
             gt_weight = gt_valid.astype(np.float32)
             payload = {
-                "sample_schema_version": np.asarray(2, dtype=np.uint16),
+                "sample_schema_version": np.asarray(3, dtype=np.uint16),
                 "base_depth": _store_depth(prediction.depth),
                 "base_confidence": np.nan_to_num(prediction.confidence).astype(np.float16),
                 "bim_depth": _store_depth(bim_depth),
@@ -675,6 +694,7 @@ def prepare_stanford_area1(
                 "camera_to_area": frame.camera_to_area.astype(np.float64),
                 "area_from_bim": area_from_bim.astype(np.float64),
                 "bim_scene_coordinate_frame": np.asarray("Stanford Area_1 world"),
+                "bim_validity_protocol": np.asarray(STANFORD_BIM_VALIDITY_PROTOCOL),
                 "global_bim_fingerprint_sha256": np.asarray(global_bim_fingerprint),
                 "da3_cache_artifact_sha256": np.asarray(prediction.cache_sha256),
                 "preparation_fingerprint_sha256": np.asarray(fingerprint),
@@ -695,13 +715,14 @@ def prepare_stanford_area1(
                     da3_source=prediction.source,
                 )
             )
-            print(
-                f"[{room_index}/{len(selected_rooms)} {room} "
-                f"{frame_index}/{len(room_frames)}] {frame.rgb_path.name}: "
-                f"GT={gt_valid_pixels}, furniture={furniture_pixels}, "
-                f"DA3={prediction.source}",
-                flush=True,
-            )
+            if frame_index == 1 or frame_index % log_every == 0 or frame_index == len(room_frames):
+                print(
+                    f"[{room_index}/{len(selected_rooms)} {room} "
+                    f"{frame_index}/{len(room_frames)}] {frame.rgb_path.name}: "
+                    f"GT={gt_valid_pixels}, furniture={furniture_pixels}, "
+                    f"DA3={prediction.source}",
+                    flush=True,
+                )
 
     records.sort(key=lambda row: str(row["id"]))
     metadata = {
@@ -718,12 +739,16 @@ def prepare_stanford_area1(
         "alignment_receipt_sha256": alignment_sha256,
         "target_shape": list(target_shape),
         "depth_protocol_m": [min_depth, max_depth],
+        "ground_truth_depth_protocol_m": [min_depth, max_depth],
         "ground_truth": "official regular-view z-depth uint16/512; 65535 invalid",
-        "bim_prior": "Area-fixed core envelope; no doors/windows/furniture/proxy/MEP",
+        "bim_prior": ("Area-fixed envelope; doors/windows retained; furniture/proxy/MEP excluded"),
         "bim_scene": "single fixed global Area_1 envelope assembled from all room IFCs",
-        "bim_filter_policy": "global-area-fixed-core-envelope-v1",
-        "bim_included_categories": list(GLOBAL_CORE_CATEGORIES),
-        "bim_excluded_categories": ["door", "window"],
+        "bim_filter_policy": "global-area-fixed-envelope-v2",
+        "bim_protocol": STANFORD_BIM_PROTOCOL,
+        "bim_validity_protocol": STANFORD_BIM_VALIDITY_PROTOCOL,
+        "bim_depth_filter_m": None,
+        "bim_included_categories": list(STANFORD_BIM_INCLUDED_CATEGORIES),
+        "bim_excluded_categories": [],
         "global_bim_fingerprint_sha256": global_bim_fingerprint,
         "global_bim_audit": global_geometry.audit,
         "registration": "one geometry-only T_area_from_bim per room; no per-frame fitting",

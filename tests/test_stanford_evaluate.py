@@ -7,6 +7,8 @@ import math
 import sys
 from types import SimpleNamespace
 
+import cv2
+import numpy as np
 import pytest
 import torch
 
@@ -18,6 +20,8 @@ from scripts.model.evaluate_stanford_area1 import (
     _beats_on_absrel_and_mae,
     _bootstrap_paired_rooms,
     _coverage_fraction,
+    _load_all_valid_regular_depth,
+    _official_regular_depth_path,
     _previous_baseline_tensors,
     _robust_selection_receipt_provenance,
 )
@@ -151,6 +155,43 @@ def test_cli_defaults_to_validation_not_test() -> None:
     args = stanford_evaluator.parse_args(["--config", "config.yaml", "--checkpoint", "model.pt"])
     assert args.split == "val"
     assert args.inference_seed is None
+    assert args.depth_support == "configured"
+
+
+def test_cli_accepts_all_valid_depth_support() -> None:
+    args = stanford_evaluator.parse_args(
+        [
+            "--config",
+            "config.yaml",
+            "--checkpoint",
+            "model.pt",
+            "--depth-support",
+            "all-valid",
+        ]
+    )
+    assert args.depth_support == "all-valid"
+
+
+def test_all_valid_depth_loader_excludes_zero_and_sentinel_without_range_cutoff(
+    tmp_path,
+) -> None:
+    rgb_dir = tmp_path / "area_1" / "data" / "rgb"
+    depth_dir = tmp_path / "area_1" / "data" / "depth"
+    rgb_dir.mkdir(parents=True)
+    depth_dir.mkdir(parents=True)
+    rgb_path = rgb_dir / "camera_x_office_1_frame_0_domain_rgb.png"
+    depth_path = depth_dir / "camera_x_office_1_frame_0_domain_depth.png"
+    rgb_path.touch()
+    raw = np.asarray([[0, 51, 2560, 3072, 65535]], dtype=np.uint16)
+    assert cv2.imwrite(str(depth_path), raw)
+    record = {"id": "office_1/frame_0", "image": str(rgb_path)}
+
+    assert _official_regular_depth_path(record) == depth_path.resolve()
+    depth, valid = _load_all_valid_regular_depth(record, raw.shape)
+
+    assert valid.tolist() == [[False, True, True, True, False]]
+    assert depth[0, 1] == pytest.approx(51 / 512)
+    assert depth[0, 3] == pytest.approx(6.0)
 
 
 def test_cli_accepts_explicit_inference_seed() -> None:

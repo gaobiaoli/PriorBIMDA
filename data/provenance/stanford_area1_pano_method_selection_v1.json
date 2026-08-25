@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "protocol": "stanford-area1-pano-method-selection-v1",
+  "created_date": "2026-08-15",
+  "selection_split": "val",
+  "test_accessed_during_selection": false,
+  "selection_population": {
+    "rooms": 7,
+    "shared_regular_pano_stations": 30,
+    "all_pano_stations": 32,
+    "pano_only_stations": 2
+  },
+  "fixed_evaluation_protocol": {
+    "depth_range_m": [
+      0.2,
+      5.0
+    ],
+    "primary_metric": "exact-ERP-solid-angle AbsRel",
+    "primary_aggregation": "equal-station macro",
+    "uncertainty": "10000-repeat room-cluster paired bootstrap, seed 42",
+    "fixed_support": true,
+    "ground_truth_scale_alignment": false
+  },
+  "source_artifacts": {
+    "validation_summary": {
+      "path": "results/stanford_area1/pano_val/summary.json",
+      "sha256": "68e101b59a2bb1340f16b5ddceecfdead91ddf1395b47a79bc21994c496cd361"
+    },
+    "validation_provenance": {
+      "path": "results/stanford_area1/pano_val/provenance.json",
+      "sha256": "df4f8050eefd0a7d1c2fdb3304f1283d22c73e98fe50e3b7c9b9d9ae0e2a7a2d"
+    },
+    "validation_per_station": {
+      "path": "results/stanford_area1/pano_val/per_station.csv",
+      "sha256": "d9c24b7ee08a204f0c676fbb5500c09078e1ab5873e868d31a6c0c4d330ef0d7"
+    },
+    "validation_strict_single": {
+      "path": "results/stanford_area1/pano_val/strict_single_per_station.csv",
+      "sha256": "a73c68029cc79edafc4c75f7a3c1464fd6ed023ce26260ba71da7fd34d77b061"
+    },
+    "validation_tangent": {
+      "path": "results/stanford_area1/pano_val/tangent_per_station.csv",
+      "sha256": "1a6364131853ebcf977d39a66da1b6e20cb1ff9825f8d6aee5a3314278f87a72"
+    },
+    "validation_regular_pano_joint": {
+      "path": "results/stanford_area1/pano_val/regular_pano_joint_per_station.csv",
+      "sha256": "ba736bc9b5f8c4e9ae30d4a3018a908d259757834161617f221e5c91b0a2184d"
+    },
+    "config": {
+      "path": "configs/stanford_area1.yaml",
+      "sha256": "c2478535ab990bd170fa5eba14a0154d0276d7d4ae88c00da972af3e7143e703"
+    },
+    "checkpoint": {
+      "path": "outputs/stanford_area1/accepted.pt",
+      "sha256": "ffc69e51bfca6e0619d19c1665f2748d35b24c48c33f67303f646ae74cdcc711"
+    },
+    "evaluator": {
+      "path": "scripts/model/evaluate_stanford_pano.py",
+      "sha256": "0d699f0c4d5b1cdea53289fa8af024cf8a48391133a52c87348f94652dcc992c"
+    },
+    "validation_tangent_manifest": {
+      "path": "data/processed/stanford_area1_504/pano_da3/nested14_r504_737a5fa1b07a/manifests/val_full.json",
+      "sha256": "ce16bf6125d60f77a14a966b264488ff25df33959faca13636c0b3a5ca8ff565"
+    }
+  },
+  "fusion_selection": {
+    "candidate_pool": [
+      "joint_weighted_log",
+      "joint_huber",
+      "joint_photo_huber",
+      "joint_synchronized_huber"
+    ],
+    "selection_input": "Route-R raw_da3 only on the regular-covered fixed support",
+    "ordering": [
+      "lowest primary AbsRel",
+      "lowest MAE only if AbsRel ties"
+    ],
+    "excluded_from_selection": [
+      "strict_single_frame",
+      "single_best_view",
+      "universal_scale",
+      "bim_direct",
+      "learned_refined",
+      "Route-P source-set variants",
+      "all test metrics"
+    ],
+    "candidates": {
+      "joint_weighted_log": {
+        "abs_rel": 0.24979035654263904,
+        "mae_m": 0.5562679455085319
+      },
+      "joint_huber": {
+        "abs_rel": 0.24412822781120652,
+        "mae_m": 0.5405583747496898
+      },
+      "joint_photo_huber": {
+        "abs_rel": 0.24417030078001783,
+        "mae_m": 0.5407156119657994
+      },
+      "joint_synchronized_huber": {
+        "abs_rel": 0.28347730085555317,
+        "mae_m": 0.631034451575053
+      }
+    },
+    "selected_fusion": "joint_huber",
+    "tie_break_used": false
+  },
+  "frozen_confirmatory_claims": {
+    "pano_quality": {
+      "candidate": "raw_da3/regular_plus_tangent14/joint_huber",
+      "reference": "raw_da3/regular_only/joint_huber",
+      "support": "common_regular",
+      "validation_abs_rel_reference": 0.24412822781120652,
+      "validation_abs_rel_candidate": 0.20846886634827563,
+      "validation_relative_reduction_percent": 14.606816173059503,
+      "validation_room_cluster_ci95_candidate_minus_reference": [
+        -0.05380705403149476,
+        -0.026930421696558675
+      ]
+    },
+    "bim_metric_alignment": {
+      "candidate": "universal_scale/joint_huber",
+      "reference": "raw_da3/joint_huber",
+      "validation_abs_rel_reference": 0.24412822781120652,
+      "validation_abs_rel_candidate": 0.07444238563116046,
+      "validation_relative_reduction_percent": 69.50685043733266
+    },
+    "learned_over_nonlearning": {
+      "candidate": "learned_refined/joint_huber",
+      "reference": "bim_direct/joint_huber",
+      "validation_abs_rel_reference": 0.07674157449577927,
+      "validation_abs_rel_candidate": 0.05573268180446596,
+      "validation_relative_reduction_percent": 27.376155401227514,
+      "validation_room_cluster_ci95_candidate_minus_reference": [
+        -0.03464083465866973,
+        -0.014168454667293886
+      ]
+    }
+  },
+  "frozen_negative_or_secondary_findings": {
+    "raw_joint_vs_strict_single": "negative: joint_huber 0.213634 vs strict single 0.115857 on strict support",
+    "local_bim_direct_vs_scale_only": "negative/inconclusive: 0.076742 vs 0.074442; paired CI crosses zero",
+    "tangent14_vs_tangent6_under_selected_fusion": "secondary: 2.28% validation improvement; paired CI crosses zero",
+    "pano_only": "descriptive only: two stations from one room",
+    "single_best_view_semantics": "per-ray single-source mosaic, not a genuine whole-frame baseline"
+  },
+  "test_policy": {
+    "test_may_be_accessed_after_this_receipt": true,
+    "required_flags": [
+      "--split test",
+      "--confirm-test"
+    ],
+    "parameters_must_match_validation": true,
+    "selected_fusion_must_not_change": true,
+    "test_must_run_once": true
+  }
+}

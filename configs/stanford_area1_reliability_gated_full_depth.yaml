@@ -1,0 +1,32 @@
+extends: stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml
+
+experiment:
+  name: stanford_area1_reliability_gated_full_depth
+  output_dir: outputs/stanford_area1_reliability_gated_full_depth
+
+model:
+  # Gate BIM feature injection at all four refiner scales.  RGB is included in
+  # the gate so foreground appearance can suppress geometrically valid but
+  # scene-inconsistent hit-only BIM surfaces.
+  gate_bim_adapters: true
+  bim_adapter_gate_floor: 0.10
+  bim_adapter_gate_use_rgb: true
+  # The detail branch was nearly neutral overall and regressed conflict
+  # subsets.  A detached, supervised BIM-reliability probability controls only
+  # this high-frequency correction; r_low remains available everywhere.
+  detail_reliability_gate:
+    enabled: true
+    floor: 0.10
+    detach: true
+
+loss:
+  # Directly supervise the token distribution with closeness of each measured
+  # BIM/DA3 ratio to the train-only AbsRel-optimal frame scale.
+  attention_weight_target: 0.20
+  attention_weight_target_temperature: 0.15
+  # Preserve anti-collapse pressure during the three scale-only epochs, then
+  # remove it so attention may concentrate on sparse reliable structure.
+  attention_entropy_decay_epochs: 3
+  # Train the RGB-aware BIM adapter gates using the existing soft target that
+  # asks whether BIM or scale-corrected DA3 is closer to train GT.
+  adapter_gate: 0.10

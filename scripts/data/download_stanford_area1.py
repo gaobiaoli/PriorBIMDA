@@ -47,6 +47,14 @@ def parse_args() -> argparse.Namespace:
         help="Also download 44 RVT source files; IFC alone is sufficient for computation",
     )
     parser.add_argument(
+        "--include-pano",
+        action="store_true",
+        help=(
+            "Also extract the 190 equirectangular RGB/depth/pose/semantic stations "
+            "used by pano evaluation"
+        ),
+    )
+    parser.add_argument(
         "--delete-area-archive",
         action="store_true",
         help="Delete the verified 30.44 GiB TAR after successful selective extraction",
@@ -84,7 +92,11 @@ def main() -> None:
             stanford_root / "metadata/assets/semantic_labels.json",
             expected_digest=STANFORD_LABELS_SHA256,
         )
-        counts = extract_stanford_area1(archive, no_xyz)
+        counts = extract_stanford_area1(
+            archive,
+            no_xyz,
+            include_pano=args.include_pano,
+        )
         print(f"Area_1 selective extraction complete: {counts}")
         if args.delete_area_archive:
             archive.unlink()

@@ -21,9 +21,16 @@
 - pose JSON 的 `camera_rt_matrix` 实际为 3×4 世界到相机 `[R|t]`；
 - 每帧内参随视角变化，不能写死。
 
-IFC 以毫米为单位。围护先验只保留 wall、floor、ceiling、column、beam；排除家具、proxy、
-MEP、door 和 window。44 个房间按冻结的 `T_area_from_bim` 合并成一个 Area 1 全局 BIM，
-每帧只依据公开 pose 渲染，不做逐帧 ICP 或 GT 深度调参。
+IFC 以毫米为单位。44 个房间按冻结的 `T_area_from_bim` 合并成一个 Area 1 全局 BIM，
+每帧只依据公开 pose 渲染，不做逐帧 ICP 或 GT 深度调参。需要区分两份不可混用的 prior：
+
+- 正式旧 benchmark 使用 bounded core envelope：只保留 wall、floor、ceiling、column、beam，
+  排除 furniture/proxy/MEP/door/window，并以 0.2–5.0 m 限定 BIM 命中；
+- 后续 hit-only 诊断保留 door/window，仍排除 furniture/proxy/MEP，只要射线获得有限正值命中
+  就有效，不以距离过滤 BIM。GT、loss 和评测 support 仍固定为 0.2–5.0 m。
+
+二者使用不同 processed root、manifest 和 preparation fingerprint。旧正式结果不会被新版
+制备覆盖。
 
 冻结配准 receipt：
 `data/provenance/stanford_area1_bimsyn_alignment.json`。该变换由 Area 1 语义结构网格辅助
@@ -116,6 +123,25 @@ Area 1 blind test（1641 帧，pixel-micro）：
 - [validation summary](../results/stanford_area1/val_summary.json)
 - [test summary](../results/stanford_area1/test_summary.json)
 - [compact result index](../results/README.md)
+
+### 7.1 Hit-only prior 重训练诊断
+
+使用与冻结 DA3-feature 候选相同的网络、房间划分和 3/9/3 从头训练策略，只替换 BIM prior
+规则。全 10,327 帧的 RGB、DA3、GT 与 GT mask 逐数组一致。BIM coverage 从 88.82% 增至
+99.94%，其中新 prior 有效像素的 4.82% 大于 5 m、0.75% 小于 0.2 m。
+
+| Split / 方法 | 旧 bounded core | 新 hit-only |
+|---|---:|---:|
+| validation BIM-direct AbsRel | 0.08710 | 0.12411 |
+| validation learned final AbsRel | **0.06209** | 0.06306 |
+| test BIM-direct AbsRel | **0.07815** | 0.10745 |
+| test learned final AbsRel | **0.06244** | 0.06585 |
+
+结论是负面的：更稠密的命中降低了对应精度，非学习 direct 尤其明显。learned final 仍比新
+BIM-direct 在 validation/test 上改善 49.19%/38.71%，但相对旧 learned final 退化
+1.56%/5.47%。跨协议 room-bootstrap CI 均跨 0，只有 2/7 validation 和 2/7 test 房间改善。
+因此 hit-only prior 仅保留作诊断，不替代本页正式协议。详见
+[ATTENTIVE_SCALE_EXPERIMENT.md](ATTENTIVE_SCALE_EXPERIMENT.md#unbounded-hit-only-bim-prior-retraining)。
 
 ## 8. 训练与评测命令
 

@@ -1,0 +1,579 @@
+from __future__ import annotations
+
+import torch
+
+from bim_priorda3.config import load_config
+from bim_priorda3.losses import (
+    BIMPriorLoss,
+    absrel_optimal_log_scale,
+    attention_scale_distribution_target_loss,
+)
+from bim_priorda3.models import BIMPriorDA3
+from bim_priorda3.models.attention_scale import AttentiveBIMScaleHead
+from bim_priorda3.models.refiner import ScaleAnchoredDepthRefiner
+from scripts.model.train import (
+    ATTENTION_SCALE_WARMUP_PARAMETER_PREFIXES,
+    ATTENTION_SCALE_WARMUP_STAGE,
+    SCRATCH_ADDITIVE_STAGE,
+    SCRATCH_JOINT_STAGE,
+    SCRATCH_REFINER_STAGE,
+    SCRATCH_SCALE_STAGE,
+    apply_refiner_head_warmup_stage,
+    apply_scratch_stage_module_modes,
+    apply_scratch_training_stage,
+    build_refiner_head_warmup_schedule,
+    build_scratch_stage_schedule,
+    load_initial_model_weights,
+    resolve_scratch_stage_epochs,
+    snapshot_parameter_trainability,
+)
+
+
+def test_attentive_scale_aggregates_measured_ratios_and_falls_back() -> None:
+    head = AttentiveBIMScaleHead(
+        in_channels=5,
+        hidden_channels=4,
+        attention_heads=2,
+        min_support=8,
+        token_dropout_probability=0.0,
+        fallback_gate_bias=20.0,
+    ).eval()
+    features = torch.zeros(2, 5, 16, 16)
+    log_ratio = torch.full((2, 1, 16, 16), torch.log(torch.tensor(2.0)))
+    valid = torch.ones_like(log_ratio)
+    valid[1, :, :, :] = 0
+    valid[1, :, :2, :2] = 1
+    fallback = torch.log(torch.tensor([1.25, 1.5])).view(2, 1, 1, 1)
+
+    output = head(features, log_ratio, valid, fallback)
+
+    assert torch.allclose(output["scale"][0], torch.tensor(2.0), atol=1e-5)
+    assert torch.equal(output["scale"][1], torch.tensor([[[1.5]]]))
+    assert output["fallback_gate"][0].item() > 0.999
+    assert output["fallback_gate"][1].item() == 0.0
+    assert output["pixel_support"].tolist() == [256, 4]
+    assert output["attention_token_distribution"].shape == (2, 2, 2, 2)
+    assert torch.allclose(
+        output["attention_token_distribution"].flatten(2).sum(dim=-1),
+        torch.ones(2, 2),
+    )
+    assert output["attention_token_valid"].shape == (2, 1, 2, 2)
+
+
+def test_direct_attention_target_supervises_spatial_scale_weights() -> None:
+    head = AttentiveBIMScaleHead(
+        in_channels=5,
+        hidden_channels=4,
+        attention_heads=2,
+        min_support=4,
+        token_dropout_probability=0.0,
+        fallback_gate_bias=20.0,
+    )
+    features = torch.randn(1, 5, 32, 32)
+    log_ratio = torch.full((1, 1, 32, 32), torch.log(torch.tensor(1.25)))
+    log_ratio[..., :16, :16] = torch.log(torch.tensor(2.0))
+    valid = torch.ones_like(log_ratio)
+    fallback = torch.log(torch.tensor([1.5])).view(1, 1, 1, 1)
+    output = head(features, log_ratio, valid, fallback)
+    output["base_depth"] = torch.ones_like(log_ratio)
+    batch = {
+        "bim_depth": log_ratio.exp(),
+        "bim_valid": valid,
+        "gt_valid": valid,
+    }
+    oracle = torch.log(torch.tensor([2.0])).view(1, 1, 1, 1)
+    loss = attention_scale_distribution_target_loss(
+        output,
+        batch,
+        oracle,
+        torch.tensor([True]),
+        temperature=0.05,
+        ratio_min=0.2,
+        ratio_max=5.0,
+    )
+
+    assert loss.item() > 0
+    loss.backward()
+    assert head.key_logits.weight.grad is not None
+    assert torch.count_nonzero(head.key_logits.weight.grad) > 0
+
+
+def test_bounded_scale_residual_is_zero_initialized_and_bounded() -> None:
+    head = AttentiveBIMScaleHead(
+        in_channels=5,
+        hidden_channels=4,
+        attention_heads=2,
+        min_support=8,
+        token_dropout_probability=0.0,
+        fallback_gate_bias=20.0,
+        bounded_log_scale_residual=0.05,
+        residual_hidden_channels=3,
+    ).eval()
+    features = torch.randn(2, 5, 16, 16)
+    log_ratio = torch.full((2, 1, 16, 16), torch.log(torch.tensor(2.0)))
+    valid = torch.ones_like(log_ratio)
+    fallback = torch.log(torch.tensor([1.25, 1.5])).view(2, 1, 1, 1)
+
+    initial = head(features, log_ratio, valid, fallback)
+
+    assert torch.count_nonzero(initial["bounded_log_scale_residual"]) == 0
+    assert torch.equal(initial["attentive_log_scale"], initial["raw_attentive_log_scale"])
+    assert head.scale_residual_mlp is not None
+    final = head.scale_residual_mlp[-1]
+    assert isinstance(final, torch.nn.Linear)
+    with torch.no_grad():
+        final.bias.fill_(100.0)
+    saturated = head(features, log_ratio, valid, fallback)
+    assert torch.all(saturated["bounded_log_scale_residual"] <= 0.05)
+    assert torch.all(saturated["bounded_log_scale_residual"] >= -0.05)
+    assert torch.allclose(
+        saturated["attentive_log_scale"] - saturated["raw_attentive_log_scale"],
+        torch.full((2, 1, 1, 1), 0.05),
+        atol=1e-6,
+    )
+
+
+def test_da3_features_are_native_attention_and_low_resolution_inputs() -> None:
+    head = AttentiveBIMScaleHead(
+        in_channels=5,
+        hidden_channels=4,
+        attention_heads=2,
+        min_support=4,
+        token_dropout_probability=0.0,
+        da3_feature_channels=6,
+    )
+    features = torch.randn(2, 5, 32, 32)
+    log_ratio = torch.linspace(-0.2, 0.2, 32).view(1, 1, 1, 32).expand(2, 1, 32, 32)
+    valid = torch.ones_like(log_ratio)
+    fallback = torch.zeros(2, 1, 1, 1)
+    mid = torch.randn(2, 6, 5, 5, requires_grad=True)
+    deep = torch.randn(2, 6, 5, 5, requires_grad=True)
+
+    output = head(
+        features,
+        log_ratio,
+        valid,
+        fallback,
+        da3_feature_mid=mid,
+        da3_feature_deep=deep,
+    )
+    objective = output["head_log_scale"][:, 0].sum() + output["head_mixture"][:, 0].sum()
+    objective.backward()
+
+    assert output["scale"].shape == (2, 1, 1, 1)
+    assert mid.grad is not None and torch.count_nonzero(mid.grad) > 0
+    assert deep.grad is not None and torch.count_nonzero(deep.grad) > 0
+
+    refiner = ScaleAnchoredDepthRefiner(
+        rgb_channels=3,
+        geometry_channels=4,
+        bim_channels=8,
+        base_channels=4,
+        max_frame_log_residual=0.2,
+        max_low_log_residual=0.25,
+        max_detail_log_residual=0.15,
+        max_total_log_residual=0.45,
+        da3_feature_channels=6,
+    )
+    with torch.no_grad():
+        refiner.low_output.weight.fill_(0.01)
+        refiner.detail_output.weight[0].fill_(0.01)
+    mid_refiner = torch.randn(2, 6, 5, 5, requires_grad=True)
+    deep_refiner = torch.randn(2, 6, 5, 5, requires_grad=True)
+    prediction = refiner(
+        torch.randn(2, 3, 32, 32),
+        torch.randn(2, 4, 32, 32),
+        torch.randn(2, 8, 32, 32),
+        da3_feature_mid=mid_refiner,
+        da3_feature_deep=deep_refiner,
+    )
+    (
+        prediction["low_log_residual"].sum()
+        + prediction["detail_log_residual"].sum()
+    ).backward()
+    assert mid_refiner.grad is not None and torch.count_nonzero(mid_refiner.grad) > 0
+    assert deep_refiner.grad is not None and torch.count_nonzero(deep_refiner.grad) > 0
+
+
+def test_da3_feature_candidate_runs_end_to_end_without_live_da3() -> None:
+    cfg = load_config("configs/stanford_area1_attentive_scale_da3_features.yaml")
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.hidden_channels = 4
+    cfg.model.attention_scale.token_dropout_probability = 0.0
+    cfg.model.attention_scale.equivariance_probability = 0.0
+    cfg.model.da3_feature_fusion.channels = 6
+    model = BIMPriorDA3(cfg)
+    batch = _candidate_batch(size=32)
+    batch["da3_feature_mid"] = torch.randn(2, 6, 5, 5)
+    batch["da3_feature_deep"] = torch.randn(2, 6, 5, 5)
+
+    output = model(batch)
+
+    assert model.da3 is None
+    assert output["depth"].shape == batch["base_depth"].shape
+    assert output["attention_scale"].shape == (2, 1, 1, 1)
+
+
+def test_reliability_gated_candidate_uses_live_scale_target_and_gates_detail() -> None:
+    cfg = load_config("configs/stanford_area1_reliability_gated_full_depth.yaml")
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.hidden_channels = 4
+    cfg.model.attention_scale.token_dropout_probability = 0.0
+    cfg.model.attention_scale.equivariance_probability = 0.0
+    cfg.model.da3_feature_fusion.channels = 6
+    model = BIMPriorDA3(cfg)
+    batch = _candidate_batch(size=32)
+    batch["da3_feature_mid"] = torch.randn(2, 6, 5, 5)
+    batch["da3_feature_deep"] = torch.randn(2, 6, 5, 5)
+    with torch.no_grad():
+        model.refiner.detail_output.bias[0] = 1.0
+        model.refiner.detail_output.bias[2] = -100.0
+
+    output = model(batch)
+
+    assert model.refiner.bim_adapter_gate_use_rgb
+    assert torch.allclose(
+        output["detail_reliability_gate"],
+        torch.full_like(output["detail_reliability_gate"], 0.10),
+        atol=1e-6,
+    )
+    assert torch.allclose(
+        output["detail_log_residual"],
+        0.10 * output["raw_detail_log_residual"],
+        atol=1e-6,
+    )
+    criterion = BIMPriorLoss(cfg)
+    criterion.set_epoch(0)
+    assert criterion.attention_entropy_factor() == 1.0
+    losses = criterion(output, batch)
+    assert losses["attention_weight_target"].item() >= 0
+    criterion.set_epoch(3)
+    assert criterion.attention_entropy_factor() == 0.0
+
+
+def test_hybrid_additive_uses_da3_features_only_in_refiner_and_starts_as_noop() -> None:
+    cfg = load_config("configs/stanford_area1_hybrid_additive.yaml")
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.hidden_channels = 4
+    cfg.model.attention_scale.token_dropout_probability = 0.0
+    cfg.model.attention_scale.equivariance_probability = 0.0
+    cfg.model.da3_feature_fusion.channels = 6
+    model = BIMPriorDA3(cfg)
+    batch = _candidate_batch(size=32)
+    batch["da3_feature_mid"] = torch.randn(2, 6, 5, 5)
+    batch["da3_feature_deep"] = torch.randn(2, 6, 5, 5)
+
+    output = model(batch)
+
+    assert model.attention_scale is not None
+    assert model.attention_scale.da3_feature_channels == 0
+    assert model.refiner.da3_feature_channels == 6
+    assert model.additive_residual_enabled
+    assert torch.count_nonzero(output["additive_metric_residual"]) == 0
+    assert torch.equal(output["depth"], output["proportional_depth"])
+    assert model.refiner.additive_output is not None
+    losses = BIMPriorLoss(cfg)(output, batch)
+    assert losses["additive_residual_teacher"].item() > 0
+    losses["total"].backward()
+    assert model.refiner.additive_output.bias.grad is not None
+    model.zero_grad(set_to_none=True)
+    with torch.no_grad():
+        model.refiner.additive_output.bias.fill_(100.0)
+    shifted = model(batch)
+    assert torch.allclose(
+        shifted["additive_metric_residual"],
+        torch.full_like(shifted["additive_metric_residual"], 0.20),
+    )
+    assert torch.allclose(
+        shifted["depth"],
+        shifted["proportional_depth"] + 0.20,
+    )
+
+
+def test_additive_head_detaches_shared_refiner_features() -> None:
+    refiner = ScaleAnchoredDepthRefiner(
+        rgb_channels=3,
+        geometry_channels=4,
+        bim_channels=8,
+        base_channels=4,
+        max_frame_log_residual=0.2,
+        max_low_log_residual=0.25,
+        max_detail_log_residual=0.15,
+        max_total_log_residual=0.45,
+        additive_residual_enabled=True,
+        max_additive_residual_m=0.2,
+        additive_detach_shared_features=True,
+    )
+    decoded = torch.randn(2, 4, 16, 16, requires_grad=True)
+    anchor = torch.ones(2, 1, 16, 16, requires_grad=True)
+    proportional = torch.zeros(2, 1, 16, 16, requires_grad=True)
+    residual = refiner.predict_additive_metric_residual(decoded, anchor, proportional)
+    residual.sum().backward()
+
+    assert decoded.grad is None
+    assert anchor.grad is None
+    assert proportional.grad is None
+    assert refiner.additive_output is not None
+    assert refiner.additive_output.bias.grad is not None
+
+
+def _candidate_batch(batch_size: int = 2, size: int = 32) -> dict[str, torch.Tensor]:
+    base = torch.ones(batch_size, 1, size, size)
+    bim = torch.ones_like(base) * 1.3
+    bim[..., :, size // 2 :] = 2.2
+    deterministic_scaled = base * 1.55
+    return {
+        "rgb": torch.rand(batch_size, 3, size, size),
+        "base_depth": base,
+        "base_confidence": torch.ones_like(base),
+        "scaled_depth": deterministic_scaled,
+        "anchor_depth": deterministic_scaled * 1.01,
+        "bim_depth": bim,
+        "bim_valid": torch.ones_like(base),
+        "bim_normals": torch.zeros(batch_size, 3, size, size),
+        "bim_edge": torch.zeros_like(base),
+        "gt_depth": base * 1.75,
+        "gt_valid": torch.ones_like(base),
+        "gt_weight": torch.ones_like(base),
+        "furniture_mask": torch.zeros_like(base),
+        "trust_target": torch.ones_like(base),
+        "trust_mask": torch.ones_like(base),
+    }
+
+
+def test_attentive_scale_candidate_is_scalar_anchored_and_gt_supervised() -> None:
+    cfg = load_config("configs/stanford_area1_attentive_scale.yaml")
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.hidden_channels = 4
+    cfg.model.attention_scale.token_dropout_probability = 0.0
+    cfg.model.attention_scale.equivariance_probability = 0.0
+    model = BIMPriorDA3(cfg)
+    batch = _candidate_batch()
+
+    output = model(batch)
+
+    assert output["attention_scale"].shape == (2, 1, 1, 1)
+    assert output["attention_scale_map"].shape == batch["base_depth"].shape
+    assert torch.count_nonzero(output["frame_log_residual"]) == 0
+    assert torch.equal(
+        output["log_residual"],
+        output["low_log_residual"] + output["detail_log_residual"],
+    )
+    assert torch.allclose(
+        output["depth"],
+        output["scaled_depth"] * torch.exp(output["spatial_log_residual"]),
+    )
+
+    losses = BIMPriorLoss(cfg)(output, batch)
+    losses["total"].backward()
+    assert losses["coarse_depth"].item() > 0
+    assert model.attention_scale is not None
+    assert model.attention_scale.fallback_gate.bias.grad is not None
+    assert torch.count_nonzero(model.attention_scale.fallback_gate.bias.grad) > 0
+    assert model.refiner.low_output.weight.grad is not None
+    assert model.refiner.detail_output.weight.grad is not None
+    assert model.refiner.frame_output.weight.grad is not None
+    assert torch.count_nonzero(model.refiner.frame_output.weight.grad[0]) == 0
+
+
+def test_absrel_optimal_log_scale_is_exact_weighted_median() -> None:
+    base = torch.ones(2, 1, 1, 4)
+    target = torch.tensor([[[[1.0, 2.0, 4.0, 8.0]]], [[[2.0, 2.0, 2.0, 2.0]]]])
+    valid = torch.ones_like(base)
+    valid[0, ..., 3] = 0
+
+    log_scale, supported = absrel_optimal_log_scale(
+        base,
+        target,
+        valid,
+        min_support=3,
+    )
+
+    # Ratios 1,2,4 have AbsRel weights 1,1/2,1/4, so the weighted
+    # median is 1.  The constant second sample has optimum scale 2.
+    assert torch.allclose(log_scale.flatten(), torch.tensor([0.0, torch.log(torch.tensor(2.0))]))
+    assert supported.tolist() == [True, True]
+
+    candidates = torch.linspace(0.25, 5.0, 19001)
+    for sample_index, expected in enumerate(log_scale.exp().flatten()):
+        mask = valid[sample_index] > 0
+        errors = (
+            (
+                candidates[:, None] * base[sample_index][mask].flatten()[None]
+                - target[sample_index][mask].flatten()[None]
+            ).abs()
+            / target[sample_index][mask].flatten()[None]
+        ).mean(dim=1)
+        grid_optimum = candidates[errors.argmin()]
+        assert torch.isclose(expected, grid_optimum, atol=3e-4)
+
+
+def test_oracle_scale_loss_directly_supervises_attention_scale() -> None:
+    cfg = load_config("configs/stanford_area1_attentive_scale_oracle.yaml")
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.hidden_channels = 4
+    cfg.model.attention_scale.token_dropout_probability = 0.0
+    cfg.model.attention_scale.equivariance_probability = 0.0
+    model = BIMPriorDA3(cfg)
+    batch = _candidate_batch()
+    output = model(batch)
+
+    losses = BIMPriorLoss(cfg)(output, batch)
+
+    assert losses["attention_scale_oracle"].item() > 0
+    model.zero_grad(set_to_none=True)
+    for key in (
+        "depth",
+        "coarse_depth",
+        "gradient",
+        "residual_teacher",
+        "frame_residual_teacher",
+        "local_residual_teacher",
+        "low_smoothness",
+        "detail_regularization",
+        "trust",
+        "frame_trust",
+        "uncertainty",
+        "degradation",
+        "adapter_gate",
+        "spatial_mean",
+        "attention_entropy",
+        "attention_scale_equivariance",
+    ):
+        cfg.loss[key] = 0.0
+    cfg.loss.near_range_boost = 0.0
+    cfg.loss.furniture_multiplier = 1.0
+    cfg.loss.bim_foreground_conflict_multiplier = 1.0
+    oracle_only = BIMPriorLoss(cfg)
+    oracle_losses = oracle_only(output, batch)
+    oracle_losses["total"].backward()
+    assert model.attention_scale is not None
+    assert model.attention_scale.fallback_gate.bias.grad is not None
+    assert torch.count_nonzero(model.attention_scale.fallback_gate.bias.grad) > 0
+    assert model.refiner.low_output.weight.grad is not None
+    assert torch.count_nonzero(model.refiner.low_output.weight.grad) == 0
+
+
+def test_candidate_initialization_and_first_epoch_train_only_attention_scale() -> None:
+    source_cfg = load_config("configs/stanford_area1.yaml")
+    source_cfg.model.base_channels = 4
+    source = BIMPriorDA3(source_cfg)
+    target_cfg = load_config("configs/stanford_area1_attentive_scale.yaml")
+    target_cfg.model.base_channels = 4
+    target_cfg.model.attention_scale.hidden_channels = 4
+    target = BIMPriorDA3(target_cfg)
+
+    receipt = load_initial_model_weights(target, source.state_dict())
+    expected_missing = {name for name in target.state_dict() if name.startswith("attention_scale.")}
+    assert set(receipt["missing_keys"]) == expected_missing
+    assert receipt["unexpected_keys"] == []
+
+    original = snapshot_parameter_trainability(target)
+    schedule = build_refiner_head_warmup_schedule(target, 1, original)
+    stage = apply_refiner_head_warmup_stage(
+        target,
+        epoch=0,
+        warmup_epochs=1,
+        original_trainability=original,
+    )
+    trainable = {name for name, parameter in target.named_parameters() if parameter.requires_grad}
+    assert schedule["parameter_prefixes"] == list(ATTENTION_SCALE_WARMUP_PARAMETER_PREFIXES)
+    assert stage["name"] == ATTENTION_SCALE_WARMUP_STAGE
+    assert trainable
+    assert all(name.startswith("attention_scale.") for name in trainable)
+
+
+def test_scratch_scale_refiner_joint_schedule_uses_fresh_task_network() -> None:
+    cfg = load_config("configs/stanford_area1_attentive_scale_mlp_scratch.yaml")
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.hidden_channels = 4
+    model = BIMPriorDA3(cfg)
+    original = snapshot_parameter_trainability(model)
+    stages = resolve_scratch_stage_epochs(
+        cfg,
+        e2e_enabled=model.e2e_da3_enabled,
+        attention_scale_enabled=model.attention_scale_enabled,
+    )
+    assert stages == {"scale_only": 3, "refiner_only": 9, "joint": 3}
+    assert stages is not None
+    schedule = build_scratch_stage_schedule(model, stages, original)
+
+    scale_stage = apply_scratch_training_stage(
+        model,
+        epoch=0,
+        schedule=schedule,
+        original_trainability=original,
+    )
+    scale_names = {name for name, parameter in model.named_parameters() if parameter.requires_grad}
+    assert scale_stage["name"] == SCRATCH_SCALE_STAGE
+    assert scale_names and all(name.startswith("attention_scale.") for name in scale_names)
+    model.train()
+    apply_scratch_stage_module_modes(model, SCRATCH_SCALE_STAGE)
+    assert model.attention_scale is not None and model.attention_scale.training
+    assert not model.refiner.training
+
+    refiner_stage = apply_scratch_training_stage(
+        model,
+        epoch=3,
+        schedule=schedule,
+        original_trainability=original,
+    )
+    refiner_names = {
+        name for name, parameter in model.named_parameters() if parameter.requires_grad
+    }
+    assert refiner_stage["name"] == SCRATCH_REFINER_STAGE
+    assert refiner_names and not any(name.startswith("attention_scale.") for name in refiner_names)
+    model.train()
+    apply_scratch_stage_module_modes(model, SCRATCH_REFINER_STAGE)
+    assert not model.attention_scale.training
+    assert model.refiner.training
+
+    joint_stage = apply_scratch_training_stage(
+        model,
+        epoch=12,
+        schedule=schedule,
+        original_trainability=original,
+    )
+    joint_names = {name for name, parameter in model.named_parameters() if parameter.requires_grad}
+    assert joint_stage["name"] == SCRATCH_JOINT_STAGE
+    assert joint_names == {name for name, trainable in original.items() if trainable}
+
+
+def test_hybrid_scratch_schedule_has_dedicated_additive_stage() -> None:
+    cfg = load_config("configs/stanford_area1_hybrid_additive.yaml")
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.hidden_channels = 4
+    cfg.model.da3_feature_fusion.channels = 6
+    model = BIMPriorDA3(cfg)
+    original = snapshot_parameter_trainability(model)
+    stages = resolve_scratch_stage_epochs(
+        cfg,
+        e2e_enabled=model.e2e_da3_enabled,
+        attention_scale_enabled=model.attention_scale_enabled,
+        additive_residual_enabled=model.additive_residual_enabled,
+    )
+    assert stages == {
+        "scale_only": 3,
+        "refiner_only": 9,
+        "additive_only": 3,
+        "joint": 3,
+    }
+    assert stages is not None
+    schedule = build_scratch_stage_schedule(model, stages, original)
+
+    additive_stage = apply_scratch_training_stage(
+        model,
+        epoch=12,
+        schedule=schedule,
+        original_trainability=original,
+    )
+    names = {name for name, parameter in model.named_parameters() if parameter.requires_grad}
+    assert additive_stage["name"] == SCRATCH_ADDITIVE_STAGE
+    assert names
+    assert all(name.startswith("refiner.additive_") for name in names)
+    model.train()
+    apply_scratch_stage_module_modes(model, SCRATCH_ADDITIVE_STAGE)
+    assert not model.attention_scale.training
+    assert not model.refiner.rgb_encoder.training
+    assert model.refiner.additive_body is not None and model.refiner.additive_body.training
+    assert model.refiner.additive_output is not None and model.refiner.additive_output.training

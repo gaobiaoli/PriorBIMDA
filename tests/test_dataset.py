@@ -153,6 +153,78 @@ def test_supervised_dataset_can_recompute_float32_baselines(
     assert np.isclose(float(item["anchor_depth"].mean()), 3.0)
 
 
+def test_dataset_can_reload_all_valid_official_stanford_ground_truth(
+    tmp_path: Path,
+) -> None:
+    height, width = 2, 4
+    processed = tmp_path / "processed"
+    rgb_dir = tmp_path / "area_1" / "data" / "rgb"
+    depth_dir = tmp_path / "area_1" / "data" / "depth"
+    processed.mkdir()
+    rgb_dir.mkdir(parents=True)
+    depth_dir.mkdir(parents=True)
+    stem = "camera_x_office_1_frame_0"
+    image_path = rgb_dir / f"{stem}_domain_rgb.png"
+    depth_path = depth_dir / f"{stem}_domain_depth.png"
+    sample_path = tmp_path / "frame.npz"
+    assert cv2.imwrite(
+        str(image_path),
+        np.full((height, width, 3), 127, dtype=np.uint8),
+    )
+    raw_depth = np.asarray(
+        [[0, 1024, 3072, 65535], [512, 2560, 5120, 1536]],
+        dtype=np.uint16,
+    )
+    assert cv2.imwrite(str(depth_path), raw_depth)
+    base = np.full((height, width), 2.0, dtype=np.float32)
+    np.savez_compressed(
+        sample_path,
+        base_depth=base,
+        base_confidence=np.ones_like(base),
+        bim_depth=np.full_like(base, 3.0),
+        bim_valid=np.ones_like(base, dtype=np.uint8),
+        bim_normals=np.zeros((3, height, width), dtype=np.float32),
+        bim_edge=np.zeros_like(base, dtype=np.uint8),
+        gt_depth=np.full_like(base, 1.0),
+        gt_valid=np.ones_like(base, dtype=np.uint8),
+        gt_weight=np.ones_like(base),
+    )
+    (processed / "manifest.jsonl").write_text(
+        json.dumps(
+            {
+                "id": "office_1/frame_0",
+                "region": "office_1",
+                "sample": str(sample_path),
+                "image": str(image_path),
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    cfg = load_config("configs/slabim_pretrain.yaml")
+    cfg.project_root = str(tmp_path)
+    cfg.data.processed_root = "processed"
+    cfg.data.regions = ["office_1"]
+    cfg.data.target_height = height
+    cfg.data.target_width = width
+    cfg.data.split_annotation = None
+    cfg.data.split_annotation_sha256 = None
+    cfg.data.split_fingerprint_sha256 = None
+    cfg.data.ground_truth_support = "official_all_valid"
+
+    dataset = BIMDepthDataset(cfg, split=None, augment=False, require_ground_truth=True)
+    item = dataset[0]
+
+    expected_valid = (raw_depth != 0) & (raw_depth != 65535)
+    expected_depth = raw_depth.astype(np.float32) / 512.0
+    expected_depth[~expected_valid] = 0.0
+    np.testing.assert_array_equal(item["gt_valid"].numpy()[0] > 0, expected_valid)
+    np.testing.assert_allclose(item["gt_depth"].numpy()[0], expected_depth)
+    np.testing.assert_array_equal(item["gt_weight"].numpy()[0] > 0, expected_valid)
+    assert float(item["gt_depth"].max()) == pytest.approx(10.0)
+    assert dataset.split_provenance["ground_truth_support"]["mode"] == "official_all_valid"
+
+
 def test_dataset_uses_configured_robust_scale_for_scaled_anchor_and_trust(
     tmp_path: Path,
 ) -> None:

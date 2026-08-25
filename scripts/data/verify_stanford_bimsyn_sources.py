@@ -18,6 +18,7 @@ from bim_priorda3.data.public_downloads import (
     load_bimsyn_manifest,
     verify_bimsyn_model_directory,
     verify_stanford_area1_extraction,
+    verify_stanford_area1_pano_extraction,
     verify_stanford_semantic_labels,
 )
 
@@ -44,6 +45,11 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--ifc-root", required=True, type=Path)
+    parser.add_argument(
+        "--require-pano",
+        action="store_true",
+        help="Also require and verify the 190 paired equirectangular stations",
+    )
     parser.add_argument(
         "--rvt-root",
         type=Path,
@@ -78,6 +84,9 @@ def main() -> None:
                 f"size={area_size}, md5={area_md5}"
             )
     modality_counts = verify_stanford_area1_extraction(extracted_root)
+    pano_modality_counts = (
+        verify_stanford_area1_pano_extraction(extracted_root) if args.require_pano else None
+    )
     labels_audit = verify_stanford_semantic_labels(semantic_labels)
 
     manifest = load_bimsyn_manifest()
@@ -113,6 +122,7 @@ def main() -> None:
             "official_md5": STANFORD_AREA1_MD5,
             "extracted_root": str(area_root),
             "modality_counts": modality_counts,
+            "pano_modality_counts": pano_modality_counts,
             "semantic_obj_sha256": STANFORD_SEMANTIC_OBJ_SHA256,
             "semantic_mtl_sha256": STANFORD_SEMANTIC_MTL_SHA256,
             "semantic_labels": labels_audit,
@@ -136,6 +146,7 @@ def main() -> None:
             "area_official_size_and_md5": area_tar is not None,
             "area_extracted_modalities": True,
             "area_modality_basenames_one_to_one": True,
+            "area_pano_modalities": args.require_pano,
             "area_semantic_obj_sha256": True,
             "area_semantic_labels_sha256": True,
             "bimsyn_ifc_per_file_size_sha256": True,

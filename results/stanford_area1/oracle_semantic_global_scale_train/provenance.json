@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "protocol": "stanford-area1-oracle-semantic-global-scale-v2",
+  "config": "configs/stanford_area1.yaml",
+  "config_sha256": "c2478535ab990bd170fa5eba14a0154d0276d7d4ae88c00da972af3e7143e703",
+  "script": "scripts/analysis/ablate_oracle_semantic_bim.py",
+  "script_sha256": "974a7cf4c46f6623d87d6a31c007712bd23a9aa54318eed2774fba3523834d75",
+  "summary_sha256": "6e13f0e35f80f4d876cc06ad8c6f39d4f3c1a443157980bab1a2747825aa8381",
+  "per_frame_csv_sha256": "6c33c4752e79a94f8c8695c6276531ef418982d9547ed02d5f228275b08a6ff5",
+  "sample_count": 7013,
+  "ordered_split_ids_sha256": "b2aec61d770b08e32eb920d76cc40c77031fb1f58ecd525c402aa3fbeb7d543f",
+  "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+  "split_fingerprint_sha256": "baa668313880c29bb22bb0b66eb4b8c98b76198d84f5d99d51598d9fd78f0556",
+  "test_accessed": false
+}

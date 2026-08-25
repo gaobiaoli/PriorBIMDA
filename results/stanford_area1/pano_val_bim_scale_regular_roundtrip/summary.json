@@ -1,0 +1,919 @@
+{
+  "all_predeclared_contrasts": [
+    {
+      "bootstrap_repetitions": 10000,
+      "candidate": "universal_scale__projection_roundtrip",
+      "candidate_abs_rel": 0.08607560259308956,
+      "candidate_better_room_count": 6,
+      "confidence_interval_95": [
+        -0.0004877635753377657,
+        -0.00012361730243473645
+      ],
+      "difference_definition": "candidate - reference (negative is better)",
+      "mean_difference": -0.0003666346915261326,
+      "metric": "original regular-frame fixed-support pixel-micro AbsRel",
+      "reference": "universal_scale__per_frame",
+      "reference_abs_rel": 0.0864422372846157,
+      "relative_reduction_percent": 0.42413836458092613,
+      "resampling_unit": "room; retain all stations and frames in each sampled room",
+      "room_count": 7,
+      "room_differences": [
+        {
+          "candidate_minus_reference_abs_rel": -0.0003917178831341628,
+          "room": "hallway_2"
+        },
+        {
+          "candidate_minus_reference_abs_rel": 0.00015499073340098646,
+          "room": "hallway_5"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.00018268469437519863,
+          "room": "office_14"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.00017135499735190796,
+          "room": "office_24"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.0002769626355055149,
+          "room": "office_28"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.000546857155708888,
+          "room": "office_31"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.00018569297946853525,
+          "room": "office_6"
+        }
+      ],
+      "seed": 42
+    },
+    {
+      "bootstrap_repetitions": 10000,
+      "candidate": "universal_scale__joint_weighted_log",
+      "candidate_abs_rel": 0.07671219273395433,
+      "candidate_better_room_count": 7,
+      "confidence_interval_95": [
+        -0.01119892016154591,
+        -0.0063002287011166835
+      ],
+      "difference_definition": "candidate - reference (negative is better)",
+      "mean_difference": -0.00973004455066137,
+      "metric": "original regular-frame fixed-support pixel-micro AbsRel",
+      "reference": "universal_scale__per_frame",
+      "reference_abs_rel": 0.0864422372846157,
+      "relative_reduction_percent": 11.256122997632138,
+      "resampling_unit": "room; retain all stations and frames in each sampled room",
+      "room_count": 7,
+      "room_differences": [
+        {
+          "candidate_minus_reference_abs_rel": -0.002499394256870055,
+          "room": "hallway_2"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.005868831002601355,
+          "room": "hallway_5"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.007445762542277745,
+          "room": "office_14"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.010268552279441213,
+          "room": "office_24"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.00825341433784589,
+          "room": "office_28"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.011865923787421823,
+          "room": "office_31"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.0091186834506638,
+          "room": "office_6"
+        }
+      ],
+      "seed": 42
+    },
+    {
+      "bootstrap_repetitions": 10000,
+      "candidate": "universal_scale__joint_huber",
+      "candidate_abs_rel": 0.07594701146309447,
+      "candidate_better_room_count": 7,
+      "confidence_interval_95": [
+        -0.012307470175299068,
+        -0.006997669092840664
+      ],
+      "difference_definition": "candidate - reference (negative is better)",
+      "mean_difference": -0.010495225821521223,
+      "metric": "original regular-frame fixed-support pixel-micro AbsRel",
+      "reference": "universal_scale__per_frame",
+      "reference_abs_rel": 0.0864422372846157,
+      "relative_reduction_percent": 12.141316734971968,
+      "resampling_unit": "room; retain all stations and frames in each sampled room",
+      "room_count": 7,
+      "room_differences": [
+        {
+          "candidate_minus_reference_abs_rel": -0.004394010384608196,
+          "room": "hallway_2"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.006037022033349285,
+          "room": "hallway_5"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.008360295703507506,
+          "room": "office_14"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.009216454727464254,
+          "room": "office_24"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.008578107651369252,
+          "room": "office_28"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.013227453638022371,
+          "room": "office_31"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.0090071382602777,
+          "room": "office_6"
+        }
+      ],
+      "seed": 42
+    },
+    {
+      "bootstrap_repetitions": 10000,
+      "candidate": "universal_scale__joint_synchronized_huber",
+      "candidate_abs_rel": 0.07445855470544728,
+      "candidate_better_room_count": 5,
+      "confidence_interval_95": [
+        -0.015784087328074986,
+        -0.0032828386284930733
+      ],
+      "difference_definition": "candidate - reference (negative is better)",
+      "mean_difference": -0.011983682579168417,
+      "metric": "original regular-frame fixed-support pixel-micro AbsRel",
+      "reference": "universal_scale__per_frame",
+      "reference_abs_rel": 0.0864422372846157,
+      "relative_reduction_percent": 13.863225843763738,
+      "resampling_unit": "room; retain all stations and frames in each sampled room",
+      "room_count": 7,
+      "room_differences": [
+        {
+          "candidate_minus_reference_abs_rel": 0.005183421804681801,
+          "room": "hallway_2"
+        },
+        {
+          "candidate_minus_reference_abs_rel": 0.00961278365048078,
+          "room": "hallway_5"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.003231771004719358,
+          "room": "office_14"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.016247704020148246,
+          "room": "office_24"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.019497427793996117,
+          "room": "office_28"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.013586798942840456,
+          "room": "office_31"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.016082917720083245,
+          "room": "office_6"
+        }
+      ],
+      "seed": 42
+    },
+    {
+      "bootstrap_repetitions": 10000,
+      "candidate": "bim_direct__projection_roundtrip",
+      "candidate_abs_rel": 0.08676548451488493,
+      "candidate_better_room_count": 6,
+      "confidence_interval_95": [
+        -0.00044527834006719035,
+        -0.00010094815755593012
+      ],
+      "difference_definition": "candidate - reference (negative is better)",
+      "mean_difference": -0.0003349010838008676,
+      "metric": "original regular-frame fixed-support pixel-micro AbsRel",
+      "reference": "bim_direct__per_frame",
+      "reference_abs_rel": 0.0871003855986858,
+      "relative_reduction_percent": 0.3845001161578333,
+      "resampling_unit": "room; retain all stations and frames in each sampled room",
+      "room_count": 7,
+      "room_differences": [
+        {
+          "candidate_minus_reference_abs_rel": -0.00033450643558542714,
+          "room": "hallway_2"
+        },
+        {
+          "candidate_minus_reference_abs_rel": 0.0001785005510313714,
+          "room": "hallway_5"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.00018780575934083943,
+          "room": "office_14"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.00015339351873965013,
+          "room": "office_24"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.00027062787310599967,
+          "room": "office_28"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.0005004356480257655,
+          "room": "office_31"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.00015791709447959823,
+          "room": "office_6"
+        }
+      ],
+      "seed": 42
+    },
+    {
+      "bootstrap_repetitions": 10000,
+      "candidate": "bim_direct__joint_weighted_log",
+      "candidate_abs_rel": 0.07860772279727023,
+      "candidate_better_room_count": 7,
+      "confidence_interval_95": [
+        -0.009544518020325021,
+        -0.0059083367844057905
+      ],
+      "difference_definition": "candidate - reference (negative is better)",
+      "mean_difference": -0.00849266280141557,
+      "metric": "original regular-frame fixed-support pixel-micro AbsRel",
+      "reference": "bim_direct__per_frame",
+      "reference_abs_rel": 0.0871003855986858,
+      "relative_reduction_percent": 9.75043077368846,
+      "resampling_unit": "room; retain all stations and frames in each sampled room",
+      "room_count": 7,
+      "room_differences": [
+        {
+          "candidate_minus_reference_abs_rel": -0.0033610952653521237,
+          "room": "hallway_2"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.005177241709876768,
+          "room": "hallway_5"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.006199983223663275,
+          "room": "office_14"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.00922532231535858,
+          "room": "office_24"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.007870473053086857,
+          "room": "office_28"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.010028677282329118,
+          "room": "office_31"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.007483959240409677,
+          "room": "office_6"
+        }
+      ],
+      "seed": 42
+    },
+    {
+      "bootstrap_repetitions": 10000,
+      "candidate": "bim_direct__joint_huber",
+      "candidate_abs_rel": 0.0780743541513871,
+      "candidate_better_room_count": 7,
+      "confidence_interval_95": [
+        -0.010493246202583318,
+        -0.006055890715392684
+      ],
+      "difference_definition": "candidate - reference (negative is better)",
+      "mean_difference": -0.009026031447298702,
+      "metric": "original regular-frame fixed-support pixel-micro AbsRel",
+      "reference": "bim_direct__per_frame",
+      "reference_abs_rel": 0.0871003855986858,
+      "relative_reduction_percent": 10.362791605637725,
+      "resampling_unit": "room; retain all stations and frames in each sampled room",
+      "room_count": 7,
+      "room_differences": [
+        {
+          "candidate_minus_reference_abs_rel": -0.004159280212380545,
+          "room": "hallway_2"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.004609915078675544,
+          "room": "hallway_5"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.0072720514227051225,
+          "room": "office_14"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.008221922705699256,
+          "room": "office_24"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.007854139746135816,
+          "room": "office_28"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.01126703357974354,
+          "room": "office_31"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.00701149181675205,
+          "room": "office_6"
+        }
+      ],
+      "seed": 42
+    },
+    {
+      "bootstrap_repetitions": 10000,
+      "candidate": "bim_direct__joint_synchronized_huber",
+      "candidate_abs_rel": 0.07573004175764309,
+      "candidate_better_room_count": 5,
+      "confidence_interval_95": [
+        -0.014019935892029016,
+        -0.004864485042442801
+      ],
+      "difference_definition": "candidate - reference (negative is better)",
+      "mean_difference": -0.011370343841042713,
+      "metric": "original regular-frame fixed-support pixel-micro AbsRel",
+      "reference": "bim_direct__per_frame",
+      "reference_abs_rel": 0.0871003855986858,
+      "relative_reduction_percent": 13.054297937820236,
+      "resampling_unit": "room; retain all stations and frames in each sampled room",
+      "room_count": 7,
+      "room_differences": [
+        {
+          "candidate_minus_reference_abs_rel": 0.004190434768538434,
+          "room": "hallway_2"
+        },
+        {
+          "candidate_minus_reference_abs_rel": 0.0026086804460266066,
+          "room": "hallway_5"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.005004121520995691,
+          "room": "office_14"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.014514677005248576,
+          "room": "office_24"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.015645659615546925,
+          "room": "office_28"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.012681784486967843,
+          "room": "office_31"
+        },
+        {
+          "candidate_minus_reference_abs_rel": -0.017259531085838067,
+          "room": "office_6"
+        }
+      ],
+      "seed": 42
+    }
+  ],
+  "artifacts": {
+    "per_frame_csv": {
+      "path": "results/stanford_area1/pano_val_bim_scale_regular_roundtrip/per_frame.csv",
+      "sha256": "02d1d55ef2521e48005cf37ceb84055d78f7a9ea12f0b0017584e03dcd552674"
+    },
+    "per_room_csv": {
+      "path": "results/stanford_area1/pano_val_bim_scale_regular_roundtrip/per_room.csv",
+      "sha256": "2c901979a8cd21b002a47779bc1e7714987949044eb78a97aa31285b55c5d2c4"
+    },
+    "per_station_csv": {
+      "path": "results/stanford_area1/pano_val_bim_scale_regular_roundtrip/per_station.csv",
+      "sha256": "d822f75e3dea7fabd6860447981efa7f22ae422bb0b5fdf906537ba1eb598451"
+    },
+    "provenance": {
+      "path": "results/stanford_area1/pano_val_bim_scale_regular_roundtrip/provenance.json",
+      "sha256": "9093661f1f5b634c026bc104a2e1dee4d86818bb45f12bbe44cd9a71cd766591"
+    }
+  },
+  "fixed_support": "each original regular frame's complete prepared 0.2--5.0 m gt_valid; identical for per-frame, identity-roundtrip, and joint methods",
+  "method_scope": {
+    "BIM_direct_secondary": true,
+    "BIM_scale": true,
+    "checkpoint": false,
+    "learned": false,
+    "pano_GT": false,
+    "pano_RGB": false,
+    "pano_tangent": false,
+    "regular_GT_opened_after_station_prediction_freeze_only": true,
+    "training_free_only": true
+  },
+  "methods": {
+    "bim_direct__joint_huber": {
+      "frame_macro": {
+        "abs_rel": 0.07735117759074765,
+        "count": 1673,
+        "delta1": 0.9309248495033212,
+        "delta2": 0.9685005626613297,
+        "delta3": 0.9899766680464838,
+        "mae": 0.1587485873024311,
+        "rmse": 0.29346029152358094
+      },
+      "native_roundtrip_coverage": {
+        "mean_frame_fraction": 0.9999990628672694,
+        "minimum_frame_fraction": 0.999917328042328,
+        "total_fallback_pixels": 360
+      },
+      "pixel_micro": {
+        "abs_rel": 0.0780743541513871,
+        "count": 364913264,
+        "delta1": 0.929222950909233,
+        "delta2": 0.966939773940363,
+        "delta3": 0.9897021665948542,
+        "mae": 0.15401672383653908,
+        "rmse": 0.3537552244636247
+      },
+      "room_macro": {
+        "abs_rel": 0.07833654157435734,
+        "count": 7,
+        "delta1": 0.9396446057378546,
+        "delta2": 0.9768170732720586,
+        "delta3": 0.9930029486442534,
+        "mae": 0.13289477666640628,
+        "rmse": 0.29620079897343204
+      },
+      "station_macro": {
+        "abs_rel": 0.07719385708199163,
+        "count": 30,
+        "delta1": 0.9339418950760124,
+        "delta2": 0.9698240490699674,
+        "delta3": 0.9904773485877761,
+        "mae": 0.15126589015909483,
+        "rmse": 0.3093545846680967
+      }
+    },
+    "bim_direct__joint_synchronized_huber": {
+      "frame_macro": {
+        "abs_rel": 0.0763060039607162,
+        "count": 1673,
+        "delta1": 0.9406019020664125,
+        "delta2": 0.9858507449566728,
+        "delta3": 0.9937629084415965,
+        "mae": 0.1673128056503573,
+        "rmse": 0.2894647628529745
+      },
+      "native_roundtrip_coverage": {
+        "mean_frame_fraction": 0.9999990628672694,
+        "minimum_frame_fraction": 0.999917328042328,
+        "total_fallback_pixels": 360
+      },
+      "pixel_micro": {
+        "abs_rel": 0.07573004175764309,
+        "count": 364913264,
+        "delta1": 0.9401442557593631,
+        "delta2": 0.986239053234305,
+        "delta3": 0.9939157541831639,
+        "mae": 0.16000092760014722,
+        "rmse": 0.3355274867330898
+      },
+      "room_macro": {
+        "abs_rel": 0.07720642386893731,
+        "count": 7,
+        "delta1": 0.93840804970988,
+        "delta2": 0.9881603049638406,
+        "delta3": 0.9944048488555054,
+        "mae": 0.1442079063391387,
+        "rmse": 0.2976025624381612
+      },
+      "station_macro": {
+        "abs_rel": 0.07569705448226426,
+        "count": 30,
+        "delta1": 0.9417219239474164,
+        "delta2": 0.9869435982353079,
+        "delta3": 0.994130815423078,
+        "mae": 0.15877994702936735,
+        "rmse": 0.30197043703360105
+      }
+    },
+    "bim_direct__joint_weighted_log": {
+      "frame_macro": {
+        "abs_rel": 0.0778686818964918,
+        "count": 1673,
+        "delta1": 0.9283896898723953,
+        "delta2": 0.9740696289472698,
+        "delta3": 0.9921554861908152,
+        "mae": 0.16059796454535297,
+        "rmse": 0.2909725038232134
+      },
+      "native_roundtrip_coverage": {
+        "mean_frame_fraction": 0.9999990628672694,
+        "minimum_frame_fraction": 0.999917328042328,
+        "total_fallback_pixels": 360
+      },
+      "pixel_micro": {
+        "abs_rel": 0.07860772279727023,
+        "count": 364913264,
+        "delta1": 0.9261609849292844,
+        "delta2": 0.9731087905864666,
+        "delta3": 0.9921399239683434,
+        "mae": 0.15593676239104592,
+        "rmse": 0.3476531529918985
+      },
+      "room_macro": {
+        "abs_rel": 0.07848641049893097,
+        "count": 7,
+        "delta1": 0.9391447337593805,
+        "delta2": 0.9814382297288115,
+        "delta3": 0.9937537810505265,
+        "mae": 0.13445793021493496,
+        "rmse": 0.29370362405814954
+      },
+      "station_macro": {
+        "abs_rel": 0.07767639407939783,
+        "count": 30,
+        "delta1": 0.9315436529532692,
+        "delta2": 0.9753498513646552,
+        "delta3": 0.9925828991165789,
+        "mae": 0.1530501342741872,
+        "rmse": 0.30543205425320635
+      }
+    },
+    "bim_direct__per_frame": {
+      "frame_macro": {
+        "abs_rel": 0.08647515078446932,
+        "count": 1673,
+        "delta1": 0.9144935146487218,
+        "delta2": 0.9627275454900542,
+        "delta3": 0.9836276033674136,
+        "mae": 0.1765052910402687,
+        "rmse": 0.3213221662121787
+      },
+      "native_roundtrip_coverage": {
+        "mean_frame_fraction": 1.0,
+        "minimum_frame_fraction": 1.0,
+        "total_fallback_pixels": 0
+      },
+      "pixel_micro": {
+        "abs_rel": 0.0871003855986858,
+        "count": 364913264,
+        "delta1": 0.9131234511661928,
+        "delta2": 0.9614830361441726,
+        "delta3": 0.9829420039935847,
+        "mae": 0.17121334283133124,
+        "rmse": 0.39455394891679674
+      },
+      "room_macro": {
+        "abs_rel": 0.08553594651179901,
+        "count": 7,
+        "delta1": 0.925331967944386,
+        "delta2": 0.9733701896099826,
+        "delta3": 0.9899545659460623,
+        "mae": 0.1447809783424258,
+        "rmse": 0.3229690715288514
+      },
+      "station_macro": {
+        "abs_rel": 0.08550059887015485,
+        "count": 30,
+        "delta1": 0.9190791476819166,
+        "delta2": 0.9649656238309363,
+        "delta3": 0.9845962623817469,
+        "mae": 0.16707691111131212,
+        "rmse": 0.3456347943341799
+      }
+    },
+    "bim_direct__projection_roundtrip": {
+      "frame_macro": {
+        "abs_rel": 0.08611091358729625,
+        "count": 1673,
+        "delta1": 0.9145011456722657,
+        "delta2": 0.9635156833651841,
+        "delta3": 0.9842972248594499,
+        "mae": 0.175645794318461,
+        "rmse": 0.3113589805648423
+      },
+      "native_roundtrip_coverage": {
+        "mean_frame_fraction": 0.999973659981691,
+        "minimum_frame_fraction": 0.9997283635676493,
+        "total_fallback_pixels": 9349
+      },
+      "pixel_micro": {
+        "abs_rel": 0.08676548451488493,
+        "count": 364913264,
+        "delta1": 0.9131798207258369,
+        "delta2": 0.9622111297110866,
+        "delta3": 0.9835735211861194,
+        "mae": 0.17046769969069758,
+        "rmse": 0.3860146171402679
+      },
+      "room_macro": {
+        "abs_rel": 0.08533220568633533,
+        "count": 7,
+        "delta1": 0.9253903942551762,
+        "delta2": 0.9738371051905023,
+        "delta3": 0.990379800028622,
+        "mae": 0.14438914213522075,
+        "rmse": 0.31705574113349105
+      },
+      "station_macro": {
+        "abs_rel": 0.08519057490976627,
+        "count": 30,
+        "delta1": 0.9191092699609308,
+        "delta2": 0.9656439848356766,
+        "delta3": 0.9851788987994854,
+        "mae": 0.1663778860658827,
+        "rmse": 0.33632281933483316
+      }
+    },
+    "universal_scale__joint_huber": {
+      "frame_macro": {
+        "abs_rel": 0.07531059567915561,
+        "count": 1673,
+        "delta1": 0.9332222565094686,
+        "delta2": 0.969682443438064,
+        "delta3": 0.9901644254701234,
+        "mae": 0.15738705764892896,
+        "rmse": 0.292918811593836
+      },
+      "native_roundtrip_coverage": {
+        "mean_frame_fraction": 0.9999990628672694,
+        "minimum_frame_fraction": 0.999917328042328,
+        "total_fallback_pixels": 360
+      },
+      "pixel_micro": {
+        "abs_rel": 0.07594701146309447,
+        "count": 364913264,
+        "delta1": 0.9315607722058576,
+        "delta2": 0.968191465904073,
+        "delta3": 0.9899116711745507,
+        "mae": 0.15253722316931637,
+        "rmse": 0.3538724708639752
+      },
+      "room_macro": {
+        "abs_rel": 0.0760818047366842,
+        "count": 7,
+        "delta1": 0.9443202880128234,
+        "delta2": 0.977862513610206,
+        "delta3": 0.9931778595569456,
+        "mae": 0.13297423180605616,
+        "rmse": 0.2984584565453686
+      },
+      "station_macro": {
+        "abs_rel": 0.07530324951665342,
+        "count": 30,
+        "delta1": 0.9365138180116352,
+        "delta2": 0.971009011881434,
+        "delta3": 0.9906636744459519,
+        "mae": 0.1509101925653944,
+        "rmse": 0.308928652822652
+      }
+    },
+    "universal_scale__joint_synchronized_huber": {
+      "frame_macro": {
+        "abs_rel": 0.07489579231602123,
+        "count": 1673,
+        "delta1": 0.9440140766605195,
+        "delta2": 0.9859213077880731,
+        "delta3": 0.993787355029362,
+        "mae": 0.1655440635233595,
+        "rmse": 0.2879977663549064
+      },
+      "native_roundtrip_coverage": {
+        "mean_frame_fraction": 0.9999990628672694,
+        "minimum_frame_fraction": 0.999917328042328,
+        "total_fallback_pixels": 360
+      },
+      "pixel_micro": {
+        "abs_rel": 0.07445855470544728,
+        "count": 364913264,
+        "delta1": 0.9440219251663047,
+        "delta2": 0.9863336209121738,
+        "delta3": 0.9939499239468588,
+        "mae": 0.15886539327025195,
+        "rmse": 0.335143615816388
+      },
+      "room_macro": {
+        "abs_rel": 0.07679181450410903,
+        "count": 7,
+        "delta1": 0.940236091859014,
+        "delta2": 0.9881542095213021,
+        "delta3": 0.9944703939906132,
+        "mae": 0.146013752022615,
+        "rmse": 0.30172919684989746
+      },
+      "station_macro": {
+        "abs_rel": 0.07479573385449349,
+        "count": 30,
+        "delta1": 0.9446125508098685,
+        "delta2": 0.9870578584261804,
+        "delta3": 0.9941695558128999,
+        "mae": 0.15923779378527686,
+        "rmse": 0.30248970600557423
+      }
+    },
+    "universal_scale__joint_weighted_log": {
+      "frame_macro": {
+        "abs_rel": 0.0760547609386855,
+        "count": 1673,
+        "delta1": 0.9294063302921605,
+        "delta2": 0.9757570293497312,
+        "delta3": 0.9925444013253696,
+        "mae": 0.15942512014104562,
+        "rmse": 0.290875988648634
+      },
+      "native_roundtrip_coverage": {
+        "mean_frame_fraction": 0.9999990628672694,
+        "minimum_frame_fraction": 0.999917328042328,
+        "total_fallback_pixels": 360
+      },
+      "pixel_micro": {
+        "abs_rel": 0.07671219273395433,
+        "count": 364913264,
+        "delta1": 0.9270804965861695,
+        "delta2": 0.9750302389665946,
+        "delta3": 0.9925706372788905,
+        "mae": 0.15461181050485032,
+        "rmse": 0.34806672899192925
+      },
+      "room_macro": {
+        "abs_rel": 0.07658179341403802,
+        "count": 7,
+        "delta1": 0.9418245484120578,
+        "delta2": 0.9830146311168649,
+        "delta3": 0.9939902523853282,
+        "mae": 0.13466840701981428,
+        "rmse": 0.2966694102032737
+      },
+      "station_macro": {
+        "abs_rel": 0.07604715761761079,
+        "count": 30,
+        "delta1": 0.93271402806342,
+        "delta2": 0.9771266609005347,
+        "delta3": 0.9929611319174723,
+        "mae": 0.1528661534203576,
+        "rmse": 0.3056059543154504
+      }
+    },
+    "universal_scale__per_frame": {
+      "frame_macro": {
+        "abs_rel": 0.08605815153963024,
+        "count": 1673,
+        "delta1": 0.9164989894753045,
+        "delta2": 0.9643635787354161,
+        "delta3": 0.9838929828819769,
+        "mae": 0.1802296815886321,
+        "rmse": 0.32392717788799746
+      },
+      "native_roundtrip_coverage": {
+        "mean_frame_fraction": 1.0,
+        "minimum_frame_fraction": 1.0,
+        "total_fallback_pixels": 0
+      },
+      "pixel_micro": {
+        "abs_rel": 0.0864422372846157,
+        "count": 364913264,
+        "delta1": 0.9153276489286506,
+        "delta2": 0.9631138757400718,
+        "delta3": 0.9832424562128276,
+        "mae": 0.17422472908315206,
+        "rmse": 0.3953637919770112
+      },
+      "room_macro": {
+        "abs_rel": 0.08448473079362687,
+        "count": 7,
+        "delta1": 0.9281095204058961,
+        "delta2": 0.974635417505534,
+        "delta3": 0.990285307320612,
+        "mae": 0.1482278457258939,
+        "rmse": 0.32670455060916437
+      },
+      "station_macro": {
+        "abs_rel": 0.08511370123507232,
+        "count": 30,
+        "delta1": 0.9208250163886045,
+        "delta2": 0.9664327124302683,
+        "delta3": 0.9848834035762486,
+        "mae": 0.17121926614033905,
+        "rmse": 0.3474824203321209
+      }
+    },
+    "universal_scale__projection_roundtrip": {
+      "frame_macro": {
+        "abs_rel": 0.08565814759314502,
+        "count": 1673,
+        "delta1": 0.9165527187617987,
+        "delta2": 0.9651271666519529,
+        "delta3": 0.9845592051893549,
+        "mae": 0.17923595897280176,
+        "rmse": 0.3140903362800036
+      },
+      "native_roundtrip_coverage": {
+        "mean_frame_fraction": 0.999973659981691,
+        "minimum_frame_fraction": 0.9997283635676493,
+        "total_fallback_pixels": 9349
+      },
+      "pixel_micro": {
+        "abs_rel": 0.08607560259308956,
+        "count": 364913264,
+        "delta1": 0.915427785053053,
+        "delta2": 0.963823534789352,
+        "delta3": 0.9838687447656055,
+        "mae": 0.1733619642027033,
+        "rmse": 0.38683312333902514
+      },
+      "room_macro": {
+        "abs_rel": 0.08425611942046353,
+        "count": 7,
+        "delta1": 0.928200000867467,
+        "delta2": 0.9751065704420174,
+        "delta3": 0.9906931918168925,
+        "mae": 0.1477525830898243,
+        "rmse": 0.3208380689725305
+      },
+      "station_macro": {
+        "abs_rel": 0.08476982788891901,
+        "count": 30,
+        "delta1": 0.9208927682864337,
+        "delta2": 0.967099168688527,
+        "delta3": 0.9854598896429624,
+        "mae": 0.17039592560076391,
+        "rmse": 0.33830660573140253
+      }
+    }
+  },
+  "population": {
+    "frame_count": 1673,
+    "room_count": 7,
+    "station_count": 30
+  },
+  "primary_contrast": {
+    "bootstrap_repetitions": 10000,
+    "candidate": "universal_scale__joint_huber",
+    "candidate_abs_rel": 0.07594701146309447,
+    "candidate_better_room_count": 7,
+    "confidence_interval_95": [
+      -0.012307470175299068,
+      -0.006997669092840664
+    ],
+    "difference_definition": "candidate - reference (negative is better)",
+    "mean_difference": -0.010495225821521223,
+    "metric": "original regular-frame fixed-support pixel-micro AbsRel",
+    "reference": "universal_scale__per_frame",
+    "reference_abs_rel": 0.0864422372846157,
+    "relative_reduction_percent": 12.141316734971968,
+    "resampling_unit": "room; retain all stations and frames in each sampled room",
+    "room_count": 7,
+    "room_differences": [
+      {
+        "candidate_minus_reference_abs_rel": -0.004394010384608196,
+        "room": "hallway_2"
+      },
+      {
+        "candidate_minus_reference_abs_rel": -0.006037022033349285,
+        "room": "hallway_5"
+      },
+      {
+        "candidate_minus_reference_abs_rel": -0.008360295703507506,
+        "room": "office_14"
+      },
+      {
+        "candidate_minus_reference_abs_rel": -0.009216454727464254,
+        "room": "office_24"
+      },
+      {
+        "candidate_minus_reference_abs_rel": -0.008578107651369252,
+        "room": "office_28"
+      },
+      {
+        "candidate_minus_reference_abs_rel": -0.013227453638022371,
+        "room": "office_31"
+      },
+      {
+        "candidate_minus_reference_abs_rel": -0.0090071382602777,
+        "room": "office_6"
+      }
+    ],
+    "seed": 42
+  },
+  "protocol": "stanford-area1-val-bim-scale-regular-erp-roundtrip-v1",
+  "publication_status": "candidate_for_future_preregistration",
+  "question": "On identical original regular frames and GT pixels, does same-station ERP fusion improve predictions after every frame receives the same universal BIM-scale method?",
+  "schema_version": 1,
+  "split": "val",
+  "status": "exploratory_validation_only",
+  "test_data_or_csv_accessed": false
+}

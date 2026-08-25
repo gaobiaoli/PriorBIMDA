@@ -1,0 +1,24 @@
+extends: stanford_area1_attentive_scale_mlp_scratch.yaml
+
+experiment:
+  name: stanford_area1_attentive_scale_da3_features
+  output_dir: outputs/stanford_area1_attentive_scale_da3_features
+
+data:
+  # Prepared once by scripts/data/cache_stanford_da3_features.py. The cache
+  # stores frozen ViT-L/14 tokens and is verified against this dataset manifest,
+  # image identity, model revision, layer indices, and preprocessing resolution.
+  da3_feature_cache_root: data/processed/stanford_area1_504/da3_features_l11_l23
+
+model:
+  da3_feature_fusion:
+    enabled: true
+    layers: [11, 23]
+    channels: 1024
+
+train:
+  # The task network is trained from scratch with the same 3/9/3 protocol as
+  # the RGB+BIM candidate. DA3 itself is frozen and no prior task checkpoint is
+  # accepted, so the comparison changes only the encoder information available.
+  batch_size: 8
+  val_batch_size: 8

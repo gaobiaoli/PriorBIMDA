@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,7 @@ from bim_priorda3.baselines import (
 )
 from bim_priorda3.config import Config
 
+from .attention_scale import AttentiveBIMScaleHead
 from .refiner import ScaleAnchoredDepthRefiner
 
 
@@ -31,6 +33,7 @@ class BIMPriorDA3(nn.Module):
     SUPPORTED_VARIANT = "prior_conditioned_v4"
     GEOMETRY_CHANNELS = 4
     BIM_CHANNELS = 8
+    ATTENTION_SCALE_CHANNELS = 13
     RESIDUAL_ANCHOR_SCALED = "scaled_depth"
     RESIDUAL_ROUTING_FRAME_AND_LOW = "frame_and_low"
     RESIDUAL_ROUTING_FRAME_ONLY = "frame_only"
@@ -44,6 +47,11 @@ class BIMPriorDA3(nn.Module):
         super().__init__()
         model = cfg.model
         self.max_depth = float(cfg.data.max_depth)
+        self.output_max_depth = float(
+            model.get("output_max_depth_m", self.max_depth * 2.0)
+        )
+        if not math.isfinite(self.output_max_depth) or self.output_max_depth <= 0:
+            raise ValueError("model.output_max_depth_m must be finite and positive")
         self.variant = str(model.get("variant", ""))
         if self.variant != self.SUPPORTED_VARIANT:
             raise ValueError(
@@ -69,6 +77,68 @@ class BIMPriorDA3(nn.Module):
             raise ValueError("model.residual_routing_scope must be 'frame_and_low' or 'frame_only'")
         self.e2e_da3_config = Config(model.get("e2e_da3", {}))
         self.e2e_da3_enabled = bool(self.e2e_da3_config.get("enabled", False))
+        self.da3_feature_fusion_config = Config(model.get("da3_feature_fusion", {}))
+        shared_da3_feature_fusion = bool(
+            self.da3_feature_fusion_config.get("enabled", False)
+        )
+        self.da3_feature_scale_enabled = bool(
+            self.da3_feature_fusion_config.get(
+                "scale_enabled",
+                shared_da3_feature_fusion,
+            )
+        )
+        self.da3_feature_refiner_enabled = bool(
+            self.da3_feature_fusion_config.get(
+                "refiner_enabled",
+                shared_da3_feature_fusion,
+            )
+        )
+        self.da3_feature_fusion_enabled = (
+            self.da3_feature_scale_enabled or self.da3_feature_refiner_enabled
+        )
+        self.da3_feature_channels = (
+            int(self.da3_feature_fusion_config.get("channels", 1024))
+            if self.da3_feature_fusion_enabled
+            else 0
+        )
+        self.da3_feature_layers = tuple(
+            int(value)
+            for value in self.da3_feature_fusion_config.get("layers", (11, 23))
+        )
+        if self.da3_feature_fusion_enabled:
+            if self.e2e_da3_enabled:
+                raise ValueError(
+                    "Cached DA3 feature fusion and end-to-end DA3 are mutually exclusive"
+                )
+            if self.da3_feature_channels < 1:
+                raise ValueError("model.da3_feature_fusion.channels must be positive")
+            if len(self.da3_feature_layers) != 2:
+                raise ValueError("model.da3_feature_fusion.layers must contain two layers")
+        self.additive_residual_config = Config(model.get("additive_residual", {}))
+        self.additive_residual_enabled = bool(
+            self.additive_residual_config.get("enabled", False)
+        )
+        self.max_additive_residual_m = float(
+            self.additive_residual_config.get("max_residual_m", 0.0)
+        )
+        if self.additive_residual_enabled and self.max_additive_residual_m <= 0:
+            raise ValueError(
+                "model.additive_residual.max_residual_m must be positive when enabled"
+            )
+        self.detail_reliability_gate_config = Config(
+            model.get("detail_reliability_gate", {})
+        )
+        self.detail_reliability_gate_enabled = bool(
+            self.detail_reliability_gate_config.get("enabled", False)
+        )
+        self.detail_reliability_gate_floor = float(
+            self.detail_reliability_gate_config.get("floor", 0.0)
+        )
+        self.detail_reliability_gate_detach = bool(
+            self.detail_reliability_gate_config.get("detach", True)
+        )
+        if not 0.0 <= self.detail_reliability_gate_floor < 1.0:
+            raise ValueError("model.detail_reliability_gate.floor must be in [0, 1)")
         self.da3: nn.Module | None = None
         self._da3_trainable_module_names: tuple[str, ...] = ()
         configured_scale = model.get("scale_estimator")
@@ -99,6 +169,67 @@ class BIMPriorDA3(nn.Module):
         self.da3_scale_ratio_min = float(self.scale_estimator_config["ratio_min"])
         self.da3_scale_ratio_max = float(self.scale_estimator_config["ratio_max"])
         self.da3_scale_min_samples = int(self.scale_estimator_config["min_samples"])
+        self.attention_scale_config = Config(model.get("attention_scale", {}))
+        self.attention_scale_enabled = bool(self.attention_scale_config.get("enabled", False))
+        if self.attention_scale_enabled and self.e2e_da3_enabled:
+            raise ValueError(
+                "The attentive-scale candidate currently requires frozen/cached DA3; "
+                "disable model.e2e_da3"
+            )
+        self.attention_scale: AttentiveBIMScaleHead | None = None
+        if self.attention_scale_enabled:
+            self.attention_scale = AttentiveBIMScaleHead(
+                in_channels=self.ATTENTION_SCALE_CHANNELS,
+                hidden_channels=int(self.attention_scale_config.get("hidden_channels", 24)),
+                attention_heads=int(self.attention_scale_config.get("attention_heads", 4)),
+                min_support=int(
+                    self.attention_scale_config.get(
+                        "min_support",
+                        self.da3_scale_min_samples,
+                    )
+                ),
+                ratio_min=float(
+                    self.attention_scale_config.get(
+                        "ratio_min",
+                        self.da3_scale_ratio_min,
+                    )
+                ),
+                ratio_max=float(
+                    self.attention_scale_config.get(
+                        "ratio_max",
+                        self.da3_scale_ratio_max,
+                    )
+                ),
+                huber_delta=float(self.attention_scale_config.get("huber_delta", 0.15)),
+                token_dropout_probability=float(
+                    self.attention_scale_config.get(
+                        "token_dropout_probability",
+                        0.10,
+                    )
+                ),
+                fallback_gate_bias=float(
+                    self.attention_scale_config.get("fallback_gate_bias", -1.5)
+                ),
+                bounded_log_scale_residual=float(
+                    self.attention_scale_config.get("bounded_log_scale_residual", 0.0)
+                ),
+                residual_hidden_channels=int(
+                    self.attention_scale_config.get("residual_hidden_channels", 32)
+                ),
+                da3_feature_channels=(
+                    self.da3_feature_channels if self.da3_feature_scale_enabled else 0
+                ),
+            )
+        self.attention_scale_equivariance_probability = float(
+            self.attention_scale_config.get("equivariance_probability", 0.0)
+        )
+        self.attention_scale_equivariance_log_range = float(
+            self.attention_scale_config.get("equivariance_log_range", 0.20)
+        )
+        if not 0.0 <= self.attention_scale_equivariance_probability <= 1.0:
+            raise ValueError("model.attention_scale.equivariance_probability must be in [0, 1]")
+        if self.attention_scale_equivariance_log_range < 0:
+            raise ValueError("model.attention_scale.equivariance_log_range must be non-negative")
         self.register_buffer(
             "_da3_rgb_mean",
             torch.tensor((0.485, 0.456, 0.406)).view(1, 3, 1, 1),
@@ -120,6 +251,17 @@ class BIMPriorDA3(nn.Module):
             max_total_log_residual=float(model.get("max_total_log_residual", 0.45)),
             gate_bim_adapters=bool(model.get("gate_bim_adapters", False)),
             bim_adapter_gate_floor=float(model.get("bim_adapter_gate_floor", 0.25)),
+            bim_adapter_gate_use_rgb=bool(
+                model.get("bim_adapter_gate_use_rgb", False)
+            ),
+            da3_feature_channels=(
+                self.da3_feature_channels if self.da3_feature_refiner_enabled else 0
+            ),
+            additive_residual_enabled=self.additive_residual_enabled,
+            max_additive_residual_m=self.max_additive_residual_m,
+            additive_detach_shared_features=bool(
+                self.additive_residual_config.get("detach_shared_features", True)
+            ),
         )
         if self.e2e_da3_enabled:
             self.da3 = self._load_da3_model(cfg, da3_model)
@@ -199,19 +341,41 @@ class BIMPriorDA3(nn.Module):
     ) -> dict[str, list[nn.Parameter]]:
         """Return independently optimizable DA3 and non-DA3 parameters."""
         groups = {"da3": [], "non_da3": []}
+        if self.attention_scale_enabled:
+            groups["attention_scale"] = []
+        if self.additive_residual_enabled:
+            groups["additive_residual"] = []
         for name, parameter in self.named_parameters():
             if not parameter.requires_grad:
                 continue
-            key = "da3" if name.startswith("da3.") else "non_da3"
+            if name.startswith("da3."):
+                key = "da3"
+            elif self.attention_scale_enabled and name.startswith("attention_scale."):
+                key = "attention_scale"
+            elif self.additive_residual_enabled and name.startswith("refiner.additive_"):
+                key = "additive_residual"
+            else:
+                key = "non_da3"
             groups[key].append(parameter)
         return groups
 
     def trainable_parameter_names(self) -> dict[str, tuple[str, ...]]:
         groups: dict[str, list[str]] = {"da3": [], "non_da3": []}
+        if self.attention_scale_enabled:
+            groups["attention_scale"] = []
+        if self.additive_residual_enabled:
+            groups["additive_residual"] = []
         for name, parameter in self.named_parameters():
             if not parameter.requires_grad:
                 continue
-            key = "da3" if name.startswith("da3.") else "non_da3"
+            if name.startswith("da3."):
+                key = "da3"
+            elif self.attention_scale_enabled and name.startswith("attention_scale."):
+                key = "attention_scale"
+            elif self.additive_residual_enabled and name.startswith("refiner.additive_"):
+                key = "additive_residual"
+            else:
+                key = "non_da3"
             groups[key].append(name)
         return {key: tuple(names) for key, names in groups.items()}
 
@@ -555,12 +719,109 @@ class BIMPriorDA3(nn.Module):
         }
         return live_batch, receipt
 
+    def _attention_scale_inputs(
+        self,
+        batch: dict[str, torch.Tensor],
+        base: torch.Tensor,
+        deterministic_scaled: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Build GT-free attention keys and measured BIM/DA3 ratio values."""
+
+        valid = batch["bim_valid"].clamp(0.0, 1.0)
+        bim = batch["bim_depth"]
+        log_base = safe_log(base)
+        fallback_log_scale_map = safe_log(deterministic_scaled) - log_base
+        fallback_valid = (
+            torch.isfinite(base)
+            & torch.isfinite(deterministic_scaled)
+            & (base > 0)
+            & (deterministic_scaled > 0)
+        )
+        fallback_numerator = torch.where(
+            fallback_valid,
+            fallback_log_scale_map,
+            torch.zeros_like(fallback_log_scale_map),
+        ).sum(dim=(-2, -1), keepdim=True)
+        fallback_denominator = fallback_valid.sum(dim=(-2, -1), keepdim=True).clamp_min(1)
+        fallback_log_scale = fallback_numerator / fallback_denominator
+
+        ratio = bim / base.clamp_min(1e-6)
+        ratio_valid = (
+            (valid > 0)
+            & torch.isfinite(base)
+            & torch.isfinite(bim)
+            & torch.isfinite(ratio)
+            & (base > 0)
+            & (bim > 0)
+            & (ratio > self.da3_scale_ratio_min)
+            & (ratio < self.da3_scale_ratio_max)
+        )
+        log_ratio = torch.where(
+            ratio_valid,
+            ratio.clamp_min(1e-6).log(),
+            torch.zeros_like(ratio),
+        )
+        safe_bim = torch.where(valid > 0, bim, deterministic_scaled)
+        log_bim = safe_log(safe_bim)
+        log_deterministic_scaled = safe_log(deterministic_scaled)
+        signed_disagreement = (log_bim - log_deterministic_scaled) * valid
+        rgb = batch["rgb"] if self.use_rgb_condition else torch.zeros_like(batch["rgb"])
+        features = torch.cat(
+            (
+                rgb,
+                log_base / 3.0,
+                batch["base_confidence"].clamp(0.0, 1.0),
+                (log_bim / 3.0) * valid,
+                valid,
+                batch["bim_normals"],
+                batch["bim_edge"].clamp(0.0, 1.0),
+                signed_disagreement.clamp(-1.0, 1.0),
+                signed_disagreement.abs().clamp(0.0, 1.0),
+            ),
+            dim=1,
+        )
+        if features.shape[1] != self.ATTENTION_SCALE_CHANNELS:
+            raise RuntimeError(
+                "Attentive scale feature contract changed: "
+                f"expected {self.ATTENTION_SCALE_CHANNELS}, got {features.shape[1]}"
+            )
+        return features, log_ratio, ratio_valid.float(), fallback_log_scale
+
+    def _estimate_attention_scale(
+        self,
+        batch: dict[str, torch.Tensor],
+        base: torch.Tensor,
+        deterministic_scaled: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        if self.attention_scale is None:
+            raise RuntimeError("Attention scale estimation requested while disabled")
+        inputs = self._attention_scale_inputs(batch, base, deterministic_scaled)
+        return self.attention_scale(
+            *inputs,
+            da3_feature_mid=(
+                batch.get("da3_feature_mid") if self.da3_feature_scale_enabled else None
+            ),
+            da3_feature_deep=(
+                batch.get("da3_feature_deep") if self.da3_feature_scale_enabled else None
+            ),
+        )
+
     def _forward_scale_refinement(
         self,
         batch: dict[str, torch.Tensor],
     ) -> dict[str, torch.Tensor]:
         base = batch["base_depth"]
-        scaled = batch["scaled_depth"]
+        deterministic_scaled = batch["scaled_depth"]
+        attention_scale_output: dict[str, torch.Tensor] | None = None
+        if self.attention_scale_enabled:
+            attention_scale_output = self._estimate_attention_scale(
+                batch,
+                base,
+                deterministic_scaled,
+            )
+            scaled = base * attention_scale_output["scale"].to(dtype=base.dtype)
+        else:
+            scaled = deterministic_scaled
         bim = batch["bim_depth"]
         valid = batch["bim_valid"].clamp(0.0, 1.0)
         residual_anchor = scaled
@@ -597,7 +858,17 @@ class BIMPriorDA3(nn.Module):
         if not self.use_bim_condition:
             bim_features = torch.zeros_like(bim_features)
 
-        prediction = self.refiner(rgb, geometry, bim_features)
+        prediction = self.refiner(
+            rgb,
+            geometry,
+            bim_features,
+            da3_feature_mid=(
+                batch.get("da3_feature_mid") if self.da3_feature_refiner_enabled else None
+            ),
+            da3_feature_deep=(
+                batch.get("da3_feature_deep") if self.da3_feature_refiner_enabled else None
+            ),
+        )
         raw_frame_residual = prediction["frame_log_residual"]
         raw_low_residual = prediction["low_log_residual"]
         if not self.use_frame_residual:
@@ -618,23 +889,47 @@ class BIMPriorDA3(nn.Module):
             if self.residual_routing_scope == self.RESIDUAL_ROUTING_FRAME_AND_LOW
             else raw_low_residual
         )
+        raw_detail_residual = prediction["detail_log_residual"]
+        detail_reliability_gate = torch.ones_like(raw_detail_residual)
+        if self.detail_reliability_gate_enabled:
+            reliability_logits_for_gate = prediction["bim_reliability_logits"]
+            if self.detail_reliability_gate_detach:
+                reliability_logits_for_gate = reliability_logits_for_gate.detach()
+            detail_reliability_gate = self.detail_reliability_gate_floor + (
+                1.0 - self.detail_reliability_gate_floor
+            ) * torch.sigmoid(reliability_logits_for_gate)
+        detail_residual = raw_detail_residual * detail_reliability_gate
         log_residual = torch.clamp(
-            frame_residual + low_residual + prediction["detail_log_residual"],
+            frame_residual + low_residual + detail_residual,
             -float(self.refiner.max_total_log_residual),
             float(self.refiner.max_total_log_residual),
         )
-        refined = residual_anchor * torch.exp(log_residual)
-        refined = refined.clamp(1e-3, self.max_depth * 2.0)
+        proportional_refined = residual_anchor * torch.exp(log_residual)
+        additive_residual = torch.zeros_like(proportional_refined)
+        if self.additive_residual_enabled:
+            decoded = prediction.get("decoded_features_for_additive")
+            if decoded is None:
+                raise KeyError("Additive refiner did not return its decoded feature tensor")
+            additive_residual = self.refiner.predict_additive_metric_residual(
+                decoded,
+                residual_anchor,
+                log_residual,
+            )
+        refined = proportional_refined + additive_residual
+        refined = refined.clamp(1e-3, self.output_max_depth)
         reliability_logits = prediction["bim_reliability_logits"]
         reliability = torch.sigmoid(reliability_logits) * valid
         local_scale = scaled / base.clamp_min(1e-3)
 
         output = {
             "depth": refined,
+            "proportional_depth": proportional_refined,
+            "additive_metric_residual": additive_residual,
             "base_depth": base,
             "base_confidence": batch["base_confidence"],
             "scaled_depth": scaled,
             "coarse_depth": scaled,
+            "deterministic_scaled_depth": deterministic_scaled,
             "refinement_anchor_depth": residual_anchor,
             "geometry_scale_channel": geometry_scale_channel,
             "geometry_scale_channel_semantics": (geometry_scale_channel_semantics),
@@ -653,13 +948,75 @@ class BIMPriorDA3(nn.Module):
             "raw_low_log_residual": raw_low_residual,
             "frame_log_residual": frame_residual,
             "low_log_residual": low_residual,
-            "detail_log_residual": prediction["detail_log_residual"],
+            "detail_log_residual": detail_residual,
+            "raw_detail_log_residual": raw_detail_residual,
+            "detail_reliability_gate": detail_reliability_gate,
             "residual_routing_gate": residual_routing_gate,
             "residual_routing_depth": residual_routing_depth,
             "residual_routing_depth_semantics": "scaled_depth",
             "residual_routing_scope": self.residual_routing_scope,
             "log_variance": prediction["log_variance"],
         }
+        if attention_scale_output is not None:
+            output.update(
+                {
+                    "attention_scale": attention_scale_output["scale"],
+                    "attention_log_scale": attention_scale_output["log_scale"],
+                    "attention_direct_log_scale": attention_scale_output["attentive_log_scale"],
+                    "attention_raw_log_scale": attention_scale_output["raw_attentive_log_scale"],
+                    "attention_bounded_log_scale_residual": attention_scale_output[
+                        "bounded_log_scale_residual"
+                    ],
+                    "attention_fallback_log_scale": attention_scale_output["fallback_log_scale"],
+                    "attention_fallback_gate": attention_scale_output["fallback_gate"],
+                    "attention_scale_pixel_support": attention_scale_output["pixel_support"],
+                    "attention_scale_token_support": attention_scale_output["token_support"],
+                    "attention_scale_head_log_scale": attention_scale_output["head_log_scale"],
+                    "attention_scale_head_mixture": attention_scale_output["head_mixture"],
+                    "attention_scale_normalized_entropy": attention_scale_output[
+                        "normalized_attention_entropy"
+                    ],
+                    "attention_scale_map": attention_scale_output["attention_map"],
+                    "attention_token_distribution": attention_scale_output[
+                        "attention_token_distribution"
+                    ],
+                    "attention_token_valid": attention_scale_output[
+                        "attention_token_valid"
+                    ],
+                }
+            )
+            spatial_residual = low_residual + detail_residual
+            output["spatial_log_residual"] = spatial_residual
+            if (
+                self.training
+                and self.attention_scale_equivariance_probability > 0
+                and self.attention_scale_equivariance_log_range > 0
+            ):
+                selected = (
+                    torch.rand(
+                        (base.shape[0], 1, 1, 1),
+                        device=base.device,
+                    )
+                    < self.attention_scale_equivariance_probability
+                )
+                log_factor = torch.empty(
+                    (base.shape[0], 1, 1, 1),
+                    device=base.device,
+                    dtype=base.dtype,
+                ).uniform_(
+                    -self.attention_scale_equivariance_log_range,
+                    self.attention_scale_equivariance_log_range,
+                )
+                log_factor = torch.where(selected, log_factor, torch.zeros_like(log_factor))
+                factor = log_factor.exp()
+                perturbed = self._estimate_attention_scale(
+                    batch,
+                    base * factor,
+                    deterministic_scaled,
+                )
+                output["attention_scale_equivariance_error"] = (
+                    perturbed["log_scale"] + log_factor - attention_scale_output["log_scale"]
+                )
         if "bim_adapter_gate_logits" in prediction:
             output["bim_adapter_gate_logits"] = prediction["bim_adapter_gate_logits"]
             output["bim_adapter_gate_logits_pyramid"] = prediction[

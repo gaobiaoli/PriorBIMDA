@@ -20,8 +20,10 @@ from bim_priorda3.data.public_downloads import (
     extract_stanford_area1,
     load_bimsyn_manifest,
     stanford_area1_inventory,
+    stanford_area1_pano_inventory,
     verify_bimsyn_model_directory,
     verify_stanford_area1_mesh,
+    verify_stanford_area1_pano_extraction,
     verify_stanford_semantic_labels,
 )
 
@@ -32,6 +34,14 @@ def test_selected_area1_member_excludes_raw_and_pano() -> None:
     assert _selected_area1_member("area_1/3d/semantic.obj")
     assert not _selected_area1_member("area_1/raw/example.jpg")
     assert not _selected_area1_member("area_1/pano/rgb/example.png")
+    assert _selected_area1_member(
+        "area_1/pano/rgb/example.png",
+        include_pano=True,
+    )
+    assert not _selected_area1_member(
+        "area_1/pano/normal/example.png",
+        include_pano=True,
+    )
 
 
 def _add_bytes(bundle: tarfile.TarFile, name: str, value: bytes) -> None:
@@ -88,6 +98,38 @@ def test_stanford_area1_inventory_counts_modalities(tmp_path: Path) -> None:
         "semantic": 1,
         "mesh": 1,
     }
+
+
+def test_stanford_pano_inventory_and_pairing(tmp_path: Path) -> None:
+    area = tmp_path / "area_1"
+    modalities = {
+        "rgb": ".png",
+        "depth": ".png",
+        "pose": ".json",
+        "semantic": ".png",
+    }
+    for index in range(190):
+        stem = f"camera_{index:03d}_office_1_frame_equirectangular"
+        for modality, suffix in modalities.items():
+            directory = area / "pano" / modality
+            directory.mkdir(parents=True, exist_ok=True)
+            (directory / f"{stem}_domain_{modality}{suffix}").write_bytes(b"sample")
+
+    assert stanford_area1_pano_inventory(tmp_path) == {
+        "rgb": 190,
+        "depth": 190,
+        "pose": 190,
+        "semantic": 190,
+    }
+    assert verify_stanford_area1_pano_extraction(tmp_path) == {
+        "rgb": 190,
+        "depth": 190,
+        "pose": 190,
+        "semantic": 190,
+    }
+    next((area / "pano/depth").glob("*.png")).unlink()
+    with pytest.raises(ValueError, match="expected 190 depth"):
+        verify_stanford_area1_pano_extraction(tmp_path)
 
 
 def test_area1_modalities_require_paired_frame_basenames(tmp_path: Path) -> None:

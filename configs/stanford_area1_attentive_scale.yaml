@@ -1,0 +1,44 @@
+extends: stanford_area1.yaml
+
+experiment:
+  name: stanford_area1_attentive_scale
+  output_dir: outputs/stanford_area1_attentive_scale
+
+model:
+  # The learned scalar replaces the old per-frame residual.  Spatial
+  # correction remains in the low/detail branches.
+  use_frame_residual: false
+  attention_scale:
+    enabled: true
+    hidden_channels: 24
+    attention_heads: 4
+    min_support: 100
+    ratio_min: 0.2
+    ratio_max: 5.0
+    huber_delta: 0.15
+    token_dropout_probability: 0.10
+    fallback_gate_bias: -1.5
+    min_normalized_entropy: 0.35
+    equivariance_probability: 0.50
+    equivariance_log_range: 0.20
+
+loss:
+  # Both terms use metric GT and therefore supervise the scale end to end.
+  coarse_depth: 0.50
+  frame_residual_teacher: 0.0
+  spatial_mean: 0.10
+  attention_entropy: 0.01
+  attention_scale_equivariance: 0.10
+
+train:
+  # Initialize the shared spatial refiner from the accepted Area_1 model;
+  # attention_scale.* is the only newly initialized parameter family.
+  init_checkpoint_policy: preserve
+  refiner_head_warmup_epochs: 1
+  learning_rate: 0.00004
+  attention_scale_learning_rate: 0.00008
+  lr_warmup_epochs: 0
+  acceptance:
+    enabled: true
+    near_relative_tolerance: 1.02
+    require_learned_scale_better_than_universal: true

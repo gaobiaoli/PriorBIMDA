@@ -230,6 +230,39 @@ def load_stanford_depth(
     return depth, valid
 
 
+STANFORD_RGB_SUFFIX = "_domain_rgb.png"
+STANFORD_DEPTH_SUFFIX = "_domain_depth.png"
+
+
+def official_regular_depth_path(image_path: str | Path) -> Path:
+    """Resolve the official regular-view depth PNG paired with an RGB image."""
+
+    image = Path(image_path).expanduser().resolve()
+    if not image.name.endswith(STANFORD_RGB_SUFFIX):
+        raise ValueError(
+            f"Stanford RGB filename must end with {STANFORD_RGB_SUFFIX!r}: {image}"
+        )
+    depth_name = image.name[: -len(STANFORD_RGB_SUFFIX)] + STANFORD_DEPTH_SUFFIX
+    depth_path = image.parent.parent / "depth" / depth_name
+    if not depth_path.is_file():
+        raise FileNotFoundError(f"Official Stanford regular depth not found: {depth_path}")
+    return depth_path
+
+
+def load_stanford_all_valid_depth(
+    path: str | Path,
+    target_shape: tuple[int, int],
+) -> tuple[np.ndarray, np.ndarray]:
+    """Load all positive official z-depth values except sentinel 65535."""
+
+    return load_stanford_depth(
+        path,
+        target_shape,
+        min_depth=float(np.nextafter(np.float32(0.0), np.float32(1.0))),
+        max_depth=float("inf"),
+    )
+
+
 def semantic_label_lut(labels_path: str | Path) -> np.ndarray:
     with Path(labels_path).expanduser().resolve().open("r", encoding="utf-8") as handle:
         labels = json.load(handle)

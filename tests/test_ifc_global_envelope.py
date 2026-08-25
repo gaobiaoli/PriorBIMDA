@@ -66,3 +66,29 @@ def test_global_scene_requires_exact_ifc_transform_room_sets(tmp_path: Path) -> 
             {"office_1": tmp_path / "office_1.ifc"},
             {"office_2": np.eye(4)},
         )
+
+
+def test_global_scene_can_retain_all_fixed_envelope_categories(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = {"office_1": tmp_path / "hash-a.ifc"}
+    monkeypatch.setattr(
+        ifc_envelope,
+        "load_ifc_envelope_geometry",
+        lambda path, strict=True: _geometry(Path(path)),
+    )
+
+    _scene, geometry = build_global_ifc_envelope_scene(
+        paths,
+        {"office_1": np.eye(4, dtype=np.float64)},
+        included_categories=ENVELOPE_CATEGORIES,
+    )
+
+    assert geometry.audit["filter_policy"] == "global-area-fixed-envelope-v2"
+    assert geometry.audit["excluded_envelope_categories"] == []
+    assert len(geometry.triangles) == 2
+    assert set(geometry.triangle_categories.tolist()) == {
+        ENVELOPE_CATEGORIES.index("wall"),
+        ENVELOPE_CATEGORIES.index("door"),
+    }

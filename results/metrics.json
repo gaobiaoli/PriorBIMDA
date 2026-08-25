@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 7,
   "method_protocol": "universal_log_upper_cap_v1",
   "depth_protocol_m": [0.2, 5.0],
   "metric_aggregation": "pixel_micro",
@@ -35,9 +35,251 @@
       "learned_abs_rel": 0.0711540217,
       "universal_bim_direct_abs_rel": 0.0871003856
     },
+    "previous_diagnostic_da3_feature_candidate": {
+      "status": "active no-additive diagnostic rollback candidate; test is post-hoc because Area_1 was previously revealed",
+      "architecture": "frozen DA3 layer-11/layer-23 feature fusion, attentive scalar scale, low/detail refiner",
+      "train_val_test_samples": [7013, 1673, 1641],
+      "selected_human_epoch": 14,
+      "validation": {
+        "scale_output": {"abs_rel": 0.0695967958, "mae": 0.1394159700, "rmse": 0.3573764200, "delta1": 0.9356682600},
+        "final_output": {"abs_rel": 0.0620945653, "mae": 0.1240071653, "rmse": 0.3084243194, "delta1": 0.9461547471}
+      },
+      "test": {
+        "scale_output": {"abs_rel": 0.0714418412, "mae": 0.1254479000, "rmse": 0.3118862600, "delta1": 0.9397952300},
+        "final_output": {"abs_rel": 0.0624352421, "mae": 0.1077992246, "rmse": 0.2816563885, "delta1": 0.9439100093},
+        "abs_rel_improvement_over_universal_bim_direct_percent": 20.10475370,
+        "abs_rel_improvement_over_public_refiner_percent": 6.65797935,
+        "abs_rel_improvement_over_previous_scratch_candidate_percent": 3.07375266,
+        "room_bootstrap_ci95_vs_universal_bim_direct": [-0.0278062415, -0.0109908464],
+        "post_hoc_room_bootstrap_ci95_vs_previous_scratch_candidate": [-0.0062193237, -0.0002042711]
+      },
+      "sequential_residual_stage_ablation": {
+        "definition": "cumulative same-checkpoint outputs: scale; scale*exp(r_low); scale*exp(r_low+r_detail)",
+        "validation": {
+          "scale": {"abs_rel": 0.0695967958, "mae": 0.1394159652, "rmse": 0.3573764174, "delta1": 0.9356682633},
+          "scale_plus_low": {"abs_rel": 0.0621713280, "mae": 0.1240474960, "rmse": 0.3083732829, "delta1": 0.9461506255},
+          "scale_plus_low_plus_detail": {"abs_rel": 0.0620945653, "mae": 0.1240071653, "rmse": 0.3084243194, "delta1": 0.9461547471},
+          "low_incremental_abs_rel_reduction_percent": 10.66926680,
+          "detail_incremental_abs_rel_reduction_percent": 0.12346955,
+          "low_share_of_total_abs_rel_reduction_percent": 98.97680218
+        },
+        "test": {
+          "scale": {"abs_rel": 0.0714418412, "mae": 0.1254479038, "rmse": 0.3118862630, "delta1": 0.9397952259},
+          "scale_plus_low": {"abs_rel": 0.0628458789, "mae": 0.1084527390, "rmse": 0.2818091300, "delta1": 0.9437024380},
+          "scale_plus_low_plus_detail": {"abs_rel": 0.0624352421, "mae": 0.1077992246, "rmse": 0.2816563885, "delta1": 0.9439100093},
+          "low_incremental_abs_rel_reduction_percent": 12.03211198,
+          "detail_incremental_abs_rel_reduction_percent": 0.65340275,
+          "low_share_of_total_abs_rel_reduction_percent": 95.44071122
+        },
+        "conclusion": "r_low is the dominant correction; r_detail is a small complementary term and the additive branch is not retained"
+      }
+    },
+    "hit_only_full_depth_supervision_diagnostic": {
+      "status": "fresh full-depth-supervised run; test is post-hoc because Area_1 was previously revealed",
+      "architecture": "hit-only BIM prior, attentive scale with frozen DA3 layer-11/layer-23 features, low/detail refiner",
+      "ground_truth_support": "official positive regular-view uint16/512 z-depth; raw 0 and 65535 invalid; no metric cutoff",
+      "model_output_max_depth_m": 128.0,
+      "train_val_test_samples": [7013, 1673, 1641],
+      "selected_human_epoch": 15,
+      "validation": {
+        "valid_pixels": 422186615,
+        "observed_depth_range_m": [0.298828125, 51.60546875],
+        "raw_da3": {"abs_rel": 0.2839903652, "mae": 0.8802813848, "rmse": 1.3248333600, "delta1": 0.3174103755},
+        "robust_bim_direct": {"abs_rel": 0.1220341362, "mae": 0.3250235452, "rmse": 0.8640759586, "delta1": 0.8452138209},
+        "scale": {"abs_rel": 0.0763470386, "mae": 0.2330517683, "rmse": 0.6844427875, "delta1": 0.9219652831},
+        "scale_plus_low": {"abs_rel": 0.0694006278, "mae": 0.2135740082, "rmse": 0.6204489521, "delta1": 0.9308629100},
+        "final": {"abs_rel": 0.0686051828, "mae": 0.2106495475, "rmse": 0.6180120173, "delta1": 0.9310232846}
+      },
+      "test": {
+        "valid_pixels": 413756559,
+        "observed_depth_range_m": [0.15625, 20.5625],
+        "raw_da3": {"abs_rel": 0.3027477300, "mae": 0.7101329900, "rmse": 0.9286307200, "delta1": 0.2622815300},
+        "robust_bim_direct": {"abs_rel": 0.1086634600, "mae": 0.2164593400, "rmse": 0.5547715200, "delta1": 0.8798855000},
+        "scale": {"abs_rel": 0.0779437000, "mae": 0.1524930000, "rmse": 0.4357349900, "delta1": 0.9306068100},
+        "scale_plus_low": {"abs_rel": 0.0674643700, "mae": 0.1325096200, "rmse": 0.4138573400, "delta1": 0.9383570000},
+        "final": {"abs_rel": 0.0674068363, "mae": 0.1316715171, "rmse": 0.4133292107, "delta1": 0.9378446034}
+      },
+      "comparison_to_same_hit_only_model_trained_on_0.2_5.0_m": {
+        "validation_final_abs_rel_relative_reduction_percent": 4.89692384,
+        "test_final_abs_rel_relative_reduction_percent": 0.05392180,
+        "validation_final_mae_relative_reduction_percent": 19.06654427,
+        "test_final_mae_relative_reduction_percent": 2.47666784
+      },
+      "conclusion": "full-depth supervision materially improves validation and meter-error metrics, but the test AbsRel gain over the closest limited-supervision checkpoint is practically neutral"
+    },
+    "hybrid_additive_candidate": {
+      "status": "archived negative diagnostic; Area_1 test was already revealed before model design",
+      "architecture": "no-token attentive scalar scale; frozen DA3 layer-11/layer-23 features in proportional refiner only; bounded pixel-metric additive head",
+      "formula": "D_final = D_scale * exp(r_low + r_detail) + delta_D_add",
+      "train_val_test_samples": [7013, 1673, 1641],
+      "selected_human_epoch": 17,
+      "trainable_task_parameters": 3741979,
+      "validation": {
+        "scale_output": {"abs_rel": 0.0698797221, "mae": 0.1405564344, "rmse": 0.3608328487, "delta1": 0.9362050539},
+        "proportional_output": {"abs_rel": 0.0613128368, "mae": 0.1239149937, "rmse": 0.3144395377, "delta1": 0.9508009416},
+        "final_output": {"abs_rel": 0.0613083270, "mae": 0.1239019835, "rmse": 0.3144343474, "delta1": 0.9508003003},
+        "additive_abs_rel_reduction_percent": 0.00735532,
+        "abs_rel_improvement_over_previous_da3_feature_candidate_percent": 1.26619506
+      },
+      "test": {
+        "scale_output": {"abs_rel": 0.0706783080, "mae": 0.1247132630, "rmse": 0.3142944690, "delta1": 0.9418671560},
+        "proportional_output": {"abs_rel": 0.0624248957, "mae": 0.1096073590, "rmse": 0.2866771830, "delta1": 0.9452001230},
+        "final_output": {"abs_rel": 0.0623503619, "mae": 0.1095310350, "rmse": 0.2866324020, "delta1": 0.9452506960},
+        "additive_abs_rel_reduction_percent": 0.11939817,
+        "abs_rel_improvement_over_universal_bim_direct_percent": 20.21337067,
+        "abs_rel_improvement_over_public_refiner_percent": 6.78487711,
+        "abs_rel_improvement_over_previous_scratch_candidate_percent": 3.20552316,
+        "abs_rel_improvement_over_previous_da3_feature_candidate_percent": 0.13594924
+      },
+      "conclusion": "overall recipe has the lowest Area_1 AbsRel, but the additive head is practically neutral and MAE/RMSE regress versus the preceding DA3-feature model"
+    },
+    "scale_residual_distribution_validation": {
+      "status": "validation-only model-design diagnostic; no test access",
+      "scale_model": "bounded-MLP attentive scalar without DA3 encoder features",
+      "samples": 1673,
+      "rooms": 7,
+      "sampled_pixels": 6852608,
+      "learned_scale": {
+        "meter_mae_on_frame_balanced_sample": 0.1442975656,
+        "median_absolute_correction_m": 0.0618798137,
+        "p90_absolute_correction_m": 0.2948263049,
+        "distance_power_exponent": 0.4038399263,
+        "room_mean_power_exponent": 0.3806350282,
+        "room_cluster_bootstrap_ci95": [0.1416251847, 0.7186742167],
+        "mixed_mae_model_intercept_m": 0.0566115155,
+        "mixed_mae_model_slope_m_per_m": 0.0401679979,
+        "mixed_model_r_squared": 0.8910659361,
+        "pure_additive_normalized_rmse": 0.3947228655,
+        "pure_proportional_normalized_rmse": 0.2651432336,
+        "mixed_normalized_rmse": 0.1302789164
+      },
+      "subset_distance_power_exponents": {
+        "bim_consistent": 0.3279307502,
+        "bim_foreground_conflict": 0.5119515602,
+        "furniture": 0.7617923410,
+        "bim_no_hit": 1.0612116022
+      },
+      "conclusion": "post-scale residual is heavy-tailed and mixed additive-plus-distance-dependent, not pure additive or pure proportional"
+    },
+    "official_semantic_global_scale_oracle_validation": {
+      "status": "privileged validation-only upper bound; not deployable or a test claim",
+      "selection": "q65 selected on 7013 train frames / 30 train rooms",
+      "samples": 1673,
+      "rooms": 7,
+      "all_hit_scale": {"abs_rel": 0.0864422373, "mae": 0.1742247291, "rmse": 0.3953637920, "delta1": 0.9153276489},
+      "semantic_category_match_q65": {"abs_rel": 0.0772486698, "mae": 0.1546421815, "rmse": 0.3698228184, "delta1": 0.9336337662},
+      "abs_rel_reduction_percent": 10.63550385,
+      "room_cluster_ci95_candidate_minus_reference": [-0.0140446821, -0.0027275163],
+      "improved_rooms": "7/7",
+      "furniture_abs_rel": {"all_hit_scale": 0.1097885967, "semantic_category_match_q65": 0.1009683013},
+      "test_accessed": false
+    },
     "subsets": {
       "furniture": {"universal_bim_direct_abs_rel": 0.0892855701, "learned_abs_rel": 0.0857341398},
       "bim_foreground_conflict": {"universal_bim_direct_abs_rel": 0.1406391057, "learned_abs_rel": 0.1377197040, "abs_rel_room_bootstrap_ci95": [-0.0069160177, 0.0006405549]}
     }
+  },
+  "stanford_area1_pano": {
+    "split": "room_disjoint_test",
+    "stations": 31,
+    "rooms": 7,
+    "depth_protocol_m": [0.2, 5.0],
+    "metric": "exact-ERP-solid-angle equal-station macro",
+    "selected_fusion": "joint_huber",
+    "training_free_pano_quality_common_regular": {
+      "regular_only": {"abs_rel": 0.2698500790, "mae": 0.5914353062, "rmse": 0.7115872114},
+      "regular_plus_tangent6": {"abs_rel": 0.2350077378, "mae": 0.5168376713, "rmse": 0.6438603518},
+      "regular_plus_tangent14": {"abs_rel": 0.2286511752, "mae": 0.4894744945, "rmse": 0.6109206254},
+      "tangent14_abs_rel_improvement_over_regular_only_percent": 15.26733065,
+      "tangent14_room_cluster_ci95_candidate_minus_reference": [-0.0529325270, -0.0302093960]
+    },
+    "view_count_common_tangent_support": {
+      "tangent6_abs_rel": 0.3941289235,
+      "tangent14_abs_rel": 0.3639978000,
+      "relative_reduction_percent": 7.64499170,
+      "room_cluster_ci95_candidate_minus_reference": [-0.0405280982, -0.0168093245]
+    },
+    "solid_angle_coverage": {
+      "regular_only": 0.6691995333,
+      "regular_plus_tangent6": 0.9975274287,
+      "regular_plus_tangent14": 0.9995674977
+    },
+    "deterministic_bim_chain": {
+      "raw_da3_abs_rel": 0.2698500790,
+      "universal_scale_abs_rel": 0.1082429391,
+      "bim_direct_abs_rel": 0.1100641480,
+      "raw_to_universal_scale_improvement_percent": 59.88774971,
+      "bim_direct_vs_scale_only_improvement_percent": -1.68251985
+    },
+    "validation_only_strict_single_plus_pano": {
+      "status": "exploratory; future protocol-v4 candidate, not a test claim",
+      "stations": 30,
+      "rooms": 7,
+      "strict_single_abs_rel": 0.1158565937,
+      "strict_single_plus_tangent6_abs_rel": 0.1645430356,
+      "strict_single_plus_tangent14_abs_rel": 0.3185916864,
+      "tangent6_relative_reduction_percent": -42.02302201,
+      "tangent14_relative_reduction_percent": -174.98796236,
+      "solid_angle_coverage": {
+        "strict_single": 0.1087083108,
+        "strict_single_plus_tangent6": 0.9937505568,
+        "strict_single_plus_tangent14": 0.9985434179
+      }
+    },
+    "validation_only_regular_erp_roundtrip": {
+      "status": "candidate for future blind protocol; not a test claim",
+      "metric": "original regular-frame fixed-support pixel-micro",
+      "frames": 1673,
+      "stations": 30,
+      "rooms": 7,
+      "fixed_support_pixels": 364913264,
+      "raw_da3": {"abs_rel": 0.2771040724, "mae": 0.6283979394, "rmse": 0.7920644376, "delta1": 0.3289364675},
+      "identity_projection_roundtrip_abs_rel": 0.2764011592,
+      "best_regular_only": {"fusion": "joint_huber", "abs_rel": 0.2595437686},
+      "regular_plus_tangent6_weighted_log_abs_rel": 0.2239887317,
+      "regular_plus_tangent14_weighted_log": {"abs_rel": 0.1865365846, "mae": 0.4318500870, "rmse": 0.5575806284, "delta1": 0.5760006630},
+      "same_fusion_regular_only_weighted_log_abs_rel": 0.2668203961,
+      "tangent14_improvement_over_same_fusion_regular_only_percent": 30.08908337,
+      "tangent14_room_cluster_ci95_candidate_minus_reference": [-0.0913329935, -0.0764939409],
+      "improved_rooms": "7/7",
+      "pano_gt_accessed": false,
+      "test_accessed": false
+    },
+    "validation_only_bim_scale_regular_erp_roundtrip": {
+      "status": "candidate for future blind protocol; not a test claim",
+      "metric": "original regular-frame fixed-support pixel-micro",
+      "frames": 1673,
+      "stations": 30,
+      "rooms": 7,
+      "fixed_support_pixels": 364913264,
+      "per_frame_universal_scale": {"abs_rel": 0.0864422373, "mae": 0.1742247291, "rmse": 0.3953637920, "delta1": 0.9153276489},
+      "identity_projection_roundtrip_abs_rel": 0.0860756026,
+      "joint_huber": {"abs_rel": 0.0759470115, "mae": 0.1525372232, "rmse": 0.3538724709, "delta1": 0.9315607722},
+      "joint_huber_relative_reduction_percent": 12.14131673,
+      "joint_huber_room_cluster_ci95_candidate_minus_reference": [-0.0123074702, -0.0069976691],
+      "improved_rooms": "7/7",
+      "joint_synchronized_huber_sensitivity": {
+        "abs_rel": 0.0744585547,
+        "mae": 0.1588653933,
+        "rmse": 0.3351436158,
+        "delta1": 0.9440219252,
+        "abs_rel_reduction_over_joint_huber_percent": 1.95986218,
+        "mae_reduction_over_joint_huber_percent": -4.14860712,
+        "rmse_reduction_over_joint_huber_percent": 5.29254367,
+        "delta1_change_percentage_points": 1.24611530,
+        "room_cluster_ci95_abs_rel_candidate_minus_joint_huber": [-0.0068151772, 0.0040846156],
+        "improved_frames": "827/1673",
+        "improved_stations": "14/30",
+        "improved_rooms": "4/7",
+        "room_macro_abs_rel": 0.0767918145,
+        "joint_huber_room_macro_abs_rel": 0.0760818047,
+        "conclusion": "mixed sensitivity result; not a stable improvement over joint_huber"
+      },
+      "pano_rgb_or_gt_accessed": false,
+      "tangent_accessed": false,
+      "checkpoint_or_learned_model_used": false,
+      "test_accessed": false
+    },
+    "reporting_scope": "training-free pano and deterministic BIM only; learned pano outputs are archival"
   }
 }

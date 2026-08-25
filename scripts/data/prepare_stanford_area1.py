@@ -19,6 +19,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-frames-per-room", type=int, default=None)
     parser.add_argument("--stride", type=int, default=1)
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--log-every", type=int, default=1)
     return parser.parse_args()
 
 
@@ -41,6 +42,7 @@ def main() -> None:
         max_frames_per_room=args.max_frames_per_room,
         stride=args.stride,
         overwrite=args.overwrite,
+        log_every=getattr(args, "log_every", 1),
     )
     if is_canonical_preparation(
         rooms=args.rooms,

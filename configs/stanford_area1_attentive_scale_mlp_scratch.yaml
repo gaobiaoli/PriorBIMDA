@@ -1,0 +1,30 @@
+extends: stanford_area1_attentive_scale_oracle.yaml
+
+experiment:
+  name: stanford_area1_attentive_scale_mlp_scratch
+  output_dir: outputs/stanford_area1_attentive_scale_mlp_scratch
+
+model:
+  attention_scale:
+    # A zero-initialized appearance-conditioned correction to the measured
+    # BIM/DA3 attentive log scale.  It is applied before the safety fallback.
+    bounded_log_scale_residual: 0.05
+    residual_hidden_channels: 32
+
+loss:
+  # Keep the direct oracle supervision introduced in the preceding run and
+  # weakly prefer the measured-ratio solution when the MLP is unnecessary.
+  attention_scale_residual: 0.001
+
+train:
+  # No --init-checkpoint is permitted for this schedule. DA3 remains frozen,
+  # while every task-specific module uses its deterministic fresh init.
+  epochs: 15
+  refiner_head_warmup_epochs: 0
+  scratch_stage_epochs:
+    scale_only: 3
+    refiner_only: 9
+    joint: 3
+  # A single cosine schedule spans all stages: the final joint stage therefore
+  # starts at low LR without resetting optimizer moments.
+  early_stopping_patience: 15
