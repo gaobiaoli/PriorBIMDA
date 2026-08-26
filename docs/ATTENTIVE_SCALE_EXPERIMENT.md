@@ -2,16 +2,17 @@
 
 ## Status
 
-This document records five completed Area_1 attention-scale candidates. The
-first attention-only run did not beat the existing refiner; direct scale
-supervision and the bounded-MLP scratch curriculum improved it; the latest
-hybrid model has the lowest Area_1 AbsRel, although its new additive branch is
-effectively neutral and its MAE/RMSE do not beat the preceding frozen-feature
-model. The active diagnostic recommendation has therefore been rolled back to
-the preceding no-additive frozen-feature model. Neither candidate is promoted
-as a confirmatory public checkpoint because Area_1 test had already been
-revealed before these iterations. Confirmation must use a new blind
-area/dataset.
+This document records the completed Area_1 attention-scale development line.
+The public Area_1 full-depth release is now frozen at
+`stanford_area1_attentive_scale_da3_features_hit_only_full_depth`: attentive
+scalar scale, frozen DA3 layer-11/layer-23 features, and the no-additive
+low/detail refiner. The later reliability-gated successor regressed final
+validation/test AbsRel and is archived as a negative diagnostic. Earlier
+bounded-core and hybrid runs remain model-design evidence, not release
+checkpoints. Area_1 test had already been revealed before these iterations, so
+publishing the selected checkpoint supports reproducibility/deployment but does
+not turn its test numbers into a new blind confirmation; that still requires a
+new area/dataset.
 
 ## Network
 
@@ -955,6 +956,11 @@ The bounded-prior receipts are stored in
 
 ### Full-depth supervised retraining
 
+**Release decision:** this validation-selected checkpoint is the recommended
+public Area_1 model for official-all-valid regular-view depth. The immediately
+following reliability-gated candidate failed to improve it and was rolled
+back.
+
 The preceding all-valid experiment changed only evaluation support. To test the
 actual full-depth objective, the task network was subsequently retrained from
 scratch with the same room split, RGB, frozen cached DA3 predictions/features,
@@ -976,8 +982,8 @@ DA3 remains frozen. Training uses batch size 8, gradient accumulation 2, 504 px
 inputs, and the unchanged 3 scale-only + 9 refiner-only + 3 low-LR joint epoch
 schedule. Human epoch 15 is the validation-selected checkpoint; peak allocated
 GPU memory was 12.822 GiB. The full test was already revealed by earlier
-iterations, so test numbers remain post-hoc diagnostics rather than a new blind
-claim.
+iterations, so the checkpoint may be released for reproducibility and use, but
+test numbers remain post-hoc rather than a new blind claim.
 
 Pixel-micro results on the identical official all-valid support are:
 
@@ -993,6 +999,29 @@ Pixel-micro results on the identical official all-valid support are:
 | Test | Learned scale | 0.077944 | 0.152493 | 0.435735 | 0.930607 |
 | Test | Scale + low | 0.067464 | 0.132510 | 0.413857 | **0.938357** |
 | Test | Scale + low + detail | **0.067407** | **0.131672** | **0.413329** | 0.937845 |
+
+After the release checkpoint had already been frozen, the same deterministic
+evaluator was extended to accept `--split train` and run once on all 7,013
+optimization images. This is a fit diagnostic only: it uses inference mode
+without augmentation or parameter updates, and GT enters only metric
+calculation after prediction. It was not used to select an epoch, tune a
+threshold, or change the released model.
+
+| Train diagnostic output | AbsRel | MAE (m) | RMSE (m) | delta1 |
+|---|---:|---:|---:|---:|
+| Raw DA3 | 0.281670 | 0.670579 | 1.113652 | 0.341935 |
+| Robust BIM-direct | 0.173598 | 0.416509 | 1.033740 | 0.759010 |
+| Learned scale | 0.089397 | 0.210565 | 0.708067 | 0.919732 |
+| Scale + low | 0.067586 | 0.165058 | 0.629919 | 0.950122 |
+| Scale + low + detail | **0.066722** | **0.162565** | **0.628261** | **0.950469** |
+
+Final train AbsRel is lower than validation/test by `0.001883/0.000685`
+(`2.82%/1.03%` relative), a small fit-to-held-out gap rather than evidence of
+severe overfitting. MAE and RMSE are not ordered across the three splits
+because their scene and depth distributions differ: train contains 1.772
+billion valid pixels spanning 0.234--49.977 m, validation reaches 51.605 m,
+and test reaches only 20.562 m. Within train, low-frequency refinement reduces
+scale-only AbsRel by 24.40%, while detail contributes another 1.28%.
 
 Against the closest controlled baseline--the same hit-only network trained on
 0.2--5.0 m but evaluated on these exact all-valid pixels--full-depth training
@@ -1023,11 +1052,73 @@ Reproduction:
 ```
 
 Repeat the evaluation with `--split test` and the `_test` output path. The
-accepted checkpoint SHA256 is
+post-training fit diagnostic can be reproduced by replacing the split with
+`train` and the suffix with `_train`; do not use that output for model
+selection. The accepted checkpoint SHA256 is
 `f330a987d638482636e225ebdf326612209fa672ea3c5c77a11049f05b655349`;
 validation/test summary SHA256 values are
 `dea8f01a5ede9848714a6f6283404a253a62b72dd030119f98fc878b9d2ea8a7` and
 `f5d006e72a4055d5275255d902618ae4df8fbc64600148dbcac1b985b9f0995a`.
+The train diagnostic summary/per-frame SHA256 values are
+`fb9c88b6a00e26c2018bb4c881cbd67dad5b32d221be4cdedbf31d2836c0a730` and
+`01b04be0f8d991e2ebdfab0cce07f46846040c9d05bf6b90ecc5e7edcbfdb22b`.
+
+### Train-selected fixed BIM/DA3 quantile (negative result)
+
+The scale-only comparator was also isolated from the local BIM-direct field.
+On the 1,641-frame official-all-valid test, the existing
+`log_upper_cap_v1` scale alone gives AbsRel/MAE/RMSE/delta1
+`0.108401/0.217625/0.553864/0.879748`. Pure q45 gives
+`0.109843/0.214767/0.530377/0.885148`: the robust cap improves AbsRel by
+1.31%, but q45 is better on the other three metrics. BIM-direct's local field
+changes robust scale AbsRel only from `0.108401` to `0.108663` and is therefore
+not responsible for the scale-only result.
+
+To ask whether a different fixed quantile is better, a new locked selector
+searched q=0.05--0.95 at step 0.01 using all 7,013 train frames and the same
+official-all-valid pixel-micro AbsRel headline objective. Runtime candidates use
+only the hit-only BIM/DA3 ratios in (0.2, 5.0); GT is used only to score the 91
+candidates on train. The selected q56 was then frozen in a receipt before one
+test execution. No alternative quantile was tested after seeing that result.
+
+| Split/method | AbsRel | MAE (m) | RMSE (m) | delta1 |
+|---|---:|---:|---:|---:|
+| Train, current robust scale | 0.176655 | -- | -- | -- |
+| Train, pure q45 | 0.143765 | -- | -- | -- |
+| Train, selected q56 | **0.137321** | -- | -- | -- |
+| Test, current robust scale | **0.108401** | 0.217625 | 0.553864 | 0.879748 |
+| Test, pure q45 | 0.109843 | **0.214767** | **0.530377** | **0.885148** |
+| Test, train-selected q56 | 0.127587 | 0.244577 | 0.577203 | 0.867391 |
+
+Q56 reduces train AbsRel by 4.48% relative to q45, but regresses test AbsRel
+by 17.70% relative to the current robust estimator and improves only 2/7 test
+rooms. The paired equal-room `q56 - robust` AbsRel interval is
+`[-0.01968, 0.02736]`. Train room balancing independently preferred q54, and
+leave-one-train-room-out winners were q52/q53/q54/q55/q56 in
+3/10/14/2/1 rooms. This disagreement already warned that the pixel-micro q56
+optimum was driven by room weighting. Q56 also raises mean scale from 1.336 on
+train to 1.492 on test, amplifying the split-dependent BIM/DA3 ratio shift.
+
+The correct conclusion is not that q45 is globally optimal. It is that a
+single train-optimized quantile is not sufficiently transferable on these
+room splits. Keep the current robust rule for the published protocol; a q54
+room-balanced hypothesis must be evaluated only on a new blind area, not by
+trying another value on this already-revealed test.
+
+Reproduction:
+
+```bash
+.venv/bin/python scripts/analysis/search_stanford_scale_quantile.py \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --split train \
+  --output results/stanford_area1/fixed_scale_quantile_full_depth_train/selection.json
+
+.venv/bin/python scripts/analysis/search_stanford_scale_quantile.py \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --split test \
+  --selection-receipt results/stanford_area1/fixed_scale_quantile_full_depth_train/selection.json \
+  --output results/stanford_area1/fixed_scale_quantile_full_depth_test
+```
 
 ### Full-depth GT-oracle DA3 scale diagnostic
 
@@ -1078,3 +1169,97 @@ scalar is genuine DA3 relative-shape/occlusion error; however, the much larger
 gap from the current learned `0.12718` also shows substantial avoidable scale
 and BIM-fusion error. The no-hit failure is severe but covers only 57,407 test
 pixels (0.014%) and is not the main aggregate bottleneck.
+
+## Reliability-gated full-depth candidate (negative result)
+
+The next candidate tested whether the full-depth model could learn where BIM
+ratios are trustworthy without an explicit semantic classifier. It changes
+three coupled components while retaining the exact room split, official
+all-valid GT support, hit-only BIM, frozen DA3 predictions/features, 504 px
+input, batch size 8, gradient accumulation 2, seed 42, and 3/9/3 staged
+schedule:
+
+1. the scale head exposes its exact post-dropout token distribution and receives
+   a train-only target based on each BIM/DA3 log-ratio's distance from the
+   frame's AbsRel-optimal GT scale;
+2. the old attention-entropy regularizer decays linearly to zero over the three
+   scale-only epochs, allowing attention to become sparse after its warm start;
+3. RGB-aware gates control BIM feature injection at all four refiner scales,
+   and the detached predicted BIM-reliability probability gates only
+   `r_detail` (floor 0.10). `r_low` remains available everywhere.
+
+GT is used only to construct losses on the training split. Validation and test
+scale are produced entirely by the network; neither oracle scale nor GT enters
+inference. The complete fresh run used 7,013/1,673/1,641 train/validation/test
+frames and peaked at 13.376 GiB allocated GPU memory. Validation selected human
+epoch 12, before the final low-LR joint stage; joint epochs 13--15 did not beat
+its `0.069280` training-loop validation AbsRel.
+
+The independent evaluator reloads official z-depth and uses the same all-valid
+pixel support as the public full-depth release:
+
+| Split | Output | Previous full-depth | Reliability-gated | Relative change |
+|---|---|---:|---:|---:|
+| Validation | Scale | 0.076347 | 0.076691 | +0.45% |
+| Validation | Scale + low | 0.069401 | 0.069871 | +0.68% |
+| Validation | Final | **0.068605** | 0.069279 | +0.98% |
+| Test | Scale | 0.077944 | **0.076740** | -1.54% |
+| Test | Scale + low | **0.067464** | 0.069145 | +2.49% |
+| Test | Final | **0.067407** | 0.068837 | +2.12% |
+
+Lower is better; a positive relative change is a regression. The scale-only
+test result improves, so directly supervising attention is promising. The
+RGB/reliability-gated refiner, however, loses more than the scale head gains.
+On test, the low branch reduces the new scale error by 9.90%, versus 13.44% in
+the previous model. Detail gating makes the final detail increment larger
+(0.446% versus 0.085%), but it cannot recover the weaker low correction.
+
+Final pixel-micro metrics are:
+
+| Split | AbsRel | MAE (m) | RMSE (m) | delta1 |
+|---|---:|---:|---:|---:|
+| Validation, previous | **0.068605** | **0.210650** | **0.618012** | **0.931023** |
+| Validation, reliability-gated | 0.069279 | 0.213985 | 0.623480 | 0.928973 |
+| Test, previous | **0.067407** | **0.131672** | **0.413329** | **0.937845** |
+| Test, reliability-gated | 0.068837 | 0.135740 | 0.417432 | 0.937092 |
+
+The subset result also rejects the intended foreground hypothesis. Relative to
+the public full-depth model, validation/test furniture AbsRel regresses
+3.08%/4.58%, and foreground-conflict AbsRel regresses 0.17%/0.88%. The new
+candidate improves the tiny BIM no-hit subset by 12.72%/6.26%, and improves
+validation non-structural pixels by 0.85%, but these gains do not dominate the
+aggregate. The test no-hit subset contains only 57,407 pixels (0.014%).
+
+A post-hoc paired room bootstrap of `new - previous` final AbsRel gives a 95%
+interval of `[-0.00308, 0.00278]` on validation and
+`[0.000385, 0.002237]` on the already-revealed test. The validation room-level
+difference is inconclusive; the test interval is wholly positive and only one
+of seven rooms improves. Consequently this candidate is archived as a negative
+diagnostic and does **not** replace the public full-depth release.
+
+Reproduction:
+
+```bash
+.venv/bin/python scripts/model/train.py \
+  --config configs/stanford_area1_reliability_gated_full_depth.yaml \
+  --device cuda
+
+.venv/bin/python scripts/model/evaluate_stanford_area1.py \
+  --config configs/stanford_area1_reliability_gated_full_depth.yaml \
+  --checkpoint outputs/stanford_area1_reliability_gated_full_depth/accepted.pt \
+  --split val --depth-support all-valid \
+  --output results/stanford_area1/reliability_gated_full_depth_val \
+  --device cuda --batch-size 8 --inference-seed 42 \
+  --bootstrap-repetitions 10000 --bootstrap-seed 42 \
+  --allow-unverified-robust-comparator
+```
+
+Repeat with `--split test` and the `_test` output directory. The configuration,
+accepted checkpoint, history, and run-state SHA256 values are respectively
+`71972b32bf04794283bd5d2c438cf029b8e147b688ddecd56e8413098d456e48`,
+`bec1cfc902c4f299fea9e465c12c3c6d0c07282e2a17a58320e7ff0d23907dba`,
+`750dcdbc939f5f75aeb50bad991ad47aad60bfcc4a7574cb459dc349b09507aa`, and
+`28b610103d4f06902e74643c17210692f6f3762ba1a317f9c09e46863bf9704a`.
+Validation/test summary SHA256 values are
+`3091faf248320e43796d08e39977be03b098cb6d0f5691948e0cb5a50ef7f8c9` and
+`15078365e4af91b9b32604b04513e71f8f9a54e9e55db43ec8b23832ff5d652e`.

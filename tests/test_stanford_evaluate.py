@@ -158,6 +158,20 @@ def test_cli_defaults_to_validation_not_test() -> None:
     assert args.depth_support == "configured"
 
 
+def test_cli_accepts_training_split_for_post_training_diagnostics() -> None:
+    args = stanford_evaluator.parse_args(
+        [
+            "--config",
+            "config.yaml",
+            "--checkpoint",
+            "model.pt",
+            "--split",
+            "train",
+        ]
+    )
+    assert args.split == "train"
+
+
 def test_cli_accepts_all_valid_depth_support() -> None:
     args = stanford_evaluator.parse_args(
         [

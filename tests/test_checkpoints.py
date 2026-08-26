@@ -199,6 +199,14 @@ def test_annotation_evaluation_must_match_training_fingerprint() -> None:
     )
     assert receipt["verified"] is True
 
+    train_receipt = validate_checkpoint_evaluation_dataset_provenance(
+        checkpoint,
+        _annotation_provenance(annotation_file="/evaluation/splits.jsonl"),
+        split="train",
+    )
+    assert train_receipt["verified"] is True
+    assert train_receipt["split"] == "train"
+
     with pytest.raises(ValueError, match="does not match the checkpoint"):
         validate_checkpoint_evaluation_dataset_provenance(
             checkpoint,

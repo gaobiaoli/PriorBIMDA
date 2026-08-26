@@ -297,8 +297,10 @@ def validate_checkpoint_evaluation_dataset_provenance(
     The opt-in affects only the source/target dataset identity comparison. A
     malformed checkpoint provenance payload still fails validation.
     """
-    if split not in {"val", "test"}:
-        raise ValueError("Evaluation dataset provenance requires split 'val' or 'test'")
+    if split not in {"train", "val", "test"}:
+        raise ValueError(
+            "Evaluation dataset provenance requires split 'train', 'val', or 'test'"
+        )
     runtime_identity = dataset_split_identity(runtime_split_provenance)
     target = {
         "kind": "runtime_evaluation_dataset",

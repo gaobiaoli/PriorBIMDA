@@ -4,7 +4,7 @@
 > `docs/UNIVERSAL_SCALE_PROTOCOL.md` 与 `results/metrics.json`。不要恢复历史 V1–V6、region-CV
 > 或 BIM-direct 网络锚点。
 
-## 1. 当前唯一活动方法
+## 1. 当前发布方法
 
 项目用固定 BIM 先验细化 DA3 Metric Large 的单帧公制深度，支持 SLABIM 与
 2D-3D-S Area_1 + BIMSyn。两个数据集运行同一个尺度估计器：
@@ -18,6 +18,11 @@ D_pred = D_scaled * exp(clamp(r_frame + r_low + r_detail))
 网络同时读取 RGB、DA3 geometry/confidence 与 BIM depth/valid/normal/edge；学习 frame、low、
 detail 三个有界 log-residual。乘法锚点始终是 `D_scaled`，不是 BIM-direct。BIM-direct 是所有
 数据集共享的确定性强比较器，也是训练 acceptance 的门槛。推理不读取 GT、语义或家具 mask。
+
+Area_1 当前推荐发布版本不是上面的 universal checkpoint，而是
+`stanford_area1_attentive_scale_da3_features_hit_only_full_depth`：官方全部有效 GT、hit-only
+BIM、冻结 DA3 layer-11/23 feature、attention scalar scale 与 low/detail refiner。旧
+universal Area_1 checkpoint 继续作为 `0.2–5.0 m` 兼容基线，两种支持域不得混表。
 
 尺度参数最初只用 Area_1 train rooms 选择，随后冻结并原样应用于 SLABIM；SLABIM validation
 没有用于重新调参。机器 receipt SHA 为
@@ -46,14 +51,16 @@ SLABIM 108 帧三维融合评测同样支持 learned：Chamfer-L1 `0.09109 m`（
 从头按 3/9/3/3 四阶段训练。validation-selected checkpoint 的 val/test AbsRel 为
 `0.06131/0.06235`，上一版同时向尺度/refiner 融合 feature 的候选为 `0.06209/0.06244`。
 加法头相对同检查点比例分支只改善 `0.007%/0.119%`，不构成实质收益；新候选相对旧 feature
-模型的 MAE/RMSE 也退化。因此当前研究候选已回退到无加法的 DA3-feature checkpoint；hybrid
-只保留为诊断。test 早已揭盲，结果不能改写上方公开主表。
+模型的 MAE/RMSE 也退化。因此该 `0.2–5.0 m` 研究线回退到无加法的 DA3-feature checkpoint；
+hybrid 只保留为诊断。它与后续晋升发布的官方全深度 checkpoint 是不同支持域，test 也早已
+揭盲，结果不能混入上方 universal 主表。
 
 正式文件：
 
 - `results/slabim/test_summary.json`
 - `results/stanford_area1/val_summary.json`
 - `results/stanford_area1/test_summary.json`
+- `results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_{val,test}/summary.json`
 - `results/manifest.json`
 
 ## 3. 对话驱动的关键演化
@@ -73,7 +80,7 @@ SLABIM 108 帧三维融合评测同样支持 learned：Chamfer-L1 `0.09109 m`（
 7. **统一尺度方法**：发现 SLABIM q45 与 Area_1 robust-cap 不一致后，删除活动 q45 模型路径与
    Area_1 BIM-direct 网络锚点。两个数据集均重新训练和完整评测。
 8. **公开项目精简**：脚本拆分为 data/model/pipelines/analysis；下载器固定 revision/hash；
-   删除 region-CV、旧消融、未晋级 E2E 权重和过程 checkpoint，只保留两份统一主模型。
+   删除 region-CV、旧消融、未晋级 E2E 权重和过程 checkpoint，先保留两份 universal 主模型。
 9. **pano 路线收敛**：额外 ERP tangent 能补覆盖，但 strict single+tangent 在同一
    regular support 上显著退化。因此主协议回到数据集原始 regular DA3，按
    pose 投到 ERP 做同站稳健联合，再回投原 regular 评测。BIM-scale validation
@@ -114,6 +121,17 @@ SLABIM 108 帧三维融合评测同样支持 learned：Chamfer-L1 `0.09109 m`（
     support 解耦。从头按同一 3/9/3 schedule 训练后，全深度 validation/test AbsRel 为
     `0.06861/0.06741`；相对旧 hit-only checkpoint 在相同 support 上的 `0.07214/0.06744`，
     validation 明显改善而 test AbsRel 基本持平，不能夸大为跨房间泛化突破。
+16. **回退可靠性门控并冻结发布版**：后续模型增加 attention-token GT target、RGB-aware BIM
+    adapter gate 与 `r_detail` reliability gate。scale-only test AbsRel 改善
+    `0.07794→0.07674`，但 final val/test 退化到 `0.06928/0.06884`，相对上一全深度模型差
+    `0.98%/2.12%`。因此用户决定回退：上一全深度 checkpoint 晋升为 Area_1 推荐发布版，
+    reliability-gated checkpoint 仅保留为不发布的负诊断。发布不改变“test 已揭盲”的事实。
+17. **补齐训练集评测并否定固定分位数重选**：发布 checkpoint 事后以 inference mode 完整评测
+    7,013 个 train 样本，final AbsRel `0.06672`，只比 validation/test 的
+    `0.06861/0.06741` 低 2.82%/1.03%，未见明显拟合间隙。随后只用 train official-all-valid
+    pixel-micro AbsRel 在 q05--q95 中选择 q56：train 从纯 q45 的 `0.14376` 改善到
+    `0.13732`，但冻结后 test 退化到 `0.12759`，差于 robust `0.10840` 和 q45 `0.10984`。
+    不再用已揭盲 test 尝试 q54 等候选；固定分位数搜索作为跨房间过拟合负结果归档。
 
 ## 4. 不可破坏的实验约束
 
@@ -133,7 +151,8 @@ SLABIM 108 帧三维融合评测同样支持 learned：Chamfer-L1 `0.09109 m`（
 - 配置：`configs/slabim_base.yaml`、`slabim_pretrain.yaml`、`slabim.yaml`、
   `stanford_area1_transfer.yaml`、`stanford_area1.yaml`
 - 数据协议：`ignore.txt`、`data/annotations/*.jsonl`、`data/provenance/*.json`
-- 主 checkpoint：`outputs/slabim/accepted.pt`、`outputs/stanford_area1/accepted.pt`
+- 发布 checkpoint：`outputs/slabim/accepted.pt`、`outputs/stanford_area1/accepted.pt`、
+  `outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt`
 - 数据说明：`docs/DATA_PREPARATION.md`
 - 脚本与命令：`docs/USER_GUIDE.md`
 - 评测设计：`docs/EVALUATION_PROTOCOL.md`
@@ -145,7 +164,7 @@ SLABIM 108 帧三维融合评测同样支持 learned：Chamfer-L1 `0.09109 m`（
 
 1. 运行 `git status --short`，保留现有用户改动。
 2. 读取上述文档和 `results/metrics.json`，不要从终端日志猜结果。
-3. 运行 `pytest -q`、`ruff check src scripts tests` 和两个 checkpoint 的 SHA 校验。
+3. 运行 `pytest -q`、`ruff check src scripts tests` 和三份发布 checkpoint 的 SHA 校验。
 4. fresh 数据 fingerprint 改变时使用 `materialize_runtime_config.py`，不把 hash 设为 null。
 5. 解释/诊断任务默认只读；未经用户授权不重训、发布或访问新的 test 数据。
 
@@ -154,7 +173,7 @@ SLABIM 108 帧三维融合评测同样支持 learned：Chamfer-L1 `0.09109 m`（
 - 单 seed 结果不能表达训练随机性；bootstrap 只量化房间/帧采样不确定性。
 - SLABIM 与 Area_1 都不是跨多个建筑的大规模外部验证。
 - Area_1 使用目标域 semantic structural mesh 辅助 BIM 配准；部署需测量/定位系统提供变换。
-- 冻结 DA3-feature/hybrid 候选只有单 seed，且 Area_1 test 已揭盲；须在新 blind
-  area/dataset 上确认。hybrid additive head 的现有增益小到不支持增加部署复杂度。
+- Area_1 全深度发布模型只有单 seed，且 test 已揭盲；新 blind area/dataset 仍是确认性论文
+  claim 的必要条件。hybrid 和 reliability-gated 后继模型不发布。
 - checkpoint 尚未上传公共 Release，`results/manifest.json` 的 URL 待所有者填写。
 - 仓库仍需要所有者选择软件 LICENSE；第三方数据许可不能由本项目代授。

@@ -6,7 +6,8 @@
 Area_1 网络把 BIM-direct 深度作为学习残差锚点，而 SLABIM 网络以尺度矫正后的 DA3 为锚点。
 这会把“数据集适配”混入方法定义，使跨数据集比较难以解释。
 
-当前公开协议删除了这两处差异。SLABIM、Area_1 和新场景都运行同一条规则：
+当前公开的 universal 兼容协议删除了这两处差异。SLABIM、Area_1 和新场景的
+`0.2–5.0 m` 基线都运行同一条规则：
 
 ```text
 r = log(BIM / DA3),  0.2 < BIM/DA3 < 5.0
@@ -17,6 +18,10 @@ D_pred = D_scaled * exp(clamp(r_frame + r_low + r_detail))
 
 有效比例少于 100 个像素时尺度回退为 1。公式只读取固定 BIM、BIM valid mask 与 DA3
 深度；不读取 GT、语义、家具 mask、区域 ID，也不在测试时拟合参数。
+
+Area_1 另有一份已发布的官方全深度模型，使用 attention scale、hit-only BIM 和冻结 DA3
+feature；它不属于本页 universal scale 协议，不能与本页指标混表。对应配置为
+`configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml`。
 
 ## 2. BIM 在统一框架中的角色
 
@@ -56,4 +61,3 @@ receipt 会直接失败。
   不把二者混写为同一种泛化。
 - 新数据集不得修改 estimator；如确需改动，必须提升 protocol schema/name 并作为新方法重跑
   所有基线和学习模型。
-

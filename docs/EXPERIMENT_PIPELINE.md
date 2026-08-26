@@ -111,8 +111,13 @@ SLABIM universal --cross-dataset init + zero residual heads--> Area_1 universal
 
 ### 产物
 
-- `outputs/stanford_area1/accepted.pt`：唯一 Area_1 生产 checkpoint。
-- `results/stanford_area1/`：正式 val/test、逐帧 CSV 和训练审计。
+- `outputs/stanford_area1/accepted.pt`：Area_1 universal `0.2–5.0 m` 兼容 checkpoint。
+- `outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt`：当前推荐的
+  Area_1 官方全深度发布 checkpoint。
+- `results/stanford_area1/`：两种支持域各自的 val/test、逐帧 CSV 和训练审计；禁止混表。
+
+可靠性门控后继版本没有超过全深度发布 checkpoint，输出只作为负实验审计，不属于生产
+产物。发布状态以 `results/manifest.json` 的 `publish` 字段为准。
 
 ## 恢复与防错
 

@@ -1,5 +1,9 @@
 extends: stanford_area1_attentive_scale_da3_features_hit_only.yaml
 
+# Public Area_1 official-all-valid release configuration.
+# This validation-selected version is the rollback target after the
+# reliability-gated successor failed to improve val/test performance.
+
 experiment:
   name: stanford_area1_attentive_scale_da3_features_hit_only_full_depth
   output_dir: outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth

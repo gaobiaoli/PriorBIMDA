@@ -1,5 +1,5 @@
 {
-  "schema_version": 7,
+  "schema_version": 10,
   "method_protocol": "universal_log_upper_cap_v1",
   "depth_protocol_m": [0.2, 5.0],
   "metric_aggregation": "pixel_micro",
@@ -74,13 +74,28 @@
         "conclusion": "r_low is the dominant correction; r_detail is a small complementary term and the additive branch is not retained"
       }
     },
-    "hit_only_full_depth_supervision_diagnostic": {
-      "status": "fresh full-depth-supervised run; test is post-hoc because Area_1 was previously revealed",
+    "hit_only_full_depth_release": {
+      "status": "public Area_1 full-depth release selected on validation; test metrics remain post-hoc because Area_1 was previously revealed",
+      "release_role": "recommended learned Area_1 model for official all-valid regular-view depth",
       "architecture": "hit-only BIM prior, attentive scale with frozen DA3 layer-11/layer-23 features, low/detail refiner",
       "ground_truth_support": "official positive regular-view uint16/512 z-depth; raw 0 and 65535 invalid; no metric cutoff",
       "model_output_max_depth_m": 128.0,
       "train_val_test_samples": [7013, 1673, 1641],
       "selected_human_epoch": 15,
+      "train_fit_diagnostic": {
+        "status": "post-training diagnostic on the optimization split; not a model-selection or headline generalization result",
+        "valid_pixels": 1771860649,
+        "observed_depth_range_m": [0.234375, 49.9765625],
+        "raw_da3": {"abs_rel": 0.2816696012, "mae": 0.6705791000, "rmse": 1.1136521000, "delta1": 0.3419348800},
+        "robust_bim_direct": {"abs_rel": 0.1735983120, "mae": 0.4165091400, "rmse": 1.0337400000, "delta1": 0.7590098800},
+        "scale": {"abs_rel": 0.0893972461, "mae": 0.2105654100, "rmse": 0.7080672500, "delta1": 0.9197316500},
+        "scale_plus_low": {"abs_rel": 0.0675856843, "mae": 0.1650577700, "rmse": 0.6299187600, "delta1": 0.9501224500},
+        "final": {"abs_rel": 0.0667217729, "mae": 0.1625647116, "rmse": 0.6282606108, "delta1": 0.9504689688},
+        "final_abs_rel_gap_to_validation": 0.0018834098,
+        "final_abs_rel_gap_to_test": 0.0006850633,
+        "validation_relative_gap_over_train_percent": 2.82278146,
+        "test_relative_gap_over_train_percent": 1.02674628
+      },
       "validation": {
         "valid_pixels": 422186615,
         "observed_depth_range_m": [0.298828125, 51.60546875],
@@ -105,7 +120,63 @@
         "validation_final_mae_relative_reduction_percent": 19.06654427,
         "test_final_mae_relative_reduction_percent": 2.47666784
       },
-      "conclusion": "full-depth supervision materially improves validation and meter-error metrics, but the test AbsRel gain over the closest limited-supervision checkpoint is practically neutral"
+      "conclusion": "selected public full-depth model; it clearly beats raw DA3 and BIM-direct on the same support, while its nearly neutral test change versus the limited-supervision predecessor must not be overstated"
+    },
+    "fixed_scale_quantile_full_depth_candidate": {
+      "status": "archived negative diagnostic; q56 selected using train pixel-micro AbsRel and evaluated once on the already-revealed test",
+      "runtime_inputs": "registered hit-only BIM depth and frozen cached DA3 depth; no GT at inference",
+      "candidate_grid": "q=0.05--0.95 inclusive, step 0.01, 91 fixed quantiles",
+      "selection_objective": "official-all-valid train pixel-micro AbsRel over all 7013 frames",
+      "train": {
+        "selected_quantile": 0.56,
+        "selected_abs_rel": 0.1373210511,
+        "q45_abs_rel": 0.1437646057,
+        "current_robust_abs_rel": 0.1766552498,
+        "room_macro_optimal_quantile_not_tested": 0.54,
+        "leave_one_room_out_winner_counts": {"q52": 3, "q53": 10, "q54": 14, "q55": 2, "q56": 1}
+      },
+      "test": {
+        "raw_da3": {"abs_rel": 0.3027477267, "mae": 0.7101329853, "rmse": 0.9286307212, "delta1": 0.2622815292},
+        "q45_scale": {"abs_rel": 0.1098434619, "mae": 0.2147674166, "rmse": 0.5303765864, "delta1": 0.8851484189},
+        "current_robust_scale": {"abs_rel": 0.1084005631, "mae": 0.2176248005, "rmse": 0.5538642999, "delta1": 0.8797484344},
+        "train_selected_q56_scale": {"abs_rel": 0.1275874880, "mae": 0.2445770790, "rmse": 0.5772032550, "delta1": 0.8673907930},
+        "q56_abs_rel_regression_vs_current_robust_percent": 17.70002286,
+        "q56_better_room_fraction_vs_current_robust": 0.2857142857,
+        "paired_room_abs_rel_difference_ci95_vs_current_robust": [-0.0196770165, 0.0273635281]
+      },
+      "conclusion": "a higher fixed quantile fits the train pixel distribution but does not transfer to held-out rooms; retain log_upper_cap_v1 and do not tune another quantile on the revealed test"
+    },
+    "reliability_gated_full_depth_candidate": {
+      "status": "archived negative diagnostic; validation-selected checkpoint; test is post-hoc because Area_1 was previously revealed",
+      "architecture": "directly supervised scale-attention tokens, RGB-aware BIM adapter gates, detached BIM-reliability gate on r_detail, frozen DA3 layer-11/layer-23 features",
+      "ground_truth_support": "official positive regular-view uint16/512 z-depth; raw 0 and 65535 invalid; no metric cutoff",
+      "train_val_test_samples": [7013, 1673, 1641],
+      "selected_human_epoch": 12,
+      "validation": {
+        "valid_pixels": 422186615,
+        "raw_da3": {"abs_rel": 0.2839903652, "mae": 0.8802813848, "rmse": 1.3248333600, "delta1": 0.3174103755},
+        "robust_bim_direct": {"abs_rel": 0.1220341362, "mae": 0.3250235452, "rmse": 0.8640759586, "delta1": 0.8452138209},
+        "scale": {"abs_rel": 0.0766907140, "mae": 0.2378550959, "rmse": 0.6933899697, "delta1": 0.9205124161},
+        "scale_plus_low": {"abs_rel": 0.0698706827, "mae": 0.2161735813, "rmse": 0.6249536367, "delta1": 0.9287057857},
+        "final": {"abs_rel": 0.0692785659, "mae": 0.2139854187, "rmse": 0.6234796987, "delta1": 0.9289726985},
+        "final_abs_rel_relative_change_vs_previous_full_depth_percent": 0.98153385,
+        "post_hoc_room_paired_abs_rel_difference_ci95_vs_previous_full_depth": [-0.0030776575, 0.0027842738]
+      },
+      "test": {
+        "valid_pixels": 413756559,
+        "raw_da3": {"abs_rel": 0.3027477267, "mae": 0.7101329853, "rmse": 0.9286307212, "delta1": 0.2622815292},
+        "robust_bim_direct": {"abs_rel": 0.1086634598, "mae": 0.2164593396, "rmse": 0.5547715211, "delta1": 0.8798855029},
+        "scale": {"abs_rel": 0.0767400617, "mae": 0.1529797045, "rmse": 0.4374124318, "delta1": 0.9307939769},
+        "scale_plus_low": {"abs_rel": 0.0691450411, "mae": 0.1367120920, "rmse": 0.4179619783, "delta1": 0.9370092451},
+        "final": {"abs_rel": 0.0688367823, "mae": 0.1357396872, "rmse": 0.4174316964, "delta1": 0.9370924365},
+        "final_abs_rel_relative_change_vs_previous_full_depth_percent": 2.12136646,
+        "post_hoc_room_paired_abs_rel_difference_ci95_vs_previous_full_depth": [0.0003849127, 0.0022374512]
+      },
+      "subset_abs_rel_relative_change_vs_previous_full_depth_percent": {
+        "validation": {"furniture": 3.07911467, "non_structural": -0.85149671, "bim_foreground_conflict": 0.17486638, "bim_consistent": 0.68301289, "bim_no_hit": -12.71958170},
+        "test": {"furniture": 4.58278730, "non_structural": 3.36606681, "bim_foreground_conflict": 0.88309832, "bim_consistent": 3.12214566, "bim_no_hit": -6.25528672}
+      },
+      "conclusion": "direct scale-attention supervision improves the scale-only test AbsRel, but the reliability-gated refiner loses more than that gain; do not replace the public full-depth release"
     },
     "hybrid_additive_candidate": {
       "status": "archived negative diagnostic; Area_1 test was already revealed before model design",

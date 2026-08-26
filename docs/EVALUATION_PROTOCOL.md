@@ -164,6 +164,12 @@ Area_1 使用房间作为重采样单位，对每个房间的
 表内为 AbsRel。SLABIM learned 相对 direct 降低 10.56%；Area_1 降低 14.41%。两个数据集
 运行同一公式和参数，差异只来自数据、BIM 几何和训练权重。
 
+Area_1 当前另发布一份官方全深度模型。它只排除 regular-view raw depth 的 `0/65535`，不能
+与上表混表：validation/test 的 raw DA3、BIM-direct、最终 learned AbsRel 分别为
+`0.28399/0.12203/0.06861` 和 `0.30275/0.10866/0.06741`。该 checkpoint 由 validation
+选择；后续 reliability-gated 版本退化到 `0.06928/0.06884`，因此不发布。Area_1 test 已
+揭盲，发布支持复现和应用，但这些 test 数字仍是 post-hoc，而不是新 blind confirmation。
+
 ### 5.2 Area_1 子集、聚合与 bootstrap
 
 Area_1 test 的主模型相对 universal BIM-direct（正式 JSON 中兼容键仍为

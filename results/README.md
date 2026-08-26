@@ -3,7 +3,7 @@
 这里只保留统一尺度协议的正式小型产物和能够解释当前结论的关键诊断产物：
 
 - `metrics.json`：论文/README 主表的紧凑机器可读版本；
-- `manifest.json`：两份生产 checkpoint、协议和结果文件的 SHA-256；
+- `manifest.json`：三份可发布 checkpoint、协议和结果文件的 SHA-256；
 - `slabim/`：108 帧 pooled-clean test 的 summary、逐帧 CSV、三维重建 summary、history 与
   run-state；
 - `stanford_area1/`：room-disjoint regular-view validation/test 的 summary、逐帧 CSV、history 与
@@ -30,11 +30,26 @@
   final 的 val/test AbsRel 为 `0.06306/0.06585`，较旧 bounded-core prior 退化
   `1.56%/5.47%`。机器可读的新旧协议汇总位于
   `attentive_scale_da3_features_hit_only_protocol_comparison.json`；这是负诊断，不替代推荐模型。
-  `attentive_scale_da3_features_hit_only_full_depth_{val,test}/` 则不再只做事后全图评测，而是
+  `attentive_scale_da3_features_hit_only_full_depth_{val,test}/` 是当前 Area_1 推荐发布结果；
+  它不再只做事后全图评测，而是
   用官方全部有效 regular GT 从头训练、validation 选点并评测；仅排除 raw `0/65535`，模型
   输出上限为 128 m。final val/test AbsRel 为 `0.06861/0.06741`。相对旧 hit-only checkpoint
   在完全相同全深度 support 上改善 `4.90%/0.054%`，说明 validation 收益明确而 test AbsRel
-  基本持平；该 test 已揭盲，仍属于诊断结果。
+  基本持平。checkpoint 可以公开复现和部署，但该 test 已揭盲，论文中仍须标为 post-hoc，
+  不能作为新的 blind confirmation。
+  `attentive_scale_da3_features_hit_only_full_depth_train/` 是随后补充的同 checkpoint、同
+  official-all-valid 协议训练集拟合诊断，覆盖 7,013 帧；final AbsRel/MAE/RMSE/delta1 为
+  `0.06672/0.16256/0.62826/0.95047`。它只用于检查拟合与泛化间隙，不参与 checkpoint
+  选择，也不进入论文主表。
+  `reliability_gated_full_depth_{val,test}/` 在这一严格相同 benchmark 上加入 attention-token
+  尺度监督、RGB-aware BIM adapter gate 和 `r_detail` 可靠性门。scale-only test AbsRel 从
+  `0.07794` 改善至 `0.07674`，但 final val/test 为 `0.06928/0.06884`，较上一全深度模型退化
+  `0.98%/2.12%`；因此它是负诊断，不替换上一基线。
+  `fixed_scale_quantile_full_depth_train/selection.json` 只用 7,013 帧 train，在 official-all-valid
+  pixel-micro AbsRel 上搜索 91 个固定 BIM/DA3 ratio 分位数并冻结 q56；随后一次性 test 结果
+  位于 `fixed_scale_quantile_full_depth_test/`。q56 的 train AbsRel 为 `0.13732`，优于纯 q45
+  的 `0.14376`，但 test 为 `0.12759`，反而差于当前 robust scale 的 `0.10840` 和纯 q45 的
+  `0.10984`。这是固定分位数跨房间过拟合的负结果，不修改发布协议。
 - `deterministic_baseline_ablation/`：两个 validation split 上的非学习 BIM-direct 逐因素
   post-hoc 消融；不属于 blind-test 主结果。
 - `stanford_area1/scale_residual_distribution_val/`：在 1,673 张 validation 图上对无 DA3-feature
@@ -52,9 +67,12 @@
 sha256sum -c results/checkpoints.sha256
 ```
 
-`outputs/` 默认不进入 Git。发布者应把两份约 30 MB 的 checkpoint 上传至 Release/Hugging
+`outputs/` 默认不进入 Git。发布者应把两份约 30 MB 的 universal checkpoint 和一份约 52 MB
+的 Area_1 全深度 checkpoint 上传至 Release/Hugging
 Face，并在 `manifest.json` 补充 URL；不得把第三方数据或大型旧 E2E 权重提交到 Git 历史。
-冻结 DA3-feature 与 hybrid 候选 checkpoint 本机分别位于
+推荐全深度 checkpoint 位于
+`outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt`。冻结
+bounded-core DA3-feature 与 hybrid 候选 checkpoint 本机分别位于
 `outputs/stanford_area1_attentive_scale_da3_features/accepted.pt` 和
 `outputs/stanford_area1_hybrid_additive/accepted.pt`；它们在 `manifest.json` 中标记为
 非公开诊断权重，应先经新区域盲测再决定是否晋升发布。

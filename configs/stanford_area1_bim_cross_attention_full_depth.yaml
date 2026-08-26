@@ -1,0 +1,22 @@
+extends: stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml
+
+experiment:
+  name: stanford_area1_bim_cross_attention_full_depth
+  output_dir: outputs/stanford_area1_bim_cross_attention_full_depth
+
+model:
+  # One local correspondence block at the 63x63 refiner bottleneck. Q comes
+  # from RGB+geometry; K/V combine the BIM/mismatch encoder with the frozen
+  # DA3 layer-23 projection. Windows without BIM hits are exact no-ops.
+  bim_cross_attention:
+    enabled: true
+    channels: 128
+    heads: 4
+    window_size: 7
+    layer_scale_init: 0.001
+    dropout: 0.0
+
+train:
+  # Logging only; optimization remains the inherited batch-8, accumulation-2,
+  # 3/9/3 scratch curriculum.
+  log_every: 200

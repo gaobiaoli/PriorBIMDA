@@ -10,10 +10,11 @@ RGB ──> pinned DA3 metric depth ──> one frozen universal scale ──> d
 RGB + DA3 geometry + BIM features ─> bounded multi-scale residual ─> depth
 ```
 
-当前主模型不是旧版 BIM/V1 加权融合。SLABIM 与 Area_1 使用完全相同的尺度规则，网络以
-尺度矫正后的 DA3 为锚点，学习帧级、低频和细节 log-residual；BIM-direct 只作为共享的强
-非学习比较器。Area_1 跨域初始化会把残差头归零。推理不读取 GT、语义标签或家具 mask。
-公式、参数来源与适用边界见[统一尺度协议](docs/UNIVERSAL_SCALE_PROTOCOL.md)。
+当前发布包包含两个不可混表的协议。SLABIM 与 Area_1 的兼容基线继续使用同一冻结 universal
+scale，在 `0.2–5.0 m` 上学习 frame/low/detail log-residual；Area_1 当前推荐发布模型则使用
+官方全部有效深度、hit-only BIM、冻结 DA3 第 11/23 层 feature、attention global scale 与
+low/detail refiner。两者都不是旧版 BIM/V1 加权融合，BIM-direct 只作为非学习比较器，推理
+均不读取 GT、语义标签或家具 mask。支持域和 checkpoint 必须成对使用。
 
 ## 统一协议结果
 
@@ -39,7 +40,7 @@ bootstrap 95% CI 跨 0，不能宣称该子集已有显著优势。机器可读�
 SLABIM 的 108 帧三维融合评测也优于 direct：Chamfer-L1 0.09109 m vs. 0.10515 m，
 F-score@10 cm 0.79622 vs. 0.74003。
 
-### Area_1 冻结 DA3 feature 与混合残差诊断候选
+### Area_1 冻结 DA3 feature 与混合残差历史候选
 
 在不更新 DA3 权重的前提下，最新候选缓存并融合 DA3 Metric-Large 第 11/23 层 encoder
 token；任务网络仍从头按 scale/refiner/joint 三阶段训练。checkpoint 只由 validation 最终
@@ -65,8 +66,8 @@ AbsRel `0.007%/0.119%`，没有实质证据表明它值得增加复杂度；主�
 后续应在新区域/数据集上盲测确认。结构、训练轨迹、负结果、哈希和完整结果见
 [attention-scale 实验记录](docs/ATTENTIVE_SCALE_EXPERIMENT.md)。
 
-当前研究候选已按模型复杂度和多指标表现回退到**无加法的 DA3-feature 版本**；hybrid 只保留
-为负诊断。对该无加法 checkpoint 的顺序消融显示，validation/test 上
+该 `0.2–5.0 m` 研究线按模型复杂度和多指标表现回退到**无加法的 DA3-feature 版本**；
+hybrid 只保留为负诊断。对该无加法 checkpoint 的顺序消融显示，validation/test 上
 `scale → +r_low → +r_detail` 的 AbsRel 分别为
 `0.06960→0.06217→0.06209` 和 `0.07144→0.06285→0.06244`。`r_low` 占尺度后总改善的
 98.98%/95.44%，`r_detail` 只占 1.02%/4.56%，属于小幅补充而非主要来源。
@@ -92,9 +93,10 @@ hit-only 规则晋升为推荐协议，而将其保留为“覆盖率不等于�
 stage 指标、命中分布、命令与哈希见
 [attention-scale 实验记录](docs/ATTENTIVE_SCALE_EXPERIMENT.md#unbounded-hit-only-bim-prior-retraining)。
 
-### Area_1 官方全深度监督诊断
+### Area_1 官方全深度发布模型（当前推荐）
 
-为避免把“全图评测”误当成“全图训练”，另用官方 regular depth 的全部有效值从头训练同一
+当前 Area_1 学习模型已回退并冻结为这一版本。它用官方 regular depth 的全部有效值从头训练
+同一
 hit-only 网络：仅排除原始 `0` 和 `65535`，训练 loss、validation 选点与 val/test 评测均不再
 施加 `0.2–5.0 m` GT 截断，输出上限同时提高到 128 m。最终 pixel-micro 为：
 
@@ -104,8 +106,14 @@ hit-only 网络：仅排除原始 `0` 和 `65535`，训练 loss、validation 选
 | Test AbsRel | 0.30275 | 0.10866 | 0.07794 | 0.06746 | **0.06741** |
 
 相对“仅在 0.2–5.0 m 监督、事后全图评测”的同网络，validation/test AbsRel 分别改善
-4.90%/0.054%；test 改善很小，不能据此宣称显著泛化提升。配置、命令、MAE/RMSE 与审计
-哈希见[完整记录](docs/ATTENTIVE_SCALE_EXPERIMENT.md#full-depth-supervised-retraining)。
+4.90%/0.054%。它在同一全深度 support 上相对 raw DA3/BIM-direct 的 test AbsRel 分别降低
+77.74%/37.97%，并作为 validation-selected 可发布 checkpoint 固定；由于 Area_1 test 在模型
+迭代前已揭盲，公开报告仍必须注明 test 是 post-hoc，而不能包装成新的 blind claim。
+
+后续 reliability-gated 版本加入 attention-token 监督、RGB-aware BIM adapter gate 和
+`r_detail` 可靠性门，但 final val/test AbsRel 为 `0.06928/0.06884`，较发布模型退化
+`0.98%/2.12%`，因此已回退且该版本不发布。配置、命令、MAE/RMSE、负结果与审计哈希见
+[完整记录](docs/ATTENTIVE_SCALE_EXPERIMENT.md#full-depth-supervised-retraining)。
 
 为选择 residual 形式，另在 validation 的 685 万采样像素上检查尺度后误差。无 DA3-feature
 attention scale 的 `mean |GT-scaled|` 随深度的幂指数为 `0.404`（纯加法为 0、纯比例为 1）；
@@ -306,6 +314,8 @@ regular+pano 分析。test 的缓存与评测都必须额外带 `--confirm-test`
 | `stanford_area1_transfer*.yaml` | SLABIM checkpoint 零样本迁移评测 |
 | `stanford_area1.yaml` | Area_1 最终 frozen target 模型 |
 | `stanford_area1_e2e.yaml` | 未晋级的 E2E challenger 协议 |
+| `stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml` | **Area_1 当前推荐的官方全深度发布模型** |
+| `stanford_area1_reliability_gated_full_depth.yaml` | 已回退、禁止发布的负实验配置 |
 
 配置只保留当前语义版本；历史 V1–V6 过程配置已移除。checkpoint 会严格验证模型配置和数据
 provenance，跨数据集初始化必须显式 opt-in，resume 仍要求完全一致。
@@ -327,7 +337,7 @@ tests/                   单元与协议回归测试
 outputs/                 本机 checkpoint/运行记录；默认不进入 Git
 ```
 
-发布 checkpoint 的角色、大小和 SHA-256 见 [results/manifest.json](results/manifest.json)。大型
+三份发布 checkpoint 的角色、大小和 SHA-256 见 [results/manifest.json](results/manifest.json)。大型
 E2E 权重应放 GitHub Release 或 Hugging Face，不应直接提交 Git 历史。
 
 ## 验证

@@ -32,9 +32,10 @@ workspace/
     └── rvt/                 # 可选
 ```
 
-正式深度指标均限定 `0.2–5.0 m`。`ignore.txt` 是源数据错误清单，必须在 split 建立前排除，
-不能只在最终评测时临时过滤。`outputs/` 是本机运行目录并被 Git 忽略；可提交结果放在
-`results/`。
+发布结果包含两种明确分开的支持域：SLABIM/Area_1 universal 兼容表限定 `0.2–5.0 m`；
+当前 Area_1 推荐学习模型使用官方全部正深度，仅排除 `0/65535`。二者不得混表。
+`ignore.txt` 是源数据错误清单，必须在 split 建立前排除，不能只在最终评测时临时过滤。
+`outputs/` 是本机运行目录并被 Git 忽略；可提交结果放在 `results/`。
 
 ## 2. SLABIM 完整流程
 
@@ -338,8 +339,9 @@ checkpoint；只在模型、配置和 claim 全部冻结后运行一次 test：
 E2E 是 challenger，而非自动替代。它必须从 target frozen `accepted.pt` 初始化并保留 residual
 heads；若 val 不优于 frozen，则不得访问 test 或发布为主模型。
 
-冻结 DA3 feature 模型属于 Area_1 研究候选，不替代上述公开主模型。当前候选已回退到无加法
-版本。制备完成后，先一次性缓存与同一 pinned DA3 预处理绑定的第 11/23 层 token，再从头
+下面的 bounded-core、`0.2–5.0 m` 冻结 DA3 feature 模型属于历史研究候选，不是当前全深度
+发布 checkpoint。该研究线已回退到无加法版本。制备完成后，先一次性缓存与同一 pinned DA3
+预处理绑定的第 11/23 层 token，再从头
 执行 scale/refiner/joint 三阶段训练：
 
 ```bash
@@ -393,8 +395,8 @@ test `0.06744`；默认 0.2--5.0 m 结果分别为 `0.06306`、`0.06585`。原 b
 checkpoint 在相同 all-valid support 上为 validation `0.07420`、test `0.06433`，结果保存在
 `attentive_scale_da3_features_bounded_prior_all_valid_{val,test}`。
 
-若要求训练监督、validation 选点和最终评测都使用官方全深度，而不只是对旧 checkpoint 做
-全图诊断，使用专用配置：
+当前 Area_1 推荐发布模型让训练监督、validation 选点和最终评测全部使用官方全深度，而不
+只是对旧 checkpoint 做全图诊断。使用以下冻结配置：
 
 ```bash
 .venv/bin/python scripts/model/train.py \
@@ -414,8 +416,39 @@ checkpoint 在相同 all-valid support 上为 validation `0.07420`、test `0.064
 把 `val` 与目录后缀替换为 `test` 即可复现 test。该配置从官方 PNG 动态重载 GT，原始值
 `0`/`65535` 之外的全部深度都进入 loss 和指标，并把模型输出上限提高到 128 m；没有使用
 `0.2--5.0 m` GT mask。现有 pixel-micro final AbsRel 为 validation `0.06861`、test
-`0.06741`。完整逐阶段指标和旧 checkpoint 的同 support 对照见
+`0.06741`。checkpoint 由 validation 选择，SHA256 为
+`f330a987d638482636e225ebdf326612209fa672ea3c5c77a11049f05b655349`。它是当前公开复现和
+部署入口；Area_1 test 已在此前迭代中揭盲，所以论文仍须把 test 数字标成 post-hoc，而不能
+称为新盲测。完整逐阶段指标和旧 checkpoint 的同 support 对照见
 [ATTENTIVE_SCALE_EXPERIMENT.md](ATTENTIVE_SCALE_EXPERIMENT.md#full-depth-supervised-retraining)。
+
+如需检查训练集拟合程度，可把同一评测命令中的 `--split val` 改为 `--split train`，输出目录
+改为 `attentive_scale_da3_features_hit_only_full_depth_train`。这会以 inference mode、无数据
+增强、无参数更新的方式评测全部 7,013 帧；GT 只用于预测后的指标计算。当前 final train
+AbsRel 为 `0.06672`，但该诊断不得用于 checkpoint 选择或论文主结果。
+
+固定 BIM/DA3 ratio 分位数的 train-only 搜索与冻结 test 审计使用独立脚本：
+
+```bash
+.venv/bin/python scripts/analysis/search_stanford_scale_quantile.py \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --split train \
+  --output results/stanford_area1/fixed_scale_quantile_full_depth_train/selection.json
+
+.venv/bin/python scripts/analysis/search_stanford_scale_quantile.py \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --split test \
+  --selection-receipt results/stanford_area1/fixed_scale_quantile_full_depth_train/selection.json \
+  --output results/stanford_area1/fixed_scale_quantile_full_depth_test
+```
+
+test 模式不提供 `--quantile` 参数，必须读取 train receipt，防止看过 test 后反复试数值。
+当前 train 选择 q56，但 test AbsRel `0.12759` 差于 robust scale `0.10840`，因此这是负诊断，
+不得替换 universal scale 协议。
+
+不要把 `configs/stanford_area1_reliability_gated_full_depth.yaml` 用作发布配置。它是回退后的
+负实验：final validation/test AbsRel 为 `0.06928/0.06884`，均差于上述发布模型；配置和结果
+仅用于审计。
 
 ### 3.7 全景联合评测
 
@@ -578,6 +611,7 @@ Area_1 主 claim 应同时检查 `all`、`furniture` 和 `bim_foreground_conflic
 | `analysis/ablate_deterministic_bim_direct.py` | 对 non-learning BIM-direct 做逐因素 validation 消融 |
 | `analysis/ablate_oracle_semantic_bim.py` | train/val-only 官方语义 + BIM ray category 的逐帧全局尺度 oracle；禁止 test |
 | `analysis/analyze_scale_residual_distribution.py` | train/val-only 尺度后像素残差诊断；比较固定米制、距离比例和混合误差模型，禁止 test |
+| `analysis/search_stanford_scale_quantile.py` | official-all-valid train 搜索固定 BIM/DA3 分位数；test 强制读取冻结 receipt |
 | `analysis/evaluate_stanford_pano_single_plus_tangent.py` | val-only 严格单张 regular + tangent6/14 对照；无 test/learned/BIM |
 | `analysis/evaluate_stanford_pano_regular_roundtrip.py` | val-only 全部 regular→ERP 联合→原 regular 回投评测；固定完整 regular GT support |
 | `analysis/evaluate_stanford_bim_scale_roundtrip.py` | val-only 同一逐帧 BIM-scale 与 regular→ERP joint→regular 的严格配对评测 |
@@ -598,7 +632,8 @@ Area_1 主 claim 应同时检查 `all`、`furniture` 和 `bim_foreground_conflic
    sha256sum -c results/checkpoints.sha256
    ```
 
-5. `outputs/` 不进入 Git。把两份统一主 checkpoint 上传到 Release/Hugging Face，并将真实 URL
-   补入 `results/manifest.json`；大型 E2E checkpoint 不应直接提交 Git。
+5. `outputs/` 不进入 Git。把 `results/manifest.json` 中 `publish=true` 的三份 checkpoint
+   上传到 Release/Hugging Face，并将真实 URL 补入清单；大型 E2E 和负实验 checkpoint
+   不应直接提交 Git。
 6. 所有者必须在公开发布前选择软件 `LICENSE`；第三方数据许可需单独遵守，不能随代码
    LICENSE 自动继承。

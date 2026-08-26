@@ -1,7 +1,8 @@
 # 2D-3D-S Area 1 + BIMSyn 适配与评测
 
-本文记录 Area 1 的公开复现协议。模型方法与 SLABIM 完全一致；差异只在原始数据、BIM
-来源、坐标配准和房间隔离划分。
+本文记录 Area 1 的公开复现协议。旧 universal `0.2–5.0 m` 链与 SLABIM 完全一致；当前
+推荐发布模型另外采用 Area_1 官方全部有效深度、hit-only BIM、attention scale 和冻结 DA3
+feature。两条结果的支持域必须明确区分。
 
 ## 1. 数据来源与许可
 
@@ -26,8 +27,9 @@ IFC 以毫米为单位。44 个房间按冻结的 `T_area_from_bim` 合并成一
 
 - 正式旧 benchmark 使用 bounded core envelope：只保留 wall、floor、ceiling、column、beam，
   排除 furniture/proxy/MEP/door/window，并以 0.2–5.0 m 限定 BIM 命中；
-- 后续 hit-only 诊断保留 door/window，仍排除 furniture/proxy/MEP，只要射线获得有限正值命中
-  就有效，不以距离过滤 BIM。GT、loss 和评测 support 仍固定为 0.2–5.0 m。
+- hit-only prior 保留 door/window，仍排除 furniture/proxy/MEP，只要射线获得有限正值命中
+  就有效，不以距离过滤 BIM。它在 `0.2–5.0 m` 监督实验中是负结果，但与官方全深度监督配对
+  后用于当前推荐发布模型。
 
 二者使用不同 processed root、manifest 和 preparation fingerprint。旧正式结果不会被新版
 制备覆盖。
@@ -140,8 +142,26 @@ Area 1 blind test（1641 帧，pixel-micro）：
 结论是负面的：更稠密的命中降低了对应精度，非学习 direct 尤其明显。learned final 仍比新
 BIM-direct 在 validation/test 上改善 49.19%/38.71%，但相对旧 learned final 退化
 1.56%/5.47%。跨协议 room-bootstrap CI 均跨 0，只有 2/7 validation 和 2/7 test 房间改善。
-因此 hit-only prior 仅保留作诊断，不替代本页正式协议。详见
+因此“只更换 prior、仍限制 `0.2–5.0 m`”的实验仅保留作诊断；它不否定下一节采用全深度
+监督的发布模型。详见
 [ATTENTIVE_SCALE_EXPERIMENT.md](ATTENTIVE_SCALE_EXPERIMENT.md#unbounded-hit-only-bim-prior-retraining)。
+
+### 7.2 当前发布模型：官方全深度 attention-scale
+
+当前 Area_1 推荐 checkpoint 使用同一房间划分和 hit-only prior，从头训练冻结 DA3
+layer-11/layer-23 feature、attention global scale 与 low/detail refiner。GT 支持域为官方
+regular-view z-depth 的全部正值，只排除原始 `0/65535`；模型输出上限为 128 m。
+
+| Split / 输出 | Raw DA3 | BIM-direct | Scale | + low | + detail |
+|---|---:|---:|---:|---:|---:|
+| Validation AbsRel | 0.28399 | 0.12203 | 0.07635 | 0.06940 | **0.06861** |
+| Test AbsRel | 0.30275 | 0.10866 | 0.07794 | 0.06746 | **0.06741** |
+
+发布 checkpoint 为
+`outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt`，SHA256
+为 `f330a987d638482636e225ebdf326612209fa672ea3c5c77a11049f05b655349`。后续
+reliability-gated 模型在相同 benchmark 上得到 `0.06928/0.06884`，因此已回退且不发布。
+checkpoint 可公开复现和部署，但 Area_1 test 此前已经揭盲，test 数字必须标记为 post-hoc。
 
 ## 8. 训练与评测命令
 
@@ -166,5 +186,24 @@ python scripts/model/evaluate_stanford_area1.py \
   --bootstrap-seed 42 --inference-seed 42 --device cuda
 ```
 
-不要为同数据集 checkpoint 加 `--cross-dataset`，不要用 test 选择模型，也不要在正式结果
-中使用 `--allow-unverified-robust-comparator`。
+上面的 universal 同数据集 checkpoint 不加 `--cross-dataset`，不使用 test 选择模型，也不
+需要 `--allow-unverified-robust-comparator`。
+
+官方全深度发布模型使用其专用配置；由于旧 robust comparator receipt 绑定到 bounded
+manifest，评测器要求显式记录 comparator 为 unverified，但不会关闭数据或 checkpoint
+provenance：
+
+```bash
+python scripts/model/train.py \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --device cuda
+
+python scripts/model/evaluate_stanford_area1.py \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --checkpoint outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt \
+  --split val --depth-support all-valid \
+  --output results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_val \
+  --batch-size 8 --bootstrap-repetitions 10000 \
+  --bootstrap-seed 42 --inference-seed 42 --device cuda \
+  --allow-unverified-robust-comparator
+```

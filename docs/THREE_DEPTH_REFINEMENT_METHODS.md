@@ -1,7 +1,8 @@
 # 三尺度深度细化网络
 
-本文说明当前公开版本的学习模块。项目只保留一条正式方法链：SLABIM 与
-2D-3D-S Area 1 使用相同的尺度估计、相同的确定性 BIM 基线和相同的三尺度残差网络。
+本文说明当前公开版本的学习模块。发布包保留 universal `0.2–5.0 m` 兼容链，同时将
+Area_1 的官方全深度 attention-scale + low/detail 模型作为推荐学习版本。两种支持域和
+checkpoint 不可混用。
 
 ## 1. 统一输入协议
 
@@ -58,15 +59,27 @@ D_refined = A * exp(R)
 推理不使用 GT、家具 mask 或语义标签。Area 1 的家具/conflict mask 只用于训练权重和
 分层评测。
 
-## 4. 两个正式模型
+## 4. 三个发布 checkpoint
 
 | 数据域 | 配置 | checkpoint | 作用 |
 |---|---|---|---|
 | SLABIM | `configs/slabim.yaml` | `outputs/slabim/accepted.pt` | SLABIM 正式模型与 Area 1 初始化源 |
-| Area 1 | `configs/stanford_area1.yaml` | `outputs/stanford_area1/accepted.pt` | 房间隔离训练的正式模型 |
+| Area 1 universal | `configs/stanford_area1.yaml` | `outputs/stanford_area1/accepted.pt` | `0.2–5.0 m` 跨数据集兼容基线 |
+| Area 1 full-depth | `configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml` | `outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt` | **当前推荐的官方全部有效深度模型** |
 
 `configs/*_e2e.yaml` 仅保留为研究入口，用于联合微调 DA3 后段；当前公开主结果不依赖
 E2E checkpoint。
+
+Area 1 full-depth 版本关闭 `r_frame`，改由 attention head 从 BIM/DA3 对应中估计每帧一个
+全局尺度，再依次预测 `r_low` 与 `r_detail`：
+
+```text
+D_scale = s_attention * D_DA3
+D_final = D_scale * exp(clip(r_low + r_detail, -0.45, 0.45))
+```
+
+它使用冻结 DA3 第 11/23 层 feature 和 hit-only BIM，但不使用后续失败版本中的
+RGB-aware BIM adapter gate、attention-token GT target 或 detail reliability gate。
 
 ## 5. 训练与验收
 
@@ -91,6 +104,16 @@ Area 1 从 SLABIM checkpoint 初始化时精确清零六个乘法残差输出切
 
 完整 MAE/RMSE/δ1、子集和 bootstrap 见 [results/README.md](../results/README.md)。
 
+Area 1 full-depth 发布模型使用另一固定支持域：官方 regular-view z-depth 中除原始
+`0/65535` 外的全部像素。其 validation/test pixel-micro 指标为：
+
+| Split | Raw DA3 | BIM direct | Scale | + low | + detail |
+|---|---:|---:|---:|---:|---:|
+| Validation | 0.28399 | 0.12203 | 0.07635 | 0.06940 | **0.06861** |
+| Test | 0.30275 | 0.10866 | 0.07794 | 0.06746 | **0.06741** |
+
+后续 reliability-gated 版本为 `0.06928/0.06884`，未超过本表，已归档且不发布。
+
 ## 7. 运行入口
 
 ```bash
@@ -109,6 +132,17 @@ python scripts/model/evaluate_stanford_area1.py \
   --checkpoint outputs/stanford_area1/accepted.pt \
   --split test --output outputs/stanford_area1/formal_test \
   --batch-size 8 --inference-seed 42 --device cuda
+
+python scripts/model/train.py \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --device cuda
+python scripts/model/evaluate_stanford_area1.py \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --checkpoint outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt \
+  --split val --depth-support all-valid \
+  --output results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_val \
+  --batch-size 8 --inference-seed 42 --device cuda \
+  --allow-unverified-robust-comparator
 ```
 
 数据准备步骤见 [DATA_PREPARATION.md](DATA_PREPARATION.md)，完整脚本索引见

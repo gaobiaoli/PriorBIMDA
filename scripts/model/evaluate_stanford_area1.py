@@ -1017,7 +1017,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--config", required=True)
     parser.add_argument("--checkpoint", required=True, type=Path)
-    parser.add_argument("--split", choices=("val", "test"), default="val")
+    parser.add_argument("--split", choices=("train", "val", "test"), default="val")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--device", default="cuda")
     parser.add_argument(

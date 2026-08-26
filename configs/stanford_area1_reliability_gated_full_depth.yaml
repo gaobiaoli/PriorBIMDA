@@ -1,5 +1,8 @@
 extends: stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml
 
+# Archived negative diagnostic. Do not use this configuration for the public
+# release; use stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml.
+
 experiment:
   name: stanford_area1_reliability_gated_full_depth
   output_dir: outputs/stanford_area1_reliability_gated_full_depth
