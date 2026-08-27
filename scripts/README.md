@@ -41,6 +41,20 @@ encoder token，并写完整性 manifest；训练脚本只读缓存，不在线�
 | `analysis/analyze_scale_residual_distribution.py` | 分析 scale 输出之后的像素级米制/log 残差随距离和内容的变化 | 仅 train/val；GT 只在无 GT 尺度推理后用于诊断 |
 | `analysis/generate_pano_evaluation_assets.py` | 从冻结 summary/CSV 生成 pano 定量图与三套流程图 | 不读取原始图像/GT |
 | `analysis/export_stanford_pano_panels.py` | 从固定 val 规则导出三套本地定性素材 | 不加载 checkpoint；不访问 test |
+| `analysis/audit_da3_focal_scaling.py` | 对比 cached canonical DA3 与按处理分辨率内参乘 `mean(fx,fy)/300` 的 metric DA3 | 不运行 checkpoint、不用 GT 定尺度、不改缓存 |
+| `analysis/compare_stanford_evaluations.py` | 对两个同 support 的 Area_1 summary 做逐子集差值与配对 room-bootstrap | 要求 split、房间、样本数、GT support 和像素数一致 |
+
+焦距审计示例：
+
+```bash
+.venv/bin/python scripts/analysis/audit_da3_focal_scaling.py \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --split val --split test --workers 8 \
+  --output results/stanford_area1/da3_focal_scaling_full_depth_audit/summary.json
+```
+
+脚本中的 focal 必须是 DA3 实际 processing resolution 下的 `fx/fy`，不能直接使用未 resize 的
+原图内参。输出同时保留旧 canonical 指标，便于定位历史表格错误。
 
 validation 数据输入和 Route R 的最小入口为：
 

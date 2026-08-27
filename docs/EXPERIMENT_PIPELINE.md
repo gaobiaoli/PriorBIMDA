@@ -17,7 +17,7 @@ public raw data
   -> one-time blind test
 ```
 
-- `0.2–5.0 m` 是正式深度协议。
+- universal 兼容链使用 `0.2–5.0 m`；Area_1 推荐全深度链使用官方 all-valid GT，二者不可混表。
 - split 在训练前固定，坏帧在 annotation 中标记 `excluded`。
 - manifest 的逐帧 preparation fingerprint 会进入 split fingerprint 和 checkpoint provenance。
 - test 不参与 cap、loss、epoch、checkpoint 或阈值选择。
@@ -112,8 +112,9 @@ SLABIM universal --cross-dataset init + zero residual heads--> Area_1 universal
 ### 产物
 
 - `outputs/stanford_area1/accepted.pt`：Area_1 universal `0.2–5.0 m` 兼容 checkpoint。
-- `outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt`：当前推荐的
-  Area_1 官方全深度发布 checkpoint。
+- `outputs/stanford_area1_iterative_scale_3round_full_depth_metric_da3/accepted.pt`：当前推荐的
+  三轮 scale-conditioned focal-corrected Area_1 全深度 checkpoint。静态 `_metric_da3`
+  checkpoint 与旧 canonical-input checkpoint 只保留作审计对照。
 - `results/stanford_area1/`：两种支持域各自的 val/test、逐帧 CSV 和训练审计；禁止混表。
 
 可靠性门控后继版本没有超过全深度发布 checkpoint，输出只作为负实验审计，不属于生产

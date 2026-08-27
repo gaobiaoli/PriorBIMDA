@@ -1,0 +1,29 @@
+extends: stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3.yaml
+
+# Three-round learned robust scale estimation. The task network is trained
+# from scratch under the same 3/9/3 scale/refiner/joint schedule as the frozen
+# static-attention comparator; only the scale aggregation mechanism changes.
+
+experiment:
+  name: stanford_area1_iterative_scale_3round_full_depth_metric_da3
+  output_dir: outputs/stanford_area1_iterative_scale_3round_full_depth_metric_da3
+
+model:
+  attention_scale:
+    iterative_updates: 3
+    iterative_hidden_channels: 32
+    # z=log(scale)=0 means that recurrence starts from unscaled metric DA3.
+    iterative_initial_log_scale: 0.0
+    # The reliability MLP is shared; only these three damping coefficients are
+    # independent and learnable.
+    iterative_damping: [0.5, 0.5, 0.5]
+    iterative_max_log_update: 0.15
+
+loss:
+  # Each unrolled estimate receives the same GT-derived frame-scale target.
+  # Normalization by the weight sum keeps the loss magnitude comparable to
+  # the published single-output scale head.
+  attention_scale_iteration_weights: [0.25, 0.50, 1.00]
+
+train:
+  log_every: 200

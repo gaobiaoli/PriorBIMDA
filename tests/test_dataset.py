@@ -52,6 +52,10 @@ def test_inference_dataset_does_not_require_ground_truth(tmp_path: Path) -> None
         bim_edge=np.zeros_like(base, dtype=np.uint8),
         scaled_depth=scaled,
         anchor_depth=scaled,
+        intrinsic=np.asarray(
+            [[600.0, 0.0, 8.0], [0.0, 300.0, 8.0], [0.0, 0.0, 1.0]],
+            dtype=np.float32,
+        ),
     )
     manifest = {
         "id": "new_region/frame",
@@ -83,6 +87,23 @@ def test_inference_dataset_does_not_require_ground_truth(tmp_path: Path) -> None
     assert "trust_target" not in item
     assert "anchor_depth" not in item
     assert np.isclose(float(item["scaled_depth"].mean()), 2.2)
+    assert tuple(item["intrinsic"].shape) == (3, 3)
+    assert float(item["da3_metric_scale"]) == pytest.approx(1.5)
+    assert not bool(item["da3_metric_scale_applied"])
+
+    cfg.data.apply_da3_metric_focal_scaling = True
+    cfg.data.recompute_cached_baselines = True
+    metric_item = BIMDepthDataset(
+        cfg,
+        split=None,
+        augment=False,
+        require_ground_truth=False,
+    )[0]
+    assert bool(metric_item["da3_metric_scale_applied"])
+    assert float(metric_item["base_depth"].mean()) == pytest.approx(3.0)
+    # Recomputed BIM scale uses the corrected metric base rather than the
+    # stale cached scaled_depth array.
+    assert float(metric_item["scaled_depth"].mean()) == pytest.approx(2.2)
 
     supervised = BIMDepthDataset(
         cfg,

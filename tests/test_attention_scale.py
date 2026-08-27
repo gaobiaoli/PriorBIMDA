@@ -10,10 +10,7 @@ from bim_priorda3.losses import (
 )
 from bim_priorda3.models import BIMPriorDA3
 from bim_priorda3.models.attention_scale import AttentiveBIMScaleHead
-from bim_priorda3.models.refiner import (
-    ScaleAnchoredDepthRefiner,
-    WindowedBIMCrossAttention,
-)
+from bim_priorda3.models.refiner import ScaleAnchoredDepthRefiner
 from scripts.model.train import (
     ATTENTION_SCALE_WARMUP_PARAMETER_PREFIXES,
     ATTENTION_SCALE_WARMUP_STAGE,
@@ -61,6 +58,78 @@ def test_attentive_scale_aggregates_measured_ratios_and_falls_back() -> None:
         torch.ones(2, 2),
     )
     assert output["attention_token_valid"].shape == (2, 1, 2, 2)
+
+
+def test_three_round_iterative_attention_starts_at_one_and_shares_reliability() -> None:
+    head = AttentiveBIMScaleHead(
+        in_channels=5,
+        hidden_channels=4,
+        attention_heads=2,
+        min_support=8,
+        token_dropout_probability=0.0,
+        fallback_gate_bias=20.0,
+        iterative_updates=3,
+        iterative_hidden_channels=5,
+        iterative_initial_log_scale=0.0,
+        iterative_damping=[0.5, 0.5, 0.5],
+        iterative_max_log_update=0.15,
+    )
+    features = torch.randn(2, 5, 16, 16)
+    horizontal_ratio = torch.linspace(1.1, 1.3, 16).view(1, 1, 1, 16)
+    log_ratio = horizontal_ratio.log().expand(2, 1, 16, 16).clone()
+    valid = torch.ones_like(log_ratio)
+    valid[1] = 0
+    deterministic_fallback = torch.log(torch.tensor([1.5, 1.5])).view(2, 1, 1, 1)
+
+    output = head(features, log_ratio, valid, deterministic_fallback)
+
+    assert output["iteration_log_scales"].shape == (2, 3, 1, 1)
+    assert output["iteration_head_log_scales"].shape == (2, 3, 2)
+    assert output["iteration_fallback_gates"].shape == (2, 3, 1, 1)
+    assert torch.allclose(output["iteration_step_sizes"], torch.full((3,), 0.5))
+    assert torch.equal(output["fallback_log_scale"], torch.zeros_like(deterministic_fallback))
+    assert torch.equal(
+        output["deterministic_fallback_log_scale"],
+        deterministic_fallback,
+    )
+    assert torch.equal(output["scale"][1], torch.ones_like(output["scale"][1]))
+    # A single module is recurrently reused; there are no round-specific MLPs.
+    assert head.iterative_reliability is not None
+    assert not any("round" in name for name, _ in head.named_parameters())
+
+    objective = output["iteration_log_scales"][0, -1].sum()
+    objective.backward()
+    reliability_output = head.iterative_reliability[-1]
+    assert isinstance(reliability_output, torch.nn.Conv2d)
+    assert reliability_output.weight.grad is not None
+    assert torch.count_nonzero(reliability_output.weight.grad) > 0
+
+
+def test_three_round_config_applies_iteration_weighted_oracle_loss() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_iterative_scale_3round_full_depth_metric_da3.yaml"
+    )
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.hidden_channels = 4
+    cfg.model.attention_scale.iterative_hidden_channels = 5
+    cfg.model.attention_scale.token_dropout_probability = 0.0
+    cfg.model.attention_scale.equivariance_probability = 0.0
+    cfg.model.da3_feature_fusion.channels = 6
+    model = BIMPriorDA3(cfg)
+    batch = _candidate_batch(size=32)
+    batch["da3_feature_mid"] = torch.randn(2, 6, 5, 5)
+    batch["da3_feature_deep"] = torch.randn(2, 6, 5, 5)
+
+    output = model(batch)
+    criterion = BIMPriorLoss(cfg)
+    losses = criterion(output, batch)
+
+    assert output["attention_iteration_log_scales"].shape == (2, 3, 1, 1)
+    assert losses["attention_scale_oracle"].item() >= 0
+    losses["total"].backward()
+    assert model.attention_scale is not None
+    assert model.attention_scale.iterative_step_logits is not None
+    assert model.attention_scale.iterative_step_logits.grad is not None
 
 
 def test_direct_attention_target_supervises_spatial_scale_weights() -> None:
@@ -190,91 +259,12 @@ def test_da3_features_are_native_attention_and_low_resolution_inputs() -> None:
         da3_feature_mid=mid_refiner,
         da3_feature_deep=deep_refiner,
     )
-    (prediction["low_log_residual"].sum() + prediction["detail_log_residual"].sum()).backward()
+    (
+        prediction["low_log_residual"].sum()
+        + prediction["detail_log_residual"].sum()
+    ).backward()
     assert mid_refiner.grad is not None and torch.count_nonzero(mid_refiner.grad) > 0
     assert deep_refiner.grad is not None and torch.count_nonzero(deep_refiner.grad) > 0
-
-
-def test_windowed_bim_cross_attention_masks_keys_and_bypasses_empty_windows() -> None:
-    module = WindowedBIMCrossAttention(
-        query_channels=8,
-        context_channels=16,
-        attention_channels=8,
-        attention_heads=2,
-        window_size=3,
-        layer_scale_init=1e-3,
-    )
-    query = torch.randn(2, 8, 5, 7, requires_grad=True)
-    context = torch.randn(2, 16, 5, 7, requires_grad=True)
-    no_hits = torch.zeros(2, 1, 5, 7)
-
-    empty_delta = module(query, context, no_hits)
-    assert empty_delta.shape == query.shape
-    assert torch.count_nonzero(empty_delta) == 0
-
-    hits = torch.zeros_like(no_hits)
-    hits[:, :, 1, 1] = 1.0
-    hits[:, :, 1, 2] = 1.0
-    hits[:, :, 3, 6] = 1.0
-    hits[:, :, 4, 6] = 1.0
-    delta = module(query, context, hits)
-    assert torch.count_nonzero(delta) > 0
-    delta.square().mean().backward()
-    assert query.grad is not None and torch.count_nonzero(query.grad) > 0
-    assert context.grad is not None and torch.count_nonzero(context.grad) > 0
-    assert module.layer_scale.grad is not None
-    assert torch.count_nonzero(module.query_projection.weight.grad) > 0
-    assert torch.count_nonzero(module.key_value_projection.weight.grad) > 0
-
-
-def test_full_depth_cross_attention_candidate_runs_through_refiner() -> None:
-    cfg = load_config("configs/stanford_area1_bim_cross_attention_full_depth.yaml")
-    cfg.model.base_channels = 4
-    cfg.model.attention_scale.hidden_channels = 4
-    cfg.model.attention_scale.token_dropout_probability = 0.0
-    cfg.model.attention_scale.equivariance_probability = 0.0
-    cfg.model.da3_feature_fusion.channels = 6
-    cfg.model.bim_cross_attention.channels = 8
-    cfg.model.bim_cross_attention.heads = 2
-    cfg.model.bim_cross_attention.window_size = 4
-    model = BIMPriorDA3(cfg)
-    batch = _candidate_batch(size=32)
-    batch["da3_feature_mid"] = torch.randn(2, 6, 5, 5)
-    batch["da3_feature_deep"] = torch.randn(2, 6, 5, 5)
-    with torch.no_grad():
-        model.refiner.low_output.weight.fill_(0.01)
-
-    output = model(batch)
-    assert output["depth"].shape == batch["base_depth"].shape
-    assert model.refiner.bim_cross_attention is not None
-    output["low_log_residual"].square().mean().backward()
-    cross_attention = model.refiner.bim_cross_attention
-    assert cross_attention.layer_scale.grad is not None
-    assert torch.count_nonzero(cross_attention.query_projection.weight.grad) > 0
-
-
-def test_cross_attention_preserves_identical_shared_initialization() -> None:
-    plain_cfg = load_config(
-        "configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml"
-    )
-    cross_cfg = load_config("configs/stanford_area1_bim_cross_attention_full_depth.yaml")
-    for cfg in (plain_cfg, cross_cfg):
-        cfg.model.base_channels = 4
-        cfg.model.attention_scale.hidden_channels = 4
-        cfg.model.da3_feature_fusion.channels = 6
-    cross_cfg.model.bim_cross_attention.channels = 8
-    cross_cfg.model.bim_cross_attention.heads = 2
-
-    torch.manual_seed(1234)
-    plain = BIMPriorDA3(plain_cfg)
-    torch.manual_seed(1234)
-    cross = BIMPriorDA3(cross_cfg)
-
-    plain_state = plain.state_dict()
-    cross_state = cross.state_dict()
-    assert set(plain_state) < set(cross_state)
-    for name, value in plain_state.items():
-        assert torch.equal(value, cross_state[name]), name
 
 
 def test_da3_feature_candidate_runs_end_to_end_without_live_da3() -> None:

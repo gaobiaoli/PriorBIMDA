@@ -22,9 +22,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import cv2
 import numpy as np
 
-from bim_priorda3.baselines import resolve_scale_estimator_config
+from bim_priorda3.baselines import (
+    PREVIOUS_FIXED_PARAMETERS,
+    previous_local_correction_features,
+    resolve_scale_estimator_config,
+)
 from bim_priorda3.config import load_config
 from bim_priorda3.data.dataset import BIMDepthDataset
 from bim_priorda3.data.stanford2d3ds import (
@@ -134,6 +139,8 @@ class SelectionFrame:
     count: int
     candidate_abs_rel_sums: np.ndarray
     robust_abs_rel_sum: float
+    candidate_bim_direct_abs_rel_sums: np.ndarray | None
+    robust_bim_direct_abs_rel_sum: float | None
     candidate_scales: np.ndarray
     robust_scale: float
     fallback: bool
@@ -148,12 +155,29 @@ class EvaluationFrame:
     metrics: dict[str, MetricSums]
 
 
-def _load_frame(record: Mapping[str, Any], target_shape: tuple[int, int]) -> LoadedFrame:
+def _load_frame(
+    record: Mapping[str, Any],
+    target_shape: tuple[int, int],
+    *,
+    apply_da3_metric_focal_scaling: bool,
+) -> LoadedFrame:
     sample_path = Path(str(record["sample"]))
     with np.load(sample_path, allow_pickle=False) as item:
         base = item["base_depth"].astype(np.float32)
         bim = item["bim_depth"].astype(np.float32)
         bim_valid = item["bim_valid"] > 0
+        if apply_da3_metric_focal_scaling:
+            if "intrinsic" not in item.files:
+                raise RuntimeError(
+                    f"{record['id']}: focal-corrected quantile search requires intrinsics"
+                )
+            intrinsic = item["intrinsic"].astype(np.float32)
+            if intrinsic.shape != (3, 3):
+                raise ValueError(f"{record['id']}: intrinsic must be 3x3")
+            focal_scale = float((intrinsic[0, 0] + intrinsic[1, 1]) / 2.0 / 300.0)
+            if not np.isfinite(focal_scale) or focal_scale <= 0:
+                raise ValueError(f"{record['id']}: invalid DA3 focal scale {focal_scale}")
+            base *= focal_scale
     if base.shape != bim.shape or base.shape != bim_valid.shape or base.ndim != 2:
         raise ValueError(f"{record['id']}: prepared depth arrays have incompatible shapes")
     invalid_bim = ~bim_valid
@@ -226,12 +250,45 @@ def _absrel_sums_for_scales(
     return np.maximum(sums, 0.0)
 
 
+def _bim_direct_absrel_sums_for_scales(
+    base_depth: np.ndarray,
+    bim_depth: np.ndarray,
+    target_depth: np.ndarray,
+    valid: np.ndarray,
+    scales: np.ndarray,
+) -> np.ndarray:
+    """Evaluate the complete deterministic local BIM correction for each scale."""
+
+    parameters = PREVIOUS_FIXED_PARAMETERS
+    expected = target_depth[valid].astype(np.float64, copy=False)
+    sums = np.empty(len(scales), dtype=np.float64)
+    for index, scale in enumerate(scales):
+        scaled = (base_depth * float(scale)).astype(np.float32)
+        field, _ = previous_local_correction_features(
+            scaled,
+            bim_depth,
+            float(parameters["consistency_log_threshold"]),
+            float(parameters["smoothing_sigma"]),
+        )
+        prediction = scaled * np.exp(float(parameters["local_correction_alpha"]) * field)
+        predicted = prediction[valid].astype(np.float64, copy=False)
+        sums[index] = float(np.sum(np.abs(predicted - expected) / expected))
+    return sums
+
+
 def _selection_frame(
     record: Mapping[str, Any],
     target_shape: tuple[int, int],
     robust_parameters: Mapping[str, Any],
+    *,
+    apply_da3_metric_focal_scaling: bool,
+    include_local_direct: bool,
 ) -> SelectionFrame:
-    frame = _load_frame(record, target_shape)
+    frame = _load_frame(
+        record,
+        target_shape,
+        apply_da3_metric_focal_scaling=apply_da3_metric_focal_scaling,
+    )
     scales, fallback = _candidate_scales(frame.ratios)
     robust = _robust_scale(frame.ratios, robust_parameters)
     all_sums = _absrel_sums_for_scales(
@@ -240,12 +297,26 @@ def _selection_frame(
         frame.target_valid,
         np.concatenate((scales, np.asarray([robust], dtype=np.float64))),
     )
+    direct_sums: np.ndarray | None = None
+    robust_direct_sum: float | None = None
+    if include_local_direct:
+        all_direct_sums = _bim_direct_absrel_sums_for_scales(
+            frame.base_depth,
+            frame.bim_depth,
+            frame.target_depth,
+            frame.target_valid,
+            np.concatenate((scales, np.asarray([robust], dtype=np.float64))),
+        )
+        direct_sums = all_direct_sums[:-1]
+        robust_direct_sum = float(all_direct_sums[-1])
     return SelectionFrame(
         sample_id=frame.sample_id,
         room=frame.room,
         count=int(np.count_nonzero(frame.target_valid)),
         candidate_abs_rel_sums=all_sums[:-1],
         robust_abs_rel_sum=float(all_sums[-1]),
+        candidate_bim_direct_abs_rel_sums=direct_sums,
+        robust_bim_direct_abs_rel_sum=robust_direct_sum,
         candidate_scales=scales,
         robust_scale=robust,
         fallback=fallback,
@@ -270,21 +341,32 @@ def _run_selection(
     config_path: Path,
     output: Path,
     *,
+    split: str,
+    include_local_direct: bool,
     workers: int,
     log_every: int,
 ) -> None:
-    dataset = BIMDepthDataset(cfg, "train", augment=False, require_ground_truth=False)
+    if split not in {"train", "val"}:
+        raise ValueError("Quantile selection split must be train or val")
+    dataset = BIMDepthDataset(cfg, split, augment=False, require_ground_truth=False)
     if str(cfg.data.get("ground_truth_support", "")) != "official_all_valid":
         raise ValueError("Quantile search requires data.ground_truth_support=official_all_valid")
     robust_parameters = resolve_scale_estimator_config(cfg.model.get("scale_estimator"))
     if robust_parameters["name"] != "log_upper_cap_v1":
         raise ValueError("Current comparator must use log_upper_cap_v1")
     target_shape = (int(cfg.data.target_height), int(cfg.data.target_width))
+    apply_da3_metric_focal_scaling = bool(
+        cfg.data.get("apply_da3_metric_focal_scaling", False)
+    )
     room_sums: dict[str, np.ndarray] = {}
     room_robust_sums: dict[str, float] = defaultdict(float)
     room_counts: dict[str, int] = defaultdict(int)
     global_sums = np.zeros(len(QUANTILES), dtype=np.float64)
     global_robust_sum = 0.0
+    global_direct_sums = np.zeros(len(QUANTILES), dtype=np.float64)
+    global_robust_direct_sum = 0.0
+    room_direct_sums: dict[str, np.ndarray] = {}
+    room_robust_direct_sums: dict[str, float] = defaultdict(float)
     global_count = 0
     scale_sum = np.zeros(len(QUANTILES), dtype=np.float64)
     scale_min = np.full(len(QUANTILES), np.inf, dtype=np.float64)
@@ -294,7 +376,13 @@ def _run_selection(
     accessed_ids: list[str] = []
 
     def process(record: Mapping[str, Any]) -> SelectionFrame:
-        return _selection_frame(record, target_shape, robust_parameters)
+        return _selection_frame(
+            record,
+            target_shape,
+            robust_parameters,
+            apply_da3_metric_focal_scaling=apply_da3_metric_focal_scaling,
+            include_local_direct=include_local_direct,
+        )
 
     executor: ThreadPoolExecutor | None = None
     results: Iterable[SelectionFrame]
@@ -314,6 +402,19 @@ def _run_selection(
             room_counts[frame.room] += frame.count
             global_sums += frame.candidate_abs_rel_sums
             global_robust_sum += frame.robust_abs_rel_sum
+            if include_local_direct:
+                assert frame.candidate_bim_direct_abs_rel_sums is not None
+                assert frame.robust_bim_direct_abs_rel_sum is not None
+                direct_destination = room_direct_sums.setdefault(
+                    frame.room,
+                    np.zeros(len(QUANTILES), dtype=np.float64),
+                )
+                direct_destination += frame.candidate_bim_direct_abs_rel_sums
+                room_robust_direct_sums[
+                    frame.room
+                ] += frame.robust_bim_direct_abs_rel_sum
+                global_direct_sums += frame.candidate_bim_direct_abs_rel_sums
+                global_robust_direct_sum += frame.robust_bim_direct_abs_rel_sum
             global_count += frame.count
             scale_sum += frame.candidate_scales
             scale_min = np.minimum(scale_min, frame.candidate_scales)
@@ -322,7 +423,10 @@ def _run_selection(
             fallback_frames += int(frame.fallback)
             accessed_ids.append(frame.sample_id)
             if log_every and (index % log_every == 0 or index == len(dataset.records)):
-                print(f"[train quantile search {index}/{len(dataset.records)}] {frame.sample_id}")
+                print(
+                    f"[{split} quantile search {index}/{len(dataset.records)}] "
+                    f"{frame.sample_id}"
+                )
     finally:
         if executor is not None:
             executor.shutdown()
@@ -331,6 +435,18 @@ def _run_selection(
     room_scores = _room_macro(room_sums, room_counts)
     pixel_selected = _selected_index(pixel_scores)
     room_selected = _selected_index(room_scores)
+    direct_pixel_scores = global_direct_sums / global_count
+    direct_room_scores = (
+        _room_macro(room_direct_sums, room_counts) if include_local_direct else None
+    )
+    direct_pixel_selected = (
+        _selected_index(direct_pixel_scores) if include_local_direct else None
+    )
+    direct_room_selected = (
+        _selected_index(direct_room_scores)
+        if direct_room_scores is not None
+        else None
+    )
     rooms = sorted(room_sums)
     loo_winners: list[float] = []
     for held_out in rooms:
@@ -341,8 +457,9 @@ def _run_selection(
         )
         loo_winners.append(QUANTILES[_selected_index(development_scores)])
     loo_counts = Counter(loo_winners)
-    candidates = [
-        {
+    candidates = []
+    for index, quantile in enumerate(QUANTILES):
+        candidate = {
             "quantile": quantile,
             "train_pixel_micro_abs_rel": float(pixel_scores[index]),
             "train_room_macro_abs_rel": float(room_scores[index]),
@@ -351,13 +468,27 @@ def _run_selection(
             "max_scale": float(scale_max[index]),
             "leave_one_room_out_win_count": int(loo_counts.get(quantile, 0)),
         }
-        for index, quantile in enumerate(QUANTILES)
-    ]
+        if include_local_direct:
+            assert direct_room_scores is not None
+            candidate.update(
+                train_pixel_micro_bim_direct_abs_rel=float(
+                    direct_pixel_scores[index]
+                ),
+                train_room_macro_bim_direct_abs_rel=float(
+                    direct_room_scores[index]
+                ),
+            )
+        candidates.append(candidate)
     q45_index = QUANTILES.index(0.45)
     selected_quantile = QUANTILES[pixel_selected]
+    selected_direct_quantile = (
+        QUANTILES[direct_pixel_selected]
+        if direct_pixel_selected is not None
+        else None
+    )
     summary = {
         "schema_version": 1,
-        "protocol": "stanford-area1-train-only-fixed-scale-quantile-search-v1",
+        "protocol": "stanford-area1-development-fixed-scale-quantile-search-v2",
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "source_sha256": _source_sha256(),
         "config": {
@@ -366,7 +497,7 @@ def _run_selection(
             "semantic_sha256": semantic_config_sha256(cfg),
         },
         "dataset": {
-            "split": "train",
+            "split": split,
             "sample_count": len(dataset.records),
             "rooms": rooms,
             "room_count": len(rooms),
@@ -376,7 +507,15 @@ def _run_selection(
         },
         "runtime_estimator": {
             "formula": "Q_q(BIM/DA3) per frame",
-            "inputs": ["registered hit-only BIM depth", "frozen cached DA3 depth"],
+            "inputs": [
+                "registered hit-only BIM depth",
+                (
+                    "focal-corrected frozen DA3 metric depth"
+                    if apply_da3_metric_focal_scaling
+                    else "frozen cached DA3 canonical-focal depth"
+                ),
+            ],
+            "da3_metric_focal_scaling_applied": apply_da3_metric_focal_scaling,
             "ratio_filter": [RATIO_MIN, RATIO_MAX],
             "minimum_scale_samples": MIN_SCALE_SAMPLES,
             "fallback_scale": 1.0,
@@ -389,16 +528,39 @@ def _run_selection(
                 "step": 0.01,
                 "count": len(QUANTILES),
             },
-            "primary_objective": "minimum official-all-valid train pixel-micro AbsRel",
+            "primary_objective": (
+                f"minimum official-all-valid {split} pixel-micro AbsRel"
+            ),
             "selected_quantile": selected_quantile,
             "selected_train_pixel_micro_abs_rel": float(pixel_scores[pixel_selected]),
             "selected_train_room_macro_abs_rel": float(room_scores[pixel_selected]),
-            "room_macro_optimal_quantile_train_only_not_tested": QUANTILES[room_selected],
+            "room_macro_optimal_quantile_development_only_not_tested": QUANTILES[
+                room_selected
+            ],
             "room_macro_optimal_abs_rel": float(room_scores[room_selected]),
-            "leave_one_train_room_out_winner_counts": {
+            "leave_one_development_room_out_winner_counts": {
                 format(quantile, ".2f"): count for quantile, count in sorted(loo_counts.items())
             },
-            "test_policy": "freeze selected_quantile; evaluate test exactly once",
+            "test_policy": "freeze selected_quantile; do not use test to revise it",
+            **(
+                {
+                    "selected_bim_direct_quantile": selected_direct_quantile,
+                    "selected_development_pixel_micro_bim_direct_abs_rel": float(
+                        direct_pixel_scores[direct_pixel_selected]
+                    ),
+                    "room_macro_optimal_bim_direct_quantile": QUANTILES[
+                        direct_room_selected
+                    ],
+                    "room_macro_optimal_bim_direct_abs_rel": float(
+                        direct_room_scores[direct_room_selected]
+                    ),
+                }
+                if include_local_direct
+                and direct_pixel_selected is not None
+                and direct_room_selected is not None
+                and direct_room_scores is not None
+                else {}
+            ),
         },
         "references": {
             "q45": {
@@ -412,7 +574,34 @@ def _run_selection(
                     np.mean([room_robust_sums[room] / room_counts[room] for room in rooms])
                 ),
                 "mean_scale": robust_scale_sum / len(dataset.records),
+                **(
+                    {
+                        "development_pixel_micro_bim_direct_abs_rel": (
+                            global_robust_direct_sum / global_count
+                        ),
+                        "development_room_macro_bim_direct_abs_rel": float(
+                            np.mean(
+                                [
+                                    room_robust_direct_sums[room] / room_counts[room]
+                                    for room in rooms
+                                ]
+                            )
+                        ),
+                    }
+                    if include_local_direct
+                    else {}
+                ),
             },
+        },
+        "local_bim_direct_search": {
+            "enabled": include_local_direct,
+            "consistency_log_threshold": PREVIOUS_FIXED_PARAMETERS[
+                "consistency_log_threshold"
+            ],
+            "smoothing_sigma": PREVIOUS_FIXED_PARAMETERS["smoothing_sigma"],
+            "local_correction_alpha": PREVIOUS_FIXED_PARAMETERS[
+                "local_correction_alpha"
+            ],
         },
         "fallback_frames": fallback_frames,
         "candidates": candidates,
@@ -427,8 +616,14 @@ def _evaluate_frame(
     target_shape: tuple[int, int],
     selected_quantile: float,
     robust_parameters: Mapping[str, Any],
+    *,
+    apply_da3_metric_focal_scaling: bool,
 ) -> EvaluationFrame:
-    frame = _load_frame(record, target_shape)
+    frame = _load_frame(
+        record,
+        target_shape,
+        apply_da3_metric_focal_scaling=apply_da3_metric_focal_scaling,
+    )
     fallback = frame.ratios.size < MIN_SCALE_SAMPLES
     if fallback:
         selected_scale = q45_scale = 1.0
@@ -503,7 +698,10 @@ def _run_test(
     log_every: int,
 ) -> None:
     selection = json.loads(selection_path.read_text())
-    if selection.get("protocol") != "stanford-area1-train-only-fixed-scale-quantile-search-v1":
+    if selection.get("protocol") not in {
+        "stanford-area1-train-only-fixed-scale-quantile-search-v1",
+        "stanford-area1-development-fixed-scale-quantile-search-v2",
+    }:
         raise ValueError("Selection receipt uses an unsupported protocol")
     selected_quantile = float(selection["selection"]["selected_quantile"])
     if selected_quantile not in QUANTILES:
@@ -517,6 +715,9 @@ def _run_test(
             raise ValueError(f"Train receipt and test split provenance differ for {key}")
     robust_parameters = resolve_scale_estimator_config(cfg.model.get("scale_estimator"))
     target_shape = (int(cfg.data.target_height), int(cfg.data.target_width))
+    apply_da3_metric_focal_scaling = bool(
+        cfg.data.get("apply_da3_metric_focal_scaling", False)
+    )
     micro = {method: MetricSums() for method in METHODS}
     rooms: dict[str, dict[str, MetricSums]] = defaultdict(
         lambda: {method: MetricSums() for method in METHODS}
@@ -527,7 +728,13 @@ def _run_test(
     fallback_frames = 0
 
     def process(record: Mapping[str, Any]) -> EvaluationFrame:
-        return _evaluate_frame(record, target_shape, selected_quantile, robust_parameters)
+        return _evaluate_frame(
+            record,
+            target_shape,
+            selected_quantile,
+            robust_parameters,
+            apply_da3_metric_focal_scaling=apply_da3_metric_focal_scaling,
+        )
 
     executor: ThreadPoolExecutor | None = None
     results: Iterable[EvaluationFrame]
@@ -623,11 +830,16 @@ def _run_test(
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True, type=Path)
-    parser.add_argument("--split", required=True, choices=("train", "test"))
+    parser.add_argument("--split", required=True, choices=("train", "val", "test"))
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--selection-receipt", type=Path)
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--log-every", type=int, default=250)
+    parser.add_argument(
+        "--include-local-direct",
+        action="store_true",
+        help="Also scan the full consistency-gated Gaussian BIM-direct output",
+    )
     return parser.parse_args(argv)
 
 
@@ -637,15 +849,21 @@ def main() -> None:
         raise ValueError("--workers must be positive")
     if args.log_every < 0:
         raise ValueError("--log-every must be nonnegative")
+    if args.include_local_direct:
+        # Python workers already parallelize frames; nested OpenCV worker pools
+        # otherwise oversubscribe the host during the 91-candidate scan.
+        cv2.setNumThreads(1)
     config_path = args.config.expanduser().resolve()
     cfg = load_config(config_path)
-    if args.split == "train":
+    if args.split in {"train", "val"}:
         if args.selection_receipt is not None:
             raise ValueError("Train selection does not accept --selection-receipt")
         _run_selection(
             cfg,
             config_path,
             args.output.expanduser().resolve(),
+            split=args.split,
+            include_local_direct=args.include_local_direct,
             workers=args.workers,
             log_every=args.log_every,
         )

@@ -1125,6 +1125,9 @@ def main() -> None:
         getattr(model, "attention_scale_enabled", False)
         and not getattr(model, "use_frame_residual", True)
     )
+    iterative_scale_count = int(
+        cfg.model.get("attention_scale", {}).get("iterative_updates", 0)
+    )
     model_scale_estimator = resolve_scale_estimator_config(cfg.model.get("scale_estimator"))
     model_robust_enabled = model_scale_estimator["name"] == ROBUST_LOG_CAP_SCALE_ESTIMATOR
     robust_comparator, robust_comparator_source = _resolve_robust_comparator(cfg)
@@ -1138,6 +1141,7 @@ def main() -> None:
     robust_comparison_enabled = robust_comparator is not None
     methods = [
         "raw_da3",
+        "raw_da3_canonical",
         "legacy_global_scale_q45",
         "legacy_bim_direct_q45",
     ]
@@ -1147,6 +1151,7 @@ def main() -> None:
         methods.extend(
             [
                 "live_da3",
+                "live_da3_canonical",
                 "live_legacy_global_scale_q45",
                 "live_legacy_bim_direct_q45",
             ]
@@ -1154,6 +1159,10 @@ def main() -> None:
         if robust_comparison_enabled:
             methods.extend(["live_robust_global_scale", "live_robust_bim_direct"])
     methods.append("coarse")
+    methods.extend(
+        f"iterative_scale_round_{index + 1}"
+        for index in range(iterative_scale_count)
+    )
     if residual_stage_ablation_enabled:
         methods.append("scale_plus_low")
     if additive_residual_enabled:
@@ -1234,6 +1243,30 @@ def main() -> None:
                 batch["base_depth"],
                 batch["bim_depth"],
             )
+            if "da3_metric_scale" not in batch:
+                raise RuntimeError(
+                    "Prepared samples lack da3_metric_scale; regenerate samples with "
+                    "processing-resolution intrinsics before reporting raw DA3 metric depth"
+                )
+            da3_metric_scale = batch["da3_metric_scale"].reshape(-1, 1, 1, 1)
+            metric_applied = batch.get("da3_metric_scale_applied")
+            if metric_applied is None:
+                metric_applied = torch.zeros(
+                    batch_sample_count,
+                    dtype=torch.bool,
+                    device=device,
+                )
+            metric_applied = metric_applied.bool().reshape(-1)
+            if bool(metric_applied.all()):
+                raw_da3_metric = batch["base_depth"]
+                raw_da3_canonical = batch["base_depth"] / da3_metric_scale
+            elif bool((~metric_applied).all()):
+                raw_da3_metric = batch["base_depth"] * da3_metric_scale
+                raw_da3_canonical = batch["base_depth"]
+            else:
+                raise RuntimeError(
+                    "A batch cannot mix canonical and focal-corrected DA3 model inputs"
+                )
             robust_scaled: torch.Tensor | None = None
             robust_direct: torch.Tensor | None = None
             robust_estimates: list[ScaleEstimate] | None = None
@@ -1244,12 +1277,32 @@ def main() -> None:
                     robust_comparator,
                 )
             predictions: dict[str, torch.Tensor] = {
-                "raw_da3": batch["base_depth"],
+                "raw_da3": raw_da3_metric,
+                "raw_da3_canonical": raw_da3_canonical,
                 "legacy_global_scale_q45": legacy_scaled,
                 "legacy_bim_direct_q45": legacy_direct,
                 "coarse": output["coarse_depth"],
                 "refined": output["depth"],
             }
+            if iterative_scale_count:
+                iteration_log_scales = output.get("attention_iteration_log_scales")
+                expected_shape = (batch_sample_count, iterative_scale_count, 1, 1)
+                if iteration_log_scales is None or tuple(iteration_log_scales.shape) != (
+                    expected_shape
+                ):
+                    raise RuntimeError(
+                        "Iterative scale checkpoint must expose log scales with shape "
+                        f"{expected_shape}; got "
+                        f"{None if iteration_log_scales is None else tuple(iteration_log_scales.shape)}"
+                    )
+                for iteration_index in range(iterative_scale_count):
+                    predictions[f"iterative_scale_round_{iteration_index + 1}"] = (
+                        output["base_depth"]
+                        * iteration_log_scales[:, iteration_index].exp().unsqueeze(1)
+                    ).clamp(
+                        min=1e-3,
+                        max=model_output_max_depth,
+                    )
             if residual_stage_ablation_enabled:
                 predictions["scale_plus_low"] = (
                     output["refinement_anchor_depth"]
@@ -1288,7 +1341,8 @@ def main() -> None:
                     batch["bim_depth"],
                 )
                 predictions.update(
-                    live_da3=live_base,
+                    live_da3=live_base * da3_metric_scale,
+                    live_da3_canonical=live_base,
                     live_legacy_global_scale_q45=live_legacy_scaled,
                     live_legacy_bim_direct_q45=live_legacy_direct,
                 )
@@ -1705,8 +1759,8 @@ def main() -> None:
         writer.writerows(rows)
 
     summary = {
-        "schema_version": 3,
-        "protocol": "stanford-area1-fixed-envelope-depth-v3-robust-comparator",
+        "schema_version": 4,
+        "protocol": "stanford-area1-fixed-envelope-depth-v4-da3-focal-metric",
         "evaluator_sha256": _sha256(Path(__file__).resolve()),
         "checkpoint": str(checkpoint_path),
         "checkpoint_sha256": _sha256(checkpoint_path),
@@ -1787,7 +1841,14 @@ def main() -> None:
             "bim_no_hit": "valid GT with no fixed-envelope BIM ray hit",
         },
         "method_definitions": {
-            "raw_da3": "cached frozen DA3 output; no BIM",
+            "raw_da3": (
+                "standalone frozen DA3METRIC output converted to metric depth as "
+                "cached canonical depth * mean(fx,fy)/300; no BIM or GT scaling"
+            ),
+            "raw_da3_canonical": (
+                "cached standalone DA3METRIC canonical-focal output retained only "
+                "to audit historical results that mislabeled it as raw metric depth"
+            ),
             "legacy_global_scale_q45": ("historical q=.45 BIM scale applied to cached DA3"),
             "legacy_bim_direct_q45": ("historical q=.45 scale plus registered local correction"),
             **(
@@ -1802,6 +1863,19 @@ def main() -> None:
                 if robust_comparison_enabled
                 else {}
             ),
+            **(
+                {
+                    "live_da3": (
+                        "live standalone DA3METRIC canonical output converted using "
+                        "the same per-frame mean(fx,fy)/300 factor"
+                    ),
+                    "live_da3_canonical": (
+                        "unscaled live standalone DA3METRIC canonical-focal output"
+                    ),
+                }
+                if e2e_enabled
+                else {}
+            ),
             "bim_envelope": (
                 "raw fixed-envelope render; standalone hit-support metrics and coverage only"
             ),
@@ -1809,6 +1883,13 @@ def main() -> None:
                 "model metric-scale input before learned local refinement; exact alias "
                 "of live_scale for E2E checkpoints"
             ),
+            **{
+                f"iterative_scale_round_{index + 1}": (
+                    f"shared-weight residual-conditioned BIM/DA3 scale estimate after "
+                    f"iteration {index + 1}, before local refinement"
+                )
+                for index in range(iterative_scale_count)
+            },
             **(
                 {
                     "scale_plus_low": (

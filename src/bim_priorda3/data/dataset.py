@@ -253,6 +253,19 @@ class BIMDepthDataset(Dataset):
             )
         self.height = int(cfg.data.target_height)
         self.width = int(cfg.data.target_width)
+        self.apply_da3_metric_focal_scaling = bool(
+            cfg.data.get("apply_da3_metric_focal_scaling", False)
+        )
+        self.split_provenance["da3_depth_quantity"] = {
+            "cached": "standalone DA3METRIC canonical-focal depth",
+            "model_input": (
+                "metric depth = cached depth * mean(fx,fy)/300"
+                if self.apply_da3_metric_focal_scaling
+                else "cached canonical-focal depth"
+            ),
+            "focal_coordinate_system": "prepared DA3 processing resolution",
+            "canonical_focal_px": 300.0,
+        }
         self.margin = float(cfg.loss.trust_margin)
         self.temperature = float(cfg.loss.trust_temperature)
         if self.ground_truth_support == OFFICIAL_ALL_VALID_GROUND_TRUTH_SUPPORT:
@@ -344,8 +357,34 @@ class BIMDepthDataset(Dataset):
         image = cv2.resize(image, (self.width, self.height), interpolation=cv2.INTER_AREA)
         rgb = image.transpose(2, 0, 1).astype(np.float32) / 255.0
 
+        intrinsic: np.ndarray | None = None
+        da3_metric_scale: float | None = None
+        if "intrinsic" in item.files:
+            intrinsic = item["intrinsic"].astype(np.float32)
+            if intrinsic.shape != (3, 3):
+                raise ValueError(
+                    f"{record['id']}: prepared intrinsic must be 3x3, "
+                    f"got {intrinsic.shape}"
+                )
+            focal_px = float((intrinsic[0, 0] + intrinsic[1, 1]) / 2.0)
+            if not np.isfinite(focal_px) or focal_px <= 0:
+                raise ValueError(
+                    f"{record['id']}: prepared intrinsic has invalid focal "
+                    f"length {focal_px}"
+                )
+            da3_metric_scale = focal_px / 300.0
+        elif self.apply_da3_metric_focal_scaling:
+            raise RuntimeError(
+                f"{record['id']}: focal-corrected DA3 input requires prepared intrinsics"
+            )
+
+        base_depth = item["base_depth"].astype(np.float32)
+        if self.apply_da3_metric_focal_scaling:
+            assert da3_metric_scale is not None
+            base_depth *= da3_metric_scale
+
         arrays = {
-            "base_depth": item["base_depth"].astype(np.float32)[None],
+            "base_depth": base_depth[None],
             "base_confidence": item["base_confidence"].astype(np.float32)[None],
             "bim_depth": item["bim_depth"].astype(np.float32)[None],
             "bim_valid": item["bim_valid"].astype(np.float32)[None],
@@ -517,6 +556,19 @@ class BIMDepthDataset(Dataset):
             "image_timestamp": float(record.get("image_timestamp", index)),
             "frame_index": int(record.get("lidar_index", index)),
         }
+        if intrinsic is not None and da3_metric_scale is not None:
+            output["intrinsic"] = torch.from_numpy(intrinsic.copy())
+            # Standalone DA3METRIC predicts at a 300 px canonical focal.
+            # Keep base_depth untouched for checkpoint compatibility and expose
+            # the camera-specific metric conversion as separate metadata.
+            output["da3_metric_scale"] = torch.tensor(
+                da3_metric_scale,
+                dtype=torch.float32,
+            )
+            output["da3_metric_scale_applied"] = torch.tensor(
+                self.apply_da3_metric_focal_scaling,
+                dtype=torch.bool,
+            )
         if self.da3_feature_fusion_enabled:
             assert self.da3_feature_cache_root is not None
             feature_mid, feature_deep = load_cached_features(

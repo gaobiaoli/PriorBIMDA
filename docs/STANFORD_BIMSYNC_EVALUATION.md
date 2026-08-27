@@ -1,8 +1,8 @@
 # 2D-3D-S Area 1 + BIMSyn 适配与评测
 
 本文记录 Area 1 的公开复现协议。旧 universal `0.2–5.0 m` 链与 SLABIM 完全一致；当前
-推荐发布模型另外采用 Area_1 官方全部有效深度、hit-only BIM、attention scale 和冻结 DA3
-feature。两条结果的支持域必须明确区分。
+推荐发布模型另外采用 Area_1 官方全部有效深度、逐帧 focal-corrected DA3、hit-only BIM、
+attention scale 和冻结 DA3 feature。两条结果的支持域必须明确区分。
 
 ## 1. 数据来源与许可
 
@@ -146,20 +146,21 @@ BIM-direct 在 validation/test 上改善 49.19%/38.71%，但相对旧 learned fi
 监督的发布模型。详见
 [ATTENTIVE_SCALE_EXPERIMENT.md](ATTENTIVE_SCALE_EXPERIMENT.md#unbounded-hit-only-bim-prior-retraining)。
 
-### 7.2 当前发布模型：官方全深度 attention-scale
+### 7.2 当前发布模型：focal-corrected 官方全深度 attention-scale
 
 当前 Area_1 推荐 checkpoint 使用同一房间划分和 hit-only prior，从头训练冻结 DA3
-layer-11/layer-23 feature、attention global scale 与 low/detail refiner。GT 支持域为官方
-regular-view z-depth 的全部正值，只排除原始 `0/65535`；模型输出上限为 128 m。
+layer-11/layer-23 feature、三轮 scale-conditioned attention 与 low/detail refiner。GT 支持域为官方
+regular-view z-depth 的全部正值，只排除原始 `0/65535`；模型输出上限为 128 m。缓存 DA3
+先逐帧乘 `mean(fx,fy)/300`，然后才进入 BIM ratio、尺度头和 refiner。
 
-| Split / 输出 | Raw DA3 | BIM-direct | Scale | + low | + detail |
-|---|---:|---:|---:|---:|---:|
-| Validation AbsRel | 0.28399 | 0.12203 | 0.07635 | 0.06940 | **0.06861** |
-| Test AbsRel | 0.30275 | 0.10866 | 0.07794 | 0.06746 | **0.06741** |
+| Split / 输出 | Raw DA3 | BIM-direct | Round 1 | Round 2 | Round 3 | + low | + detail |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Validation AbsRel | 0.09070 | 0.11815 | 0.07607 | 0.07093 | 0.06985 | 0.06476 | **0.06421** |
+| Test AbsRel | 0.08545 | 0.11072 | 0.07360 | 0.06972 | 0.06889 | 0.06351 | **0.06305** |
 
 发布 checkpoint 为
-`outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt`，SHA256
-为 `f330a987d638482636e225ebdf326612209fa672ea3c5c77a11049f05b655349`。后续
+`outputs/stanford_area1_iterative_scale_3round_full_depth_metric_da3/accepted.pt`，SHA256
+为 `74f2797dc42a4e7e8359440ea9d305a073e7ec0d2fe0850fb1ab79877bb7ae6d`。此前
 reliability-gated 模型在相同 benchmark 上得到 `0.06928/0.06884`，因此已回退且不发布。
 checkpoint 可公开复现和部署，但 Area_1 test 此前已经揭盲，test 数字必须标记为 post-hoc。
 
@@ -195,14 +196,14 @@ provenance：
 
 ```bash
 python scripts/model/train.py \
-  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3.yaml \
   --device cuda
 
 python scripts/model/evaluate_stanford_area1.py \
-  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
-  --checkpoint outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3.yaml \
+  --checkpoint outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3/accepted.pt \
   --split val --depth-support all-valid \
-  --output results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_val \
+  --output results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_metric_da3_val \
   --batch-size 8 --bootstrap-repetitions 10000 \
   --bootstrap-seed 42 --inference-seed 42 --device cuda \
   --allow-unverified-robust-comparator

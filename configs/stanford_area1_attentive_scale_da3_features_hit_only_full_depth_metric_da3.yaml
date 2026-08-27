@@ -1,0 +1,20 @@
+extends: stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml
+
+# Retrain the rollback architecture from scratch with the standalone
+# DA3METRIC output converted from its 300 px canonical focal to per-camera
+# metric z-depth before any BIM ratio, deterministic scale, loss, or refiner
+# input is constructed.
+
+experiment:
+  name: stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3
+  output_dir: outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3
+
+data:
+  apply_da3_metric_focal_scaling: true
+  # Cached scale/anchor arrays were generated from canonical-focal DA3 and
+  # must never be reused after changing the base-depth quantity.
+  recompute_cached_baselines: true
+
+train:
+  # Inherited scratch 3/9/3 schedule; no initialization checkpoint is allowed.
+  log_every: 200

@@ -47,7 +47,9 @@ class BIMPriorDA3(nn.Module):
         super().__init__()
         model = cfg.model
         self.max_depth = float(cfg.data.max_depth)
-        self.output_max_depth = float(model.get("output_max_depth_m", self.max_depth * 2.0))
+        self.output_max_depth = float(
+            model.get("output_max_depth_m", self.max_depth * 2.0)
+        )
         if not math.isfinite(self.output_max_depth) or self.output_max_depth <= 0:
             raise ValueError("model.output_max_depth_m must be finite and positive")
         self.variant = str(model.get("variant", ""))
@@ -76,7 +78,9 @@ class BIMPriorDA3(nn.Module):
         self.e2e_da3_config = Config(model.get("e2e_da3", {}))
         self.e2e_da3_enabled = bool(self.e2e_da3_config.get("enabled", False))
         self.da3_feature_fusion_config = Config(model.get("da3_feature_fusion", {}))
-        shared_da3_feature_fusion = bool(self.da3_feature_fusion_config.get("enabled", False))
+        shared_da3_feature_fusion = bool(
+            self.da3_feature_fusion_config.get("enabled", False)
+        )
         self.da3_feature_scale_enabled = bool(
             self.da3_feature_fusion_config.get(
                 "scale_enabled",
@@ -98,7 +102,8 @@ class BIMPriorDA3(nn.Module):
             else 0
         )
         self.da3_feature_layers = tuple(
-            int(value) for value in self.da3_feature_fusion_config.get("layers", (11, 23))
+            int(value)
+            for value in self.da3_feature_fusion_config.get("layers", (11, 23))
         )
         if self.da3_feature_fusion_enabled:
             if self.e2e_da3_enabled:
@@ -110,13 +115,19 @@ class BIMPriorDA3(nn.Module):
             if len(self.da3_feature_layers) != 2:
                 raise ValueError("model.da3_feature_fusion.layers must contain two layers")
         self.additive_residual_config = Config(model.get("additive_residual", {}))
-        self.additive_residual_enabled = bool(self.additive_residual_config.get("enabled", False))
+        self.additive_residual_enabled = bool(
+            self.additive_residual_config.get("enabled", False)
+        )
         self.max_additive_residual_m = float(
             self.additive_residual_config.get("max_residual_m", 0.0)
         )
         if self.additive_residual_enabled and self.max_additive_residual_m <= 0:
-            raise ValueError("model.additive_residual.max_residual_m must be positive when enabled")
-        self.detail_reliability_gate_config = Config(model.get("detail_reliability_gate", {}))
+            raise ValueError(
+                "model.additive_residual.max_residual_m must be positive when enabled"
+            )
+        self.detail_reliability_gate_config = Config(
+            model.get("detail_reliability_gate", {})
+        )
         self.detail_reliability_gate_enabled = bool(
             self.detail_reliability_gate_config.get("enabled", False)
         )
@@ -128,12 +139,6 @@ class BIMPriorDA3(nn.Module):
         )
         if not 0.0 <= self.detail_reliability_gate_floor < 1.0:
             raise ValueError("model.detail_reliability_gate.floor must be in [0, 1)")
-        self.bim_cross_attention_config = Config(model.get("bim_cross_attention", {}))
-        self.bim_cross_attention_enabled = bool(
-            self.bim_cross_attention_config.get("enabled", False)
-        )
-        if self.bim_cross_attention_enabled and not self.da3_feature_refiner_enabled:
-            raise ValueError("model.bim_cross_attention requires DA3 feature fusion in the refiner")
         self.da3: nn.Module | None = None
         self._da3_trainable_module_names: tuple[str, ...] = ()
         configured_scale = model.get("scale_estimator")
@@ -214,6 +219,28 @@ class BIMPriorDA3(nn.Module):
                 da3_feature_channels=(
                     self.da3_feature_channels if self.da3_feature_scale_enabled else 0
                 ),
+                iterative_updates=int(
+                    self.attention_scale_config.get("iterative_updates", 0)
+                ),
+                iterative_hidden_channels=int(
+                    self.attention_scale_config.get("iterative_hidden_channels", 32)
+                ),
+                iterative_initial_log_scale=float(
+                    self.attention_scale_config.get(
+                        "iterative_initial_log_scale",
+                        0.0,
+                    )
+                ),
+                iterative_damping=list(
+                    self.attention_scale_config.get("iterative_damping", [])
+                )
+                or None,
+                iterative_max_log_update=float(
+                    self.attention_scale_config.get(
+                        "iterative_max_log_update",
+                        0.15,
+                    )
+                ),
             )
         self.attention_scale_equivariance_probability = float(
             self.attention_scale_config.get("equivariance_probability", 0.0)
@@ -246,7 +273,9 @@ class BIMPriorDA3(nn.Module):
             max_total_log_residual=float(model.get("max_total_log_residual", 0.45)),
             gate_bim_adapters=bool(model.get("gate_bim_adapters", False)),
             bim_adapter_gate_floor=float(model.get("bim_adapter_gate_floor", 0.25)),
-            bim_adapter_gate_use_rgb=bool(model.get("bim_adapter_gate_use_rgb", False)),
+            bim_adapter_gate_use_rgb=bool(
+                model.get("bim_adapter_gate_use_rgb", False)
+            ),
             da3_feature_channels=(
                 self.da3_feature_channels if self.da3_feature_refiner_enabled else 0
             ),
@@ -255,16 +284,6 @@ class BIMPriorDA3(nn.Module):
             additive_detach_shared_features=bool(
                 self.additive_residual_config.get("detach_shared_features", True)
             ),
-            bim_cross_attention_enabled=self.bim_cross_attention_enabled,
-            bim_cross_attention_channels=int(self.bim_cross_attention_config.get("channels", 128)),
-            bim_cross_attention_heads=int(self.bim_cross_attention_config.get("heads", 4)),
-            bim_cross_attention_window_size=int(
-                self.bim_cross_attention_config.get("window_size", 7)
-            ),
-            bim_cross_attention_layer_scale_init=float(
-                self.bim_cross_attention_config.get("layer_scale_init", 1e-3)
-            ),
-            bim_cross_attention_dropout=float(self.bim_cross_attention_config.get("dropout", 0.0)),
         )
         if self.e2e_da3_enabled:
             self.da3 = self._load_da3_model(cfg, da3_model)
@@ -971,6 +990,9 @@ class BIMPriorDA3(nn.Module):
                         "bounded_log_scale_residual"
                     ],
                     "attention_fallback_log_scale": attention_scale_output["fallback_log_scale"],
+                    "attention_deterministic_fallback_log_scale": attention_scale_output[
+                        "deterministic_fallback_log_scale"
+                    ],
                     "attention_fallback_gate": attention_scale_output["fallback_gate"],
                     "attention_scale_pixel_support": attention_scale_output["pixel_support"],
                     "attention_scale_token_support": attention_scale_output["token_support"],
@@ -983,9 +1005,34 @@ class BIMPriorDA3(nn.Module):
                     "attention_token_distribution": attention_scale_output[
                         "attention_token_distribution"
                     ],
-                    "attention_token_valid": attention_scale_output["attention_token_valid"],
+                    "attention_token_valid": attention_scale_output[
+                        "attention_token_valid"
+                    ],
                 }
             )
+            if "iteration_log_scales" in attention_scale_output:
+                output.update(
+                    {
+                        "attention_iteration_log_scales": attention_scale_output[
+                            "iteration_log_scales"
+                        ],
+                        "attention_iteration_raw_log_scales": attention_scale_output[
+                            "iteration_raw_log_scales"
+                        ],
+                        "attention_iteration_head_log_scales": attention_scale_output[
+                            "iteration_head_log_scales"
+                        ],
+                        "attention_iteration_fallback_gates": attention_scale_output[
+                            "iteration_fallback_gates"
+                        ],
+                        "attention_iteration_step_sizes": attention_scale_output[
+                            "iteration_step_sizes"
+                        ],
+                        "attention_iteration_normalized_entropy": attention_scale_output[
+                            "iteration_normalized_attention_entropy"
+                        ],
+                    }
+                )
             spatial_residual = low_residual + detail_residual
             output["spatial_log_residual"] = spatial_residual
             if (

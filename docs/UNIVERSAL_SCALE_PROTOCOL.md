@@ -19,9 +19,9 @@ D_pred = D_scaled * exp(clamp(r_frame + r_low + r_detail))
 有效比例少于 100 个像素时尺度回退为 1。公式只读取固定 BIM、BIM valid mask 与 DA3
 深度；不读取 GT、语义、家具 mask、区域 ID，也不在测试时拟合参数。
 
-Area_1 另有一份已发布的官方全深度模型，使用 attention scale、hit-only BIM 和冻结 DA3
-feature；它不属于本页 universal scale 协议，不能与本页指标混表。对应配置为
-`configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml`。
+Area_1 另有一份已发布的官方全深度模型，使用 focal-corrected DA3、attention scale、hit-only
+BIM 和冻结 DA3 feature；它不属于本页 universal scale 协议，不能与本页指标混表。对应配置为
+`configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3.yaml`。
 
 ## 2. BIM 在统一框架中的角色
 

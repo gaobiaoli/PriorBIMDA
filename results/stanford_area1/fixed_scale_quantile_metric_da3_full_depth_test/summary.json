@@ -1,0 +1,744 @@
+{
+  "schema_version": 1,
+  "protocol": "stanford-area1-frozen-train-selected-scale-quantile-test-v1",
+  "created_utc": "2026-08-26T13:20:58.481928+00:00",
+  "source_sha256": "a9dc44f680e1f57b6e3ce52ae467cf9de232c11854ad8dd935fd25d6b254cb38",
+  "config": {
+    "path": "/home/bgao491/PriorBIMDA/configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3.yaml",
+    "raw_sha256": "120b0c99f8137c1e5dcf589fbd72ab519219f3061f28de1b897239410b7221d4",
+    "semantic_sha256": "14b98d1caf96fca2a9db93a4aa99bf8a749af837fac94ac495974d6769c39291"
+  },
+  "selection_receipt": {
+    "path": "/home/bgao491/PriorBIMDA/results/stanford_area1/fixed_scale_quantile_metric_da3_full_depth_train/selection.json",
+    "sha256": "a0ec065b1a133469a07d6af24e422a6678ba48cd78a1dddb6a5311cc953fc965",
+    "selected_quantile": 0.52,
+    "train_objective": "minimum official-all-valid train pixel-micro AbsRel",
+    "selected_train_abs_rel": 0.1291135429653641
+  },
+  "dataset": {
+    "split": "test",
+    "sample_count": 1641,
+    "rooms": [
+      "conferenceRoom_1",
+      "hallway_8",
+      "office_16",
+      "office_20",
+      "office_22",
+      "office_23",
+      "office_30"
+    ],
+    "valid_pixel_count": 413756559,
+    "split_provenance": {
+      "schema_version": 1,
+      "annotation_file": "/home/bgao491/PriorBIMDA/data/annotations/stanford_area1_room_v1.jsonl",
+      "annotation_raw_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+      "canonical_assignment_sha256": "97cf3246e93a6413a8fe9b5aeb5d44aa76e8a25106e2fab6f03f08d96af82be1",
+      "manifest_ordered_ids_sha256": "c51f93157d7b7969b87fe07dd44adad4c01e30a6a310045693a746a08ed091cb",
+      "manifest_preparation_fingerprint_status": "verified",
+      "manifest_preparation_fingerprint_sha256": "5d7c1bff66b949a8536ca742217f8a83cb19d289b69cc44028fee3387c8f8f35",
+      "fingerprint_sha256": "98df6610a13d97d61edac37d8191512fc129e2a521993cbfc1110e699be19b0e",
+      "manifest_record_count": 10327,
+      "annotation_record_count": 10327,
+      "split_counts": {
+        "train": 7013,
+        "val": 1673,
+        "test": 1641,
+        "excluded": 0
+      },
+      "split_region_counts": {
+        "train": {
+          "WC_1": 298,
+          "conferenceRoom_1": 0,
+          "conferenceRoom_2": 361,
+          "copyRoom_1": 127,
+          "hallway_1": 64,
+          "hallway_2": 0,
+          "hallway_3": 118,
+          "hallway_4": 17,
+          "hallway_5": 0,
+          "hallway_6": 1411,
+          "hallway_7": 1553,
+          "hallway_8": 0,
+          "office_1": 167,
+          "office_10": 112,
+          "office_11": 112,
+          "office_12": 115,
+          "office_13": 120,
+          "office_14": 0,
+          "office_15": 85,
+          "office_16": 0,
+          "office_17": 175,
+          "office_18": 182,
+          "office_19": 141,
+          "office_2": 139,
+          "office_20": 0,
+          "office_21": 186,
+          "office_22": 0,
+          "office_23": 0,
+          "office_24": 0,
+          "office_25": 114,
+          "office_26": 221,
+          "office_27": 229,
+          "office_28": 0,
+          "office_29": 101,
+          "office_3": 172,
+          "office_30": 0,
+          "office_31": 0,
+          "office_4": 116,
+          "office_5": 123,
+          "office_6": 0,
+          "office_7": 110,
+          "office_8": 99,
+          "office_9": 121,
+          "pantry_1": 124
+        },
+        "val": {
+          "WC_1": 0,
+          "conferenceRoom_1": 0,
+          "conferenceRoom_2": 0,
+          "copyRoom_1": 0,
+          "hallway_1": 0,
+          "hallway_2": 97,
+          "hallway_3": 0,
+          "hallway_4": 0,
+          "hallway_5": 77,
+          "hallway_6": 0,
+          "hallway_7": 0,
+          "hallway_8": 0,
+          "office_1": 0,
+          "office_10": 0,
+          "office_11": 0,
+          "office_12": 0,
+          "office_13": 0,
+          "office_14": 93,
+          "office_15": 0,
+          "office_16": 0,
+          "office_17": 0,
+          "office_18": 0,
+          "office_19": 0,
+          "office_2": 0,
+          "office_20": 0,
+          "office_21": 0,
+          "office_22": 0,
+          "office_23": 0,
+          "office_24": 161,
+          "office_25": 0,
+          "office_26": 0,
+          "office_27": 0,
+          "office_28": 233,
+          "office_29": 0,
+          "office_3": 0,
+          "office_30": 0,
+          "office_31": 901,
+          "office_4": 0,
+          "office_5": 0,
+          "office_6": 111,
+          "office_7": 0,
+          "office_8": 0,
+          "office_9": 0,
+          "pantry_1": 0
+        },
+        "test": {
+          "WC_1": 0,
+          "conferenceRoom_1": 280,
+          "conferenceRoom_2": 0,
+          "copyRoom_1": 0,
+          "hallway_1": 0,
+          "hallway_2": 0,
+          "hallway_3": 0,
+          "hallway_4": 0,
+          "hallway_5": 0,
+          "hallway_6": 0,
+          "hallway_7": 0,
+          "hallway_8": 72,
+          "office_1": 0,
+          "office_10": 0,
+          "office_11": 0,
+          "office_12": 0,
+          "office_13": 0,
+          "office_14": 0,
+          "office_15": 0,
+          "office_16": 289,
+          "office_17": 0,
+          "office_18": 0,
+          "office_19": 0,
+          "office_2": 0,
+          "office_20": 190,
+          "office_21": 0,
+          "office_22": 200,
+          "office_23": 152,
+          "office_24": 0,
+          "office_25": 0,
+          "office_26": 0,
+          "office_27": 0,
+          "office_28": 0,
+          "office_29": 0,
+          "office_3": 0,
+          "office_30": 458,
+          "office_31": 0,
+          "office_4": 0,
+          "office_5": 0,
+          "office_6": 0,
+          "office_7": 0,
+          "office_8": 0,
+          "office_9": 0,
+          "pantry_1": 0
+        },
+        "excluded": {
+          "WC_1": 0,
+          "conferenceRoom_1": 0,
+          "conferenceRoom_2": 0,
+          "copyRoom_1": 0,
+          "hallway_1": 0,
+          "hallway_2": 0,
+          "hallway_3": 0,
+          "hallway_4": 0,
+          "hallway_5": 0,
+          "hallway_6": 0,
+          "hallway_7": 0,
+          "hallway_8": 0,
+          "office_1": 0,
+          "office_10": 0,
+          "office_11": 0,
+          "office_12": 0,
+          "office_13": 0,
+          "office_14": 0,
+          "office_15": 0,
+          "office_16": 0,
+          "office_17": 0,
+          "office_18": 0,
+          "office_19": 0,
+          "office_2": 0,
+          "office_20": 0,
+          "office_21": 0,
+          "office_22": 0,
+          "office_23": 0,
+          "office_24": 0,
+          "office_25": 0,
+          "office_26": 0,
+          "office_27": 0,
+          "office_28": 0,
+          "office_29": 0,
+          "office_3": 0,
+          "office_30": 0,
+          "office_31": 0,
+          "office_4": 0,
+          "office_5": 0,
+          "office_6": 0,
+          "office_7": 0,
+          "office_8": 0,
+          "office_9": 0,
+          "pantry_1": 0
+        }
+      },
+      "ordered_ids_sha256": {
+        "train": "b2aec61d770b08e32eb920d76cc40c77031fb1f58ecd525c402aa3fbeb7d543f",
+        "val": "cf475a95336872579aad4c7a1762f781c7ec3146474fed119d955b92e3d35bfc",
+        "test": "b7d6d7ea4fbd3a15ef74494cda16532fdf284b050618064e206317e30316404f",
+        "excluded": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "excluded_reasons": {},
+      "fused_lidar_validation": {
+        "disjoint": true,
+        "unique_source_counts": {
+          "train": 0,
+          "val": 0,
+          "test": 0
+        }
+      },
+      "mode": "annotations",
+      "selected_regions": [
+        "WC_1",
+        "conferenceRoom_1",
+        "conferenceRoom_2",
+        "copyRoom_1",
+        "hallway_1",
+        "hallway_2",
+        "hallway_3",
+        "hallway_4",
+        "hallway_5",
+        "hallway_6",
+        "hallway_7",
+        "hallway_8",
+        "office_1",
+        "office_10",
+        "office_11",
+        "office_12",
+        "office_13",
+        "office_14",
+        "office_15",
+        "office_16",
+        "office_17",
+        "office_18",
+        "office_19",
+        "office_2",
+        "office_20",
+        "office_21",
+        "office_22",
+        "office_23",
+        "office_24",
+        "office_25",
+        "office_26",
+        "office_27",
+        "office_28",
+        "office_29",
+        "office_3",
+        "office_30",
+        "office_31",
+        "office_4",
+        "office_5",
+        "office_6",
+        "office_7",
+        "office_8",
+        "office_9",
+        "pantry_1"
+      ],
+      "da3_depth_quantity": {
+        "cached": "standalone DA3METRIC canonical-focal depth",
+        "model_input": "metric depth = cached depth * mean(fx,fy)/300",
+        "focal_coordinate_system": "prepared DA3 processing resolution",
+        "canonical_focal_px": 300.0
+      },
+      "ground_truth_support": {
+        "mode": "official_all_valid",
+        "encoding": "official regular-view z-depth uint16/512 metres",
+        "validity": "raw != 0 and raw != 65535; no metric depth cutoff",
+        "resize": "OpenCV nearest-exact"
+      },
+      "da3_feature_cache": {
+        "manifest_sha256": "41169cfb3d47be93cf530781d7f85e337181789a1ea7d32f294921089ee3049a",
+        "source_manifest_sha256": "6fe3e7d5256f9d54f118c9ec4b1c6839f31a9352f063f77c14b04430c9f43c2b",
+        "model_name": "depth-anything/da3metric-large",
+        "model_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+        "process_res": 504,
+        "layers": [
+          11,
+          23
+        ],
+        "channels": 1024,
+        "grid_shape": [
+          36,
+          36
+        ],
+        "dtype": "float16"
+      }
+    },
+    "accessed_sample_ids_sha256": "b7d6d7ea4fbd3a15ef74494cda16532fdf284b050618064e206317e30316404f"
+  },
+  "runtime_estimator": {
+    "formula": "Q_q(BIM/DA3) per frame",
+    "inputs": [
+      "registered hit-only BIM depth",
+      "focal-corrected frozen DA3 metric depth"
+    ],
+    "da3_metric_focal_scaling_applied": true,
+    "ratio_filter": [
+      0.2,
+      5.0
+    ],
+    "minimum_scale_samples": 100,
+    "fallback_scale": 1.0,
+    "ground_truth_used_at_runtime": false
+  },
+  "fallback_frames": 0,
+  "aggregates": {
+    "raw_da3": {
+      "pixel_micro": {
+        "abs_rel": 0.08545340168369792,
+        "mae": 0.17712399814867175,
+        "rmse": 0.435242459527748,
+        "delta1": 0.9380457313789677,
+        "delta2": 0.9753179429356188,
+        "delta3": 0.9855877112512432,
+        "count": 413756559
+      },
+      "frame_macro": {
+        "abs_rel": 0.08533140881272624,
+        "mae": 0.17691239761620722,
+        "rmse": 0.31605487776598734,
+        "delta1": 0.9381318183034143,
+        "delta2": 0.9753534485162895,
+        "delta3": 0.9856159749957436
+      },
+      "room_macro": {
+        "abs_rel": 0.09553860804600821,
+        "mae": 0.208976219101781,
+        "rmse": 0.47126645050449784,
+        "delta1": 0.9212899524197724,
+        "delta2": 0.9622742339299879,
+        "delta3": 0.9751030860246032
+      }
+    },
+    "q45_scale": {
+      "pixel_micro": {
+        "abs_rel": 0.11422105656287868,
+        "mae": 0.2194901183716514,
+        "rmse": 0.5407749372640761,
+        "delta1": 0.8816064544852327,
+        "delta2": 0.9328555755897999,
+        "delta3": 0.9535747468356145,
+        "count": 413756559
+      },
+      "frame_macro": {
+        "abs_rel": 0.11394267833960117,
+        "mae": 0.21896260785383884,
+        "rmse": 0.36243539109453216,
+        "delta1": 0.881952232548788,
+        "delta2": 0.9331287805435416,
+        "delta3": 0.9537986206273383
+      },
+      "room_macro": {
+        "abs_rel": 0.12514286301749106,
+        "mae": 0.2522540977108128,
+        "rmse": 0.5790970502311603,
+        "delta1": 0.858468306783881,
+        "delta2": 0.9125753510067731,
+        "delta3": 0.9442847683812771
+      }
+    },
+    "current_robust_scale": {
+      "pixel_micro": {
+        "abs_rel": 0.1103291360003753,
+        "mae": 0.21890884398325636,
+        "rmse": 0.5560515236465331,
+        "delta1": 0.8792555020257697,
+        "delta2": 0.9163716653008998,
+        "delta3": 0.9363681458884136,
+        "count": 413756559
+      },
+      "frame_macro": {
+        "abs_rel": 0.11003080755699696,
+        "mae": 0.21831419177844594,
+        "rmse": 0.3640489272098477,
+        "delta1": 0.8796595570603941,
+        "delta2": 0.9167633323379867,
+        "delta3": 0.9367063959059401
+      },
+      "room_macro": {
+        "abs_rel": 0.12850902885708068,
+        "mae": 0.267107048609342,
+        "rmse": 0.6081781190486851,
+        "delta1": 0.8406268789551034,
+        "delta2": 0.8847449964377805,
+        "delta3": 0.9223854921983826
+      }
+    },
+    "selected_quantile_scale": {
+      "pixel_micro": {
+        "abs_rel": 0.1251245971359213,
+        "mae": 0.23569969596160106,
+        "rmse": 0.5686857462330893,
+        "delta1": 0.873484673870753,
+        "delta2": 0.9298453828257016,
+        "delta3": 0.9560424853591264,
+        "count": 413756559
+      },
+      "frame_macro": {
+        "abs_rel": 0.12484437541232973,
+        "mae": 0.2351936347812226,
+        "rmse": 0.37703381452271545,
+        "delta1": 0.8738028525229854,
+        "delta2": 0.9300939181177531,
+        "delta3": 0.9562423099029591
+      },
+      "room_macro": {
+        "abs_rel": 0.13077817509799297,
+        "mae": 0.256915547217998,
+        "rmse": 0.5902787550571266,
+        "delta1": 0.859481400401385,
+        "delta2": 0.9151752459785724,
+        "delta3": 0.9481689509065496
+      }
+    }
+  },
+  "per_room": {
+    "conferenceRoom_1": {
+      "raw_da3": {
+        "abs_rel": 0.06471188613749042,
+        "mae": 0.1382910938750737,
+        "rmse": 0.25655379404577383,
+        "delta1": 0.9564542468747438,
+        "delta2": 0.9875208166283699,
+        "delta3": 0.9957847969909337,
+        "count": 70782356
+      },
+      "q45_scale": {
+        "abs_rel": 0.10450082067956372,
+        "mae": 0.19169692097479177,
+        "rmse": 0.4990924757803578,
+        "delta1": 0.909522141365286,
+        "delta2": 0.930155122273692,
+        "delta3": 0.9392554268750252,
+        "count": 70782356
+      },
+      "current_robust_scale": {
+        "abs_rel": 0.10372976776588676,
+        "mae": 0.20097285592075087,
+        "rmse": 0.5046863519347075,
+        "delta1": 0.8919639945299362,
+        "delta2": 0.9126017223840359,
+        "delta3": 0.9233652098271495,
+        "count": 70782356
+      },
+      "selected_quantile_scale": {
+        "abs_rel": 0.11219486550955618,
+        "mae": 0.20253305973490832,
+        "rmse": 0.5363180679869602,
+        "delta1": 0.9075244825136931,
+        "delta2": 0.9310612661720387,
+        "delta3": 0.9461408998592813,
+        "count": 70782356
+      }
+    },
+    "hallway_8": {
+      "raw_da3": {
+        "abs_rel": 0.1748311053156661,
+        "mae": 0.5169385301937224,
+        "rmse": 1.11555875038568,
+        "delta1": 0.774420132695715,
+        "delta2": 0.8504396753308355,
+        "delta3": 0.8835076727376537,
+        "count": 18257108
+      },
+      "q45_scale": {
+        "abs_rel": 0.24239218485189562,
+        "mae": 0.6194079649937574,
+        "rmse": 1.1646985773307257,
+        "delta1": 0.60865340775768,
+        "delta2": 0.7312383757602793,
+        "delta3": 0.8510037843890719,
+        "count": 18257108
+      },
+      "current_robust_scale": {
+        "abs_rel": 0.27828016954896845,
+        "mae": 0.6940995204301276,
+        "rmse": 1.217611023066722,
+        "delta1": 0.5142067955121917,
+        "delta2": 0.6361613241264717,
+        "delta3": 0.8234855706610269,
+        "count": 18257108
+      },
+      "selected_quantile_scale": {
+        "abs_rel": 0.22908526558848644,
+        "mae": 0.5948292981267177,
+        "rmse": 1.1519031560896544,
+        "delta1": 0.6551393024568842,
+        "delta2": 0.7553982810421015,
+        "delta3": 0.8500770220562862,
+        "count": 18257108
+      }
+    },
+    "office_16": {
+      "raw_da3": {
+        "abs_rel": 0.07006089039290993,
+        "mae": 0.1346263421611586,
+        "rmse": 0.24941747858200453,
+        "delta1": 0.9530219512675276,
+        "delta2": 0.9853375784122957,
+        "delta3": 0.9935026937897664,
+        "count": 72689971
+      },
+      "q45_scale": {
+        "abs_rel": 0.10441089422343344,
+        "mae": 0.18859799659057294,
+        "rmse": 0.42084967728997447,
+        "delta1": 0.9081837988351928,
+        "delta2": 0.9336747981368709,
+        "delta3": 0.9435804012083042,
+        "count": 72689971
+      },
+      "current_robust_scale": {
+        "abs_rel": 0.09620233122154477,
+        "mae": 0.1861255537077175,
+        "rmse": 0.41394302948637557,
+        "delta1": 0.9049395823806285,
+        "delta2": 0.9350670259587804,
+        "delta3": 0.9439525158154211,
+        "count": 72689971
+      },
+      "selected_quantile_scale": {
+        "abs_rel": 0.11223624561571176,
+        "mae": 0.19390658915734302,
+        "rmse": 0.44591814992313555,
+        "delta1": 0.9026115583400082,
+        "delta2": 0.931515531901918,
+        "delta3": 0.9414026454901185,
+        "count": 72689971
+      }
+    },
+    "office_20": {
+      "raw_da3": {
+        "abs_rel": 0.07859189220347153,
+        "mae": 0.12613112477323257,
+        "rmse": 0.24673801604388873,
+        "delta1": 0.9463950861828719,
+        "delta2": 0.9845192945201597,
+        "delta3": 0.9926654556204405,
+        "count": 47709712
+      },
+      "q45_scale": {
+        "abs_rel": 0.0969667742530155,
+        "mae": 0.16195396139973994,
+        "rmse": 0.37792067726121625,
+        "delta1": 0.9003064617116112,
+        "delta2": 0.9287315966191537,
+        "delta3": 0.9543348532474898,
+        "count": 47709712
+      },
+      "current_robust_scale": {
+        "abs_rel": 0.10606987568468894,
+        "mae": 0.18769143590559367,
+        "rmse": 0.46063508269972725,
+        "delta1": 0.8891659836471031,
+        "delta2": 0.9080056488289009,
+        "delta3": 0.9159437810062656,
+        "count": 47709712
+      },
+      "selected_quantile_scale": {
+        "abs_rel": 0.09346579501860866,
+        "mae": 0.14392112863345596,
+        "rmse": 0.33140066036694105,
+        "delta1": 0.9098852032475065,
+        "delta2": 0.9456674565547577,
+        "delta3": 0.9749832906138691,
+        "count": 47709712
+      }
+    },
+    "office_22": {
+      "raw_da3": {
+        "abs_rel": 0.0995381226473571,
+        "mae": 0.1937580556648984,
+        "rmse": 0.6377567044308562,
+        "delta1": 0.9298403578977487,
+        "delta2": 0.9741155206668252,
+        "delta3": 0.984077175614256,
+        "count": 50355388
+      },
+      "q45_scale": {
+        "abs_rel": 0.11663854510687356,
+        "mae": 0.2132454884385967,
+        "rmse": 0.6564977371756537,
+        "delta1": 0.8882832558057143,
+        "delta2": 0.9446758309160481,
+        "delta3": 0.9646661247054635,
+        "count": 50355388
+      },
+      "current_robust_scale": {
+        "abs_rel": 0.12724629037933102,
+        "mae": 0.2441162576706639,
+        "rmse": 0.7355286207156055,
+        "delta1": 0.8563832136493517,
+        "delta2": 0.9066550534770976,
+        "delta3": 0.9288962086837659,
+        "count": 50355388
+      },
+      "selected_quantile_scale": {
+        "abs_rel": 0.1283005253028194,
+        "mae": 0.21881369517267504,
+        "rmse": 0.6480721629761356,
+        "delta1": 0.8837098226708133,
+        "delta2": 0.9378125733039729,
+        "delta3": 0.9733916656545274,
+        "count": 50355388
+      }
+    },
+    "office_23": {
+      "raw_da3": {
+        "abs_rel": 0.09318754358436251,
+        "mae": 0.15949679678751244,
+        "rmse": 0.4152818294387572,
+        "delta1": 0.9493020389110582,
+        "delta2": 0.9763281644450065,
+        "delta3": 0.9891340464517446,
+        "count": 38314815
+      },
+      "q45_scale": {
+        "abs_rel": 0.09134346224569317,
+        "mae": 0.1479284334286016,
+        "rmse": 0.4220438993279448,
+        "delta1": 0.9301164575634777,
+        "delta2": 0.9692236540878508,
+        "delta3": 0.9893272093314296,
+        "count": 38314815
+      },
+      "current_robust_scale": {
+        "abs_rel": 0.09026185127882902,
+        "mae": 0.15977472005067797,
+        "rmse": 0.46115103077395836,
+        "delta1": 0.9235795083442266,
+        "delta2": 0.945541587503424,
+        "delta3": 0.9597382892231112,
+        "count": 38314815
+      },
+      "selected_quantile_scale": {
+        "abs_rel": 0.09317420539625539,
+        "mae": 0.1428571834380804,
+        "rmse": 0.4179225592557284,
+        "delta1": 0.9253338427968398,
+        "delta2": 0.9737092558061419,
+        "delta3": 0.9896595872901905,
+        "count": 38314815
+      }
+    },
+    "office_30": {
+      "raw_da3": {
+        "abs_rel": 0.08784881604079983,
+        "mae": 0.19359159025686887,
+        "rmse": 0.3775585806045245,
+        "delta1": 0.9395958531087422,
+        "delta2": 0.9776585875064222,
+        "delta3": 0.9870497609674264,
+        "count": 115647209
+      },
+      "q45_scale": {
+        "abs_rel": 0.11974735976196228,
+        "mae": 0.2429479181496289,
+        "rmse": 0.5125763074522485,
+        "delta1": 0.8642126244482043,
+        "delta2": 0.9503280792535166,
+        "delta3": 0.9678255789121551,
+        "count": 115647209
+      },
+      "current_robust_scale": {
+        "abs_rel": 0.09777291612031595,
+        "mae": 0.1969689965798625,
+        "rmse": 0.4636916946636988,
+        "delta1": 0.9041490746222851,
+        "delta2": 0.9491826127857526,
+        "delta3": 0.9613168701719381,
+        "count": 115647209
+      },
+      "selected_quantile_scale": {
+        "abs_rel": 0.14699032325451286,
+        "mae": 0.30154787626280555,
+        "rmse": 0.6004165288013305,
+        "delta1": 0.8321655907839505,
+        "delta2": 0.9310623570690755,
+        "delta3": 0.9615275453815751,
+        "count": 115647209
+      }
+    }
+  },
+  "paired_room_bootstrap_vs_current_robust": {
+    "difference": "selected_quantile_scale - current_robust_scale; negative is better",
+    "rooms": [
+      "conferenceRoom_1",
+      "hallway_8",
+      "office_16",
+      "office_20",
+      "office_22",
+      "office_23",
+      "office_30"
+    ],
+    "mean_room_difference": 0.0022691462409122542,
+    "candidate_better_room_fraction": 0.2857142857142857,
+    "confidence_interval_95": [
+      -0.018363720935304344,
+      0.022149806310227456
+    ],
+    "repetitions": 10000,
+    "seed": 42
+  },
+  "per_frame_csv": "/home/bgao491/PriorBIMDA/results/stanford_area1/fixed_scale_quantile_metric_da3_full_depth_test/per_frame.csv",
+  "per_frame_csv_sha256": "2cc29b1a83e628674256c6475fce0b52f2f0641c237d46c28254e3255b13ca1f"
+}

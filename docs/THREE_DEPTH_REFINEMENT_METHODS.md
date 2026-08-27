@@ -1,8 +1,8 @@
 # 三尺度深度细化网络
 
 本文说明当前公开版本的学习模块。发布包保留 universal `0.2–5.0 m` 兼容链，同时将
-Area_1 的官方全深度 attention-scale + low/detail 模型作为推荐学习版本。两种支持域和
-checkpoint 不可混用。
+Area_1 的 focal-corrected 官方全深度 attention-scale + low/detail 模型作为推荐学习版本。
+两种支持域和 checkpoint 不可混用。
 
 ## 1. 统一输入协议
 
@@ -65,16 +65,17 @@ D_refined = A * exp(R)
 |---|---|---|---|
 | SLABIM | `configs/slabim.yaml` | `outputs/slabim/accepted.pt` | SLABIM 正式模型与 Area 1 初始化源 |
 | Area 1 universal | `configs/stanford_area1.yaml` | `outputs/stanford_area1/accepted.pt` | `0.2–5.0 m` 跨数据集兼容基线 |
-| Area 1 full-depth | `configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml` | `outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt` | **当前推荐的官方全部有效深度模型** |
+| Area 1 full-depth | `configs/stanford_area1_iterative_scale_3round_full_depth_metric_da3.yaml` | `outputs/stanford_area1_iterative_scale_3round_full_depth_metric_da3/accepted.pt` | **当前推荐的三轮尺度条件官方全部有效深度模型** |
 
 `configs/*_e2e.yaml` 仅保留为研究入口，用于联合微调 DA3 后段；当前公开主结果不依赖
 E2E checkpoint。
 
 Area 1 full-depth 版本关闭 `r_frame`，改由 attention head 从 BIM/DA3 对应中估计每帧一个
-全局尺度，再依次预测 `r_low` 与 `r_detail`：
+全局尺度，再依次预测 `r_low` 与 `r_detail`。缓存 DA3 先按逐帧内参转换为 metric depth：
 
 ```text
-D_scale = s_attention * D_DA3
+D_DA3_metric = D_DA3_cache * mean(fx, fy) / 300
+D_scale = s_attention * D_DA3_metric
 D_final = D_scale * exp(clip(r_low + r_detail, -0.45, 0.45))
 ```
 
@@ -109,8 +110,8 @@ Area 1 full-depth 发布模型使用另一固定支持域：官方 regular-view 
 
 | Split | Raw DA3 | BIM direct | Scale | + low | + detail |
 |---|---:|---:|---:|---:|---:|
-| Validation | 0.28399 | 0.12203 | 0.07635 | 0.06940 | **0.06861** |
-| Test | 0.30275 | 0.10866 | 0.07794 | 0.06746 | **0.06741** |
+| Validation | 0.09070 | 0.11815 | 0.07531 | **0.06441** | 0.06445 |
+| Test | 0.08545 | 0.11072 | 0.07847 | 0.06628 | **0.06614** |
 
 后续 reliability-gated 版本为 `0.06928/0.06884`，未超过本表，已归档且不发布。
 
@@ -134,13 +135,13 @@ python scripts/model/evaluate_stanford_area1.py \
   --batch-size 8 --inference-seed 42 --device cuda
 
 python scripts/model/train.py \
-  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3.yaml \
   --device cuda
 python scripts/model/evaluate_stanford_area1.py \
-  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
-  --checkpoint outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt \
+  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3.yaml \
+  --checkpoint outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3/accepted.pt \
   --split val --depth-support all-valid \
-  --output results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_val \
+  --output results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_metric_da3_val \
   --batch-size 8 --inference-seed 42 --device cuda \
   --allow-unverified-robust-comparator
 ```

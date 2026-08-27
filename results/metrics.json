@@ -1,9 +1,38 @@
 {
-  "schema_version": 10,
+  "schema_version": 14,
   "method_protocol": "universal_log_upper_cap_v1",
   "depth_protocol_m": [0.2, 5.0],
   "metric_aggregation": "pixel_micro",
   "single_training_seed": 42,
+  "da3_output_quantity_correction": {
+    "status": "2026-08 focal audit; all legacy raw_da3 keys in historical result objects are cached canonical-focal output, not standalone DA3METRIC metric depth",
+    "formula": "metric_depth = cached_depth * mean(fx, fy) / 300",
+    "focal_coordinate_system": "DA3 processing resolution (504 px in current configs)",
+    "gt_used_for_scaling": false,
+    "slabim_test_0.2_5.0_m": {
+      "cached_canonical_abs_rel": 0.1993466339,
+      "focal_corrected_metric": {"abs_rel": 0.0737294653, "mae": 0.1155933404, "rmse": 0.2556750224, "delta1": 0.9389051207},
+      "metric_scale": 0.84
+    },
+    "stanford_area1_test_0.2_5.0_m": {
+      "cached_canonical_abs_rel": 0.3012279210,
+      "focal_corrected_metric": {"abs_rel": 0.0844332214, "mae": 0.1610703940, "rmse": 0.3361959747, "delta1": 0.9406481039}
+    },
+    "stanford_area1_official_all_valid": {
+      "validation": {
+        "cached_canonical_abs_rel": 0.2839903652,
+        "focal_corrected_metric": {"abs_rel": 0.0907045246, "mae": 0.2660445567, "rmse": 0.6546223273, "delta1": 0.9264027354}
+      },
+      "test": {
+        "cached_canonical_abs_rel": 0.3027477267,
+        "focal_corrected_metric": {"abs_rel": 0.0854534025, "mae": 0.1771239997, "rmse": 0.4352424603, "delta1": 0.9380457386},
+        "metric_scale_range": [1.0947704061, 2.0261230469],
+        "metric_scale_mean": 1.4426897218
+      }
+    },
+    "legacy_checkpoint_input": "unchanged cached canonical output; do not apply the factor to an existing task checkpoint without retraining",
+    "pano_status": "legacy raw/pano claims require a per-view focal-corrected rerun"
+  },
   "slabim": {
     "split": "pooled_clean_test",
     "samples": 108,
@@ -75,8 +104,8 @@
       }
     },
     "hit_only_full_depth_release": {
-      "status": "public Area_1 full-depth release selected on validation; test metrics remain post-hoc because Area_1 was previously revealed",
-      "release_role": "recommended learned Area_1 model for official all-valid regular-view depth",
+      "status": "superseded by the focal-corrected DA3 retraining; retained as historical canonical-input checkpoint",
+      "release_role": "historical learned Area_1 model for official all-valid regular-view depth",
       "architecture": "hit-only BIM prior, attentive scale with frozen DA3 layer-11/layer-23 features, low/detail refiner",
       "ground_truth_support": "official positive regular-view uint16/512 z-depth; raw 0 and 65535 invalid; no metric cutoff",
       "model_output_max_depth_m": 128.0,
@@ -121,6 +150,132 @@
         "test_final_mae_relative_reduction_percent": 2.47666784
       },
       "conclusion": "selected public full-depth model; it clearly beats raw DA3 and BIM-direct on the same support, while its nearly neutral test change versus the limited-supervision predecessor must not be overstated"
+    },
+    "metric_da3_hit_only_full_depth_release": {
+      "status": "superseded static-attention focal-corrected comparator; retained for paired audit",
+      "release_role": "static attention comparator for the three-round learned estimator",
+      "architecture": "rollback hit-only BIM prior, attentive scale with frozen DA3 layer-11/layer-23 features, low/detail multiplicative refiner; no cross-attention and no additive head",
+      "da3_input_quantity": "cached canonical-focal z-depth multiplied per frame by mean(fx,fy)/300 before every BIM ratio, scale estimate, loss, and refiner input",
+      "ground_truth_support": "official positive regular-view uint16/512 z-depth; raw 0 and 65535 invalid; no metric cutoff",
+      "model_output_max_depth_m": 128.0,
+      "train_val_test_samples": [7013, 1673, 1641],
+      "selected_human_epoch": 13,
+      "single_training_seed": 42,
+      "validation": {
+        "valid_pixels": 422186615,
+        "raw_da3_metric": {"abs_rel": 0.0907045244, "mae": 0.2660445572, "rmse": 0.6546223286, "delta1": 0.9264027331},
+        "raw_da3_canonical_audit_only": {"abs_rel": 0.2839903652, "mae": 0.8802813848, "rmse": 1.3248333600, "delta1": 0.3174227515},
+        "robust_bim_direct": {"abs_rel": 0.1181523220, "mae": 0.3164819514, "rmse": 0.8378414827, "delta1": 0.8492148904},
+        "scale": {"abs_rel": 0.0753131427, "mae": 0.2314900896, "rmse": 0.6783661015, "delta1": 0.9241775820},
+        "scale_plus_low": {"abs_rel": 0.0644051849, "mae": 0.1986593259, "rmse": 0.6058552517, "delta1": 0.9359019400},
+        "final": {"abs_rel": 0.0644467159, "mae": 0.1988488489, "rmse": 0.6061377190, "delta1": 0.9358678413}
+      },
+      "test": {
+        "valid_pixels": 413756559,
+        "raw_da3_metric": {"abs_rel": 0.0854534017, "mae": 0.1771239981, "rmse": 0.4352424595, "delta1": 0.9380457314},
+        "raw_da3_canonical_audit_only": {"abs_rel": 0.3027477267, "mae": 0.7101329850, "rmse": 0.9286307212, "delta1": 0.2622953660},
+        "robust_bim_direct": {"abs_rel": 0.1107240166, "mae": 0.2179207233, "rmse": 0.5576093239, "delta1": 0.8794820024},
+        "scale": {"abs_rel": 0.0784674764, "mae": 0.1533086498, "rmse": 0.4392844515, "delta1": 0.9281616415},
+        "scale_plus_low": {"abs_rel": 0.0662843171, "mae": 0.1289489407, "rmse": 0.4111951486, "delta1": 0.9396572660},
+        "final": {"abs_rel": 0.0661440303, "mae": 0.1287924765, "rmse": 0.4112977683, "delta1": 0.9397510216}
+      },
+      "abs_rel_reduction_percent": {
+        "validation_final_vs_corrected_raw_da3": 28.94873071,
+        "test_final_vs_corrected_raw_da3": 22.59637529,
+        "validation_final_vs_previous_canonical_input_release": 6.06144718,
+        "test_final_vs_previous_canonical_input_release": 1.87340928,
+        "validation_final_vs_current_robust_bim_direct": 45.45454987,
+        "test_final_vs_current_robust_bim_direct": 40.26225553
+      },
+      "stage_attribution": {
+        "validation_scale_to_low_reduction_percent": 14.48347180,
+        "test_scale_to_low_reduction_percent": 15.52638089,
+        "validation_low_to_detail_reduction_percent": -0.06448380,
+        "test_low_to_detail_reduction_percent": 0.21164404
+      },
+      "conclusion": "focal-corrected scratch retraining improves both validation and post-hoc test over the superseded canonical-input release; r_low remains the dominant residual term, while r_detail is neutral across splits"
+    },
+    "iterative_scale_3round_full_depth_release": {
+      "status": "current validation-selected Area_1 aggregate release; test is post-hoc because Area_1 was previously revealed",
+      "architecture": "focal-corrected frozen DA3 layer-11/layer-23 features, hit-only BIM, three shared-weight residual-conditioned attention updates from scale=1, unchanged low/detail multiplicative refiner",
+      "ground_truth_support": "official positive regular-view uint16/512 z-depth; raw 0 and 65535 invalid; no metric cutoff",
+      "train_val_test_samples": [7013, 1673, 1641],
+      "selected_human_epoch": 12,
+      "single_training_seed": 42,
+      "learned_iteration_damping": [0.5152138472, 0.5132908821, 0.5116788149],
+      "validation": {
+        "valid_pixels": 422186615,
+        "raw_da3_metric": {"abs_rel": 0.0907045244, "mae": 0.2660445572, "rmse": 0.6546223286, "delta1": 0.9264027331},
+        "robust_bim_direct": {"abs_rel": 0.1181523220, "mae": 0.3164819514, "rmse": 0.8378414827, "delta1": 0.8492148904},
+        "round_1_scale": {"abs_rel": 0.0760700334},
+        "round_2_scale": {"abs_rel": 0.0709253987},
+        "round_3_scale": {"abs_rel": 0.0698533426, "mae": 0.2187085567, "rmse": 0.6517618649, "delta1": 0.9374989138},
+        "scale_plus_low": {"abs_rel": 0.0647555383, "mae": 0.2007186609, "rmse": 0.5928027610, "delta1": 0.9415183189},
+        "final": {"abs_rel": 0.0642132323, "mae": 0.1991274986, "rmse": 0.5912587675, "delta1": 0.9419455754}
+      },
+      "test": {
+        "valid_pixels": 413756559,
+        "raw_da3_metric": {"abs_rel": 0.0854534017, "mae": 0.1771239981, "rmse": 0.4352424595, "delta1": 0.9380457314},
+        "robust_bim_direct": {"abs_rel": 0.1107240166, "mae": 0.2179207233, "rmse": 0.5576093239, "delta1": 0.8794820024},
+        "round_1_scale": {"abs_rel": 0.0736030391},
+        "round_2_scale": {"abs_rel": 0.0697218956},
+        "round_3_scale": {"abs_rel": 0.0688854451, "mae": 0.1417071102, "rmse": 0.4187522886, "delta1": 0.9447751425},
+        "scale_plus_low": {"abs_rel": 0.0635149346, "mae": 0.1276421998, "rmse": 0.4021280412, "delta1": 0.9442283452},
+        "final": {"abs_rel": 0.0630492495, "mae": 0.1263633082, "rmse": 0.4013225645, "delta1": 0.9442441564}
+      },
+      "relative_abs_rel_change_vs_static_attention": {
+        "validation_scale_fraction": -0.0724946523,
+        "test_scale_fraction": -0.1221146865,
+        "validation_final_fraction": -0.0036228924,
+        "test_final_fraction": -0.0467885135
+      },
+      "paired_room_bootstrap_ci95_new_minus_static": {
+        "validation_scale": [-0.0140620305, -0.0001336762],
+        "test_scale": [-0.0137140439, -0.0052816276],
+        "validation_final": [-0.0049112357, 0.0031835040],
+        "test_final": [-0.0091432013, -0.0003457372]
+      },
+      "limitation": "aggregate and scale improve, but furniture and BIM-consistent subset AbsRel regress; new blind-area confirmation is required"
+    },
+    "metric_da3_deterministic_bim_quantile_audit": {
+      "status": "post-hoc deterministic-method audit; quantiles are selected only on train/validation and test is not used to revise them",
+      "support": "Area_1 official-all-valid, focal-corrected DA3, hit-only BIM, pixel-micro",
+      "candidate_grid": "q=0.05--0.95 inclusive, step 0.01",
+      "current_robust_estimator": "min(q45(log ratio), q25(log ratio)+0.05)",
+      "train_scale_only_selection": {
+        "selected_quantile": 0.52,
+        "selected_abs_rel": 0.1291135430,
+        "q45_abs_rel": 0.1322838621,
+        "room_macro_optimal_quantile": 0.51,
+        "leave_one_room_out_winner_counts": {"q49": 1, "q51": 24, "q52": 4, "q54": 1},
+        "frozen_q52_test_abs_rel": 0.1251245971,
+        "q45_test_abs_rel": 0.1142210566,
+        "current_robust_test_abs_rel": 0.1103291360,
+        "conclusion": "q52 overfits the train room distribution and is rejected"
+      },
+      "validation_exhaustive_selection": {
+        "scale_only_optimal_quantile": 0.45,
+        "scale_only_abs_rel": 0.1056832221,
+        "bim_direct_optimal_quantile": 0.45,
+        "bim_direct_abs_rel": 0.1042632527,
+        "bim_direct_room_macro_optimal_quantile": 0.45,
+        "current_robust_scale_abs_rel": 0.1193409840,
+        "current_robust_bim_direct_abs_rel": 0.1181523220
+      },
+      "test_frozen_comparisons": {
+        "raw_da3_metric_abs_rel": 0.0854534017,
+        "q45_scale_abs_rel": 0.1142210566,
+        "q45_bim_direct_abs_rel": 0.1143665059,
+        "current_robust_scale_abs_rel": 0.1103291360,
+        "current_robust_bim_direct_abs_rel": 0.1107240166
+      },
+      "local_correction_effect_percent": {
+        "q45_validation_abs_rel_reduction": 1.34360918,
+        "q45_test_abs_rel_reduction": -0.12734025,
+        "robust_validation_abs_rel_reduction": 0.99602161,
+        "robust_test_abs_rel_reduction": -0.35791148
+      },
+      "conclusion": "q45 is validation-optimal for both deterministic outputs, but every BIM scale/direct variant is worse than corrected raw DA3 on held-out test; Gaussian local propagation is effectively neutral and does not justify a stronger accuracy claim"
     },
     "fixed_scale_quantile_full_depth_candidate": {
       "status": "archived negative diagnostic; q56 selected using train pixel-micro AbsRel and evaluated once on the already-revealed test",

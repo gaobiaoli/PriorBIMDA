@@ -33,6 +33,11 @@ class AttentiveBIMScaleHead(nn.Module):
         bounded_log_scale_residual: float = 0.0,
         residual_hidden_channels: int = 32,
         da3_feature_channels: int = 0,
+        iterative_updates: int = 0,
+        iterative_hidden_channels: int = 32,
+        iterative_initial_log_scale: float = 0.0,
+        iterative_damping: tuple[float, ...] | list[float] | None = None,
+        iterative_max_log_update: float = 0.15,
     ) -> None:
         super().__init__()
         if hidden_channels < 4:
@@ -51,6 +56,14 @@ class AttentiveBIMScaleHead(nn.Module):
             raise ValueError("bounded_log_scale_residual must be non-negative")
         if residual_hidden_channels < 1:
             raise ValueError("residual_hidden_channels must be positive")
+        if iterative_updates < 0:
+            raise ValueError("iterative_updates must be non-negative")
+        if iterative_hidden_channels < 1:
+            raise ValueError("iterative_hidden_channels must be positive")
+        if not math.isfinite(iterative_initial_log_scale):
+            raise ValueError("iterative_initial_log_scale must be finite")
+        if iterative_max_log_update <= 0:
+            raise ValueError("iterative_max_log_update must be positive")
 
         self.attention_heads = int(attention_heads)
         self.min_support = int(min_support)
@@ -60,8 +73,20 @@ class AttentiveBIMScaleHead(nn.Module):
         self.token_dropout_probability = float(token_dropout_probability)
         self.bounded_log_scale_residual = float(bounded_log_scale_residual)
         self.da3_feature_channels = int(da3_feature_channels)
+        self.iterative_updates = int(iterative_updates)
+        self.iterative_initial_log_scale = float(iterative_initial_log_scale)
+        self.iterative_max_log_update = float(iterative_max_log_update)
         if self.da3_feature_channels < 0:
             raise ValueError("da3_feature_channels must be non-negative")
+        if iterative_damping is None:
+            iterative_damping = [0.5] * self.iterative_updates
+        damping = tuple(float(value) for value in iterative_damping)
+        if len(damping) != self.iterative_updates:
+            raise ValueError(
+                "iterative_damping must contain one value per iterative update"
+            )
+        if any(not 0.0 < value < 1.0 for value in damping):
+            raise ValueError("iterative damping values must lie strictly in (0, 1)")
 
         channels = int(hidden_channels)
         self.encoder = nn.Sequential(
@@ -99,6 +124,24 @@ class AttentiveBIMScaleHead(nn.Module):
         )
         self.head_mixer = nn.Linear(condition_channels, self.attention_heads)
         self.fallback_gate = nn.Linear(condition_channels + 2, 1)
+        self.iterative_reliability: nn.Sequential | None = None
+        self.iterative_step_logits: nn.Parameter | None = None
+        if self.iterative_updates:
+            # The same compact reliability function is reused at every round
+            # and for every attention head. Its inputs are the encoded token,
+            # the signed/absolute ratio residual to the current scale, and the
+            # corresponding analytic Huber confidence.
+            self.iterative_reliability = nn.Sequential(
+                nn.Conv2d(
+                    embedding_channels + 3,
+                    int(iterative_hidden_channels),
+                    kernel_size=1,
+                ),
+                nn.SiLU(inplace=True),
+                nn.Conv2d(int(iterative_hidden_channels), 1, kernel_size=1),
+            )
+            damping_tensor = torch.tensor(damping, dtype=torch.float32)
+            self.iterative_step_logits = nn.Parameter(torch.logit(damping_tensor))
         self.scale_residual_mlp: nn.Sequential | None = None
         if self.bounded_log_scale_residual > 0:
             self.scale_residual_mlp = nn.Sequential(
@@ -116,6 +159,15 @@ class AttentiveBIMScaleHead(nn.Module):
         nn.init.zeros_(self.head_mixer.bias)
         nn.init.zeros_(self.fallback_gate.weight)
         nn.init.constant_(self.fallback_gate.bias, float(fallback_gate_bias))
+        if self.iterative_reliability is not None:
+            iterative_output = self.iterative_reliability[-1]
+            if not isinstance(iterative_output, nn.Conv2d):
+                raise TypeError("iterative_reliability must end with nn.Conv2d")
+            # A very small non-zero output keeps the initial estimator near the
+            # static one while allowing both MLP layers to receive gradients
+            # from the first optimizer step.
+            nn.init.normal_(iterative_output.weight, std=1e-3)
+            nn.init.zeros_(iterative_output.bias)
         if self.scale_residual_mlp is not None:
             # The new branch is an exact no-op at initialization.  This keeps
             # the scale estimator anchored to the measured BIM/DA3 ratios
@@ -232,32 +284,23 @@ class AttentiveBIMScaleHead(nn.Module):
             has_retained = retained.any(dim=1, keepdim=True)
             token_mask = torch.where(has_retained, retained, token_mask)
 
-        logits = self.key_logits(encoded).flatten(2).float()
-        masked_logits = logits.masked_fill(~token_mask[:, None, :], -torch.inf)
+        static_logits = self.key_logits(encoded).flatten(2).float()
         no_valid_token = ~token_mask.any(dim=1)
-        if bool(no_valid_token.any()):
-            # Softmax cannot consume an all--inf row.  The corresponding sample
-            # is forced to the deterministic fallback below, so this temporary
-            # token only keeps the arithmetic finite.
-            masked_logits = masked_logits.clone()
-            masked_logits[no_valid_token, :, 0] = 0.0
-        attention = torch.softmax(masked_logits, dim=-1)
-        attention = attention * token_mask[:, None, :].float()
-        attention = attention / attention.sum(dim=-1, keepdim=True).clamp_min(1e-8)
 
-        # Two deterministic IRLS-style Huber updates.  The values are measured
-        # log ratios; only their spatial weights and the confidence fallback
-        # are learned.
-        center = fallback_log_scale.flatten(1).float().expand(-1, self.attention_heads)
-        expanded_values = token_values[:, None, :]
-        for _ in range(2):
-            residual = expanded_values - center[:, :, None]
-            robust_weight = torch.rsqrt(1.0 + (residual / self.huber_delta).square())
-            effective_weight = attention * robust_weight
-            center = (effective_weight * expanded_values).sum(dim=-1) / effective_weight.sum(
-                dim=-1
-            ).clamp_min(1e-8)
-        head_log_scale = center
+        def normalized_attention(candidate_logits: torch.Tensor) -> torch.Tensor:
+            masked_logits = candidate_logits.masked_fill(
+                ~token_mask[:, None, :],
+                -torch.inf,
+            )
+            if bool(no_valid_token.any()):
+                # Softmax cannot consume an all--inf row. The corresponding
+                # sample is forced to its fallback below, so this temporary
+                # token only keeps the arithmetic finite.
+                masked_logits = masked_logits.clone()
+                masked_logits[no_valid_token, :, 0] = 0.0
+            normalized = torch.softmax(masked_logits, dim=-1)
+            normalized = normalized * token_mask[:, None, :].float()
+            return normalized / normalized.sum(dim=-1, keepdim=True).clamp_min(1e-8)
 
         valid_tokens_float = token_mask[:, None, :].to(dtype=encoded.dtype)
         pooled_embedding = (encoded.flatten(2) * valid_tokens_float).sum(
@@ -269,26 +312,150 @@ class AttentiveBIMScaleHead(nn.Module):
             else pooled_embedding
         )
         head_mixture = torch.softmax(self.head_mixer(condition_embedding).float(), dim=-1)
-        raw_attentive_log_scale = (head_mixture * head_log_scale).sum(dim=-1, keepdim=True)
+
+        expanded_values = token_values[:, None, :]
+        iteration_head_log_scales: list[torch.Tensor] = []
+        iteration_raw_log_scales: list[torch.Tensor] = []
+        iteration_entropies: list[torch.Tensor] = []
+        if self.iterative_updates:
+            assert self.iterative_reliability is not None
+            assert self.iterative_step_logits is not None
+            encoded_per_head = (
+                encoded[:, None, :, :, :]
+                .expand(-1, self.attention_heads, -1, -1, -1)
+                .reshape(
+                    batch_size * self.attention_heads,
+                    encoded.shape[1],
+                    *token_size,
+                )
+            )
+            center = token_values.new_full(
+                (batch_size, self.attention_heads),
+                self.iterative_initial_log_scale,
+            )
+            step_sizes = torch.sigmoid(self.iterative_step_logits.float())
+            for iteration_index in range(self.iterative_updates):
+                # Detaching the current center only on the reliability path
+                # avoids a self-reinforcing shortcut. The robust center update
+                # itself remains differentiable through all three rounds.
+                reliability_residual = expanded_values - center.detach()[:, :, None]
+                analytic_confidence = torch.rsqrt(
+                    1.0 + (reliability_residual / self.huber_delta).square()
+                )
+                dynamic_features = torch.cat(
+                    (
+                        encoded_per_head,
+                        reliability_residual.reshape(
+                            batch_size * self.attention_heads,
+                            1,
+                            *token_size,
+                        ),
+                        reliability_residual.abs().reshape(
+                            batch_size * self.attention_heads,
+                            1,
+                            *token_size,
+                        ),
+                        analytic_confidence.reshape(
+                            batch_size * self.attention_heads,
+                            1,
+                            *token_size,
+                        ),
+                    ),
+                    dim=1,
+                )
+                dynamic_logits = self.iterative_reliability(dynamic_features).reshape(
+                    batch_size,
+                    self.attention_heads,
+                    token_count,
+                )
+                attention = normalized_attention(static_logits + dynamic_logits.float())
+
+                residual = expanded_values - center[:, :, None]
+                robust_weight = torch.rsqrt(
+                    1.0 + (residual / self.huber_delta).square()
+                )
+                effective_weight = attention * robust_weight
+                proposed_center = (
+                    (effective_weight * expanded_values).sum(dim=-1)
+                    / effective_weight.sum(dim=-1).clamp_min(1e-8)
+                )
+                center_delta = self.iterative_max_log_update * torch.tanh(
+                    (proposed_center - center) / self.iterative_max_log_update
+                )
+                center = center + step_sizes[iteration_index] * center_delta
+                iteration_head_log_scales.append(center)
+                iteration_raw_log_scales.append(
+                    (head_mixture * center).sum(dim=-1, keepdim=True)
+                )
+                positive_iteration_attention = attention.clamp_min(1e-12)
+                iteration_entropies.append(
+                    -(attention * positive_iteration_attention.log()).sum(dim=-1)
+                )
+        else:
+            attention = normalized_attention(static_logits)
+            # Legacy fixed-attention path retained bit-for-bit for published
+            # checkpoints. Only new configs enable the recurrent estimator.
+            center = fallback_log_scale.flatten(1).float().expand(
+                -1,
+                self.attention_heads,
+            )
+            for _ in range(2):
+                residual = expanded_values - center[:, :, None]
+                robust_weight = torch.rsqrt(1.0 + (residual / self.huber_delta).square())
+                effective_weight = attention * robust_weight
+                center = (
+                    (effective_weight * expanded_values).sum(dim=-1)
+                    / effective_weight.sum(dim=-1).clamp_min(1e-8)
+                )
+            iteration_head_log_scales.append(center)
+            iteration_raw_log_scales.append(
+                (head_mixture * center).sum(dim=-1, keepdim=True)
+            )
+
+        head_log_scale = iteration_head_log_scales[-1]
+        raw_attentive_log_scale = iteration_raw_log_scales[-1]
         if self.scale_residual_mlp is None:
             log_scale_residual = torch.zeros_like(raw_attentive_log_scale)
         else:
             log_scale_residual = self.bounded_log_scale_residual * torch.tanh(
                 self.scale_residual_mlp(condition_embedding).float()
             )
-        attentive_log_scale = raw_attentive_log_scale + log_scale_residual
-
         support_fraction = valid_pixels.float().mean(dim=(-3, -2, -1), keepdim=False)[:, None]
-        fallback_flat = fallback_log_scale.flatten(1).float()
-        scale_disagreement = (attentive_log_scale - fallback_flat).abs()
-        gate_features = torch.cat(
-            (condition_embedding.float(), support_fraction, scale_disagreement),
-            dim=1,
+        deterministic_fallback_flat = fallback_log_scale.flatten(1).float()
+        fallback_flat = (
+            torch.full_like(
+                deterministic_fallback_flat,
+                self.iterative_initial_log_scale,
+            )
+            if self.iterative_updates
+            else deterministic_fallback_flat
         )
-        learned_gate = torch.sigmoid(self.fallback_gate(gate_features).float())
         sufficient = (pixel_support >= self.min_support).float()[:, None]
-        fallback_gate = learned_gate * sufficient
-        log_scale = fallback_gate * attentive_log_scale + (1.0 - fallback_gate) * fallback_flat
+        raw_iteration_stack = torch.stack(iteration_raw_log_scales, dim=1)
+        attentive_iteration_stack = raw_iteration_stack + log_scale_residual[:, None, :]
+        iteration_count = attentive_iteration_stack.shape[1]
+        iteration_gate_features = torch.cat(
+            (
+                condition_embedding.float()[:, None, :].expand(-1, iteration_count, -1),
+                support_fraction[:, None, :].expand(-1, iteration_count, -1),
+                (
+                    attentive_iteration_stack
+                    - fallback_flat[:, None, :]
+                ).abs(),
+            ),
+            dim=-1,
+        )
+        learned_iteration_gate = torch.sigmoid(
+            self.fallback_gate(iteration_gate_features).float()
+        )
+        iteration_fallback_gate = learned_iteration_gate * sufficient[:, None, :]
+        iteration_log_scale = (
+            iteration_fallback_gate * attentive_iteration_stack
+            + (1.0 - iteration_fallback_gate) * fallback_flat[:, None, :]
+        )
+        attentive_log_scale = attentive_iteration_stack[:, -1]
+        fallback_gate = iteration_fallback_gate[:, -1]
+        log_scale = iteration_log_scale[:, -1]
 
         positive_attention = attention.clamp_min(1e-12)
         entropy = -(attention * positive_attention.log()).sum(dim=-1)
@@ -312,13 +479,16 @@ class AttentiveBIMScaleHead(nn.Module):
         )
         attention_token_valid = token_mask.reshape(batch_size, 1, *token_size)
 
-        return {
+        result = {
             "scale": log_scale.exp().view(-1, 1, 1, 1),
             "log_scale": log_scale.view(-1, 1, 1, 1),
             "attentive_log_scale": attentive_log_scale.view(-1, 1, 1, 1),
             "raw_attentive_log_scale": raw_attentive_log_scale.view(-1, 1, 1, 1),
             "bounded_log_scale_residual": log_scale_residual.view(-1, 1, 1, 1),
             "fallback_log_scale": fallback_flat.view(-1, 1, 1, 1),
+            "deterministic_fallback_log_scale": deterministic_fallback_flat.view(
+                -1, 1, 1, 1
+            ),
             "fallback_gate": fallback_gate.view(-1, 1, 1, 1),
             "pixel_support": pixel_support,
             "token_support": token_mask.sum(dim=-1),
@@ -333,3 +503,30 @@ class AttentiveBIMScaleHead(nn.Module):
             "attention_token_distribution": attention_token_distribution,
             "attention_token_valid": attention_token_valid,
         }
+        if self.iterative_updates:
+            valid_token_count = token_mask.sum(dim=-1).float()
+            entropy_denominator = valid_token_count.clamp_min(2.0).log()[:, None, None]
+            iteration_entropy = torch.stack(iteration_entropies, dim=1)
+            normalized_iteration_entropy = torch.where(
+                valid_token_count[:, None, None] > 1,
+                iteration_entropy / entropy_denominator,
+                torch.ones_like(iteration_entropy),
+            )
+            result.update(
+                {
+                    "iteration_log_scales": iteration_log_scale.unsqueeze(-1),
+                    "iteration_raw_log_scales": raw_iteration_stack.unsqueeze(-1),
+                    "iteration_head_log_scales": torch.stack(
+                        iteration_head_log_scales,
+                        dim=1,
+                    ),
+                    "iteration_fallback_gates": iteration_fallback_gate.unsqueeze(-1),
+                    "iteration_step_sizes": torch.sigmoid(
+                        self.iterative_step_logits.float()
+                    ),
+                    "iteration_normalized_attention_entropy": (
+                        normalized_iteration_entropy.mean(dim=-1)
+                    ),
+                }
+            )
+        return result

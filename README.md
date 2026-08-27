@@ -5,29 +5,33 @@ BIM-PriorDA3 用固定 BIM 几何先验细化单帧度量深度。仓库目前�
 位姿/配准、DA3 缓存、样本制备、训练和固定支持集评测均有脚本。
 
 ```text
-RGB ──> pinned DA3 metric depth ──> one frozen universal scale ──> depth anchor
+RGB ──> pinned DA3 canonical cache ──> per-camera focal metric conversion ──> depth anchor
                          BIM ─────> geometry condition + deterministic comparator
 RGB + DA3 geometry + BIM features ─> bounded multi-scale residual ─> depth
 ```
 
 当前发布包包含两个不可混表的协议。SLABIM 与 Area_1 的兼容基线继续使用同一冻结 universal
 scale，在 `0.2–5.0 m` 上学习 frame/low/detail log-residual；Area_1 当前推荐发布模型则使用
-官方全部有效深度、hit-only BIM、冻结 DA3 第 11/23 层 feature、attention global scale 与
+官方全部有效深度、逐帧 focal-corrected DA3、hit-only BIM、冻结 DA3 第 11/23 层 feature、attention global scale 与
 low/detail refiner。两者都不是旧版 BIM/V1 加权融合，BIM-direct 只作为非学习比较器，推理
 均不读取 GT、语义标签或家具 mask。支持域和 checkpoint 必须成对使用。
 
 ## 统一协议结果
 
-统一深度协议为 `0.2–5.0 m`，下表是 pixel-micro 指标。原始 DA3 的 AbsRel 在 SLABIM
-test 为 `0.19935`，在 Area_1 blind test 为 `0.30123`。
+统一深度协议为 `0.2–5.0 m`，下表是 pixel-micro 指标。2026-08 的焦距审计发现，历史
+`raw_da3` 行直接评测了 DA3METRIC-LARGE 的 canonical-focal 输出，遗漏官方定义的
+`mean(fx,fy)/300` 米制换算。为保留审计链，旧数值不删除，但明确改名为 canonical；真正不使用
+BIM/GT 的 metric DA3 baseline 是新增的 focal-corrected 行。
 
 | 数据集 / 方法 | 帧数 | AbsRel | MAE (m) | RMSE (m) | δ1 |
 |---|---:|---:|---:|---:|---:|
-| SLABIM raw DA3 | 108 | 0.19935 | 0.31109 | 0.42167 | 0.76328 |
+| SLABIM DA3 cached canonical（历史误标 raw） | 108 | 0.19935 | 0.31109 | 0.42167 | 0.76328 |
+| SLABIM raw DA3 metric（focal-corrected） | 108 | 0.07373 | 0.11559 | 0.25568 | 0.93891 |
 | SLABIM universal scale | 108 | 0.06361 | 0.10316 | 0.24305 | 0.96457 |
 | SLABIM universal BIM-direct | 108 | 0.06263 | 0.10334 | 0.24761 | 0.96320 |
 | SLABIM learned refiner | 108 | **0.05601** | **0.09210** | **0.22725** | **0.97759** |
-| Area_1 raw DA3 | 1641 | 0.30123 | 0.67323 | 0.83485 | 0.26437 |
+| Area_1 DA3 cached canonical（历史误标 raw） | 1641 | 0.30123 | 0.67323 | 0.83485 | 0.26437 |
+| Area_1 raw DA3 metric（focal-corrected） | 1641 | 0.08443 | 0.16107 | 0.33620 | 0.94065 |
 | Area_1 universal scale | 1641 | 0.07752 | 0.13938 | 0.31541 | 0.93710 |
 | Area_1 universal BIM-direct | 1641 | 0.07815 | 0.13891 | 0.31350 | 0.93740 |
 | Area_1 learned refiner | 1641 | **0.06689** | **0.11761** | **0.30823** | **0.94295** |
@@ -36,6 +40,12 @@ test 为 `0.19935`，在 Area_1 blind test 为 `0.30123`。
 `10.56%/14.41%`。Area_1 家具子集也改善；BIM 冲突子集的点估计改善，但其房间级 AbsRel
 bootstrap 95% CI 跨 0，不能宣称该子集已有显著优势。机器可读汇总、逐帧结果和训练审计见
 [results/](results/)。
+
+focal correction 不读取 GT：SLABIM 的 504 px focal 固定为 252 px，系数为 0.84；Area_1
+则必须使用逐帧 resize 后内参，test 系数范围为 1.09477--2.02612。旧 scale/BIM/learned
+checkpoint 仍以 canonical cache 为输入，不能只改输入后直接复用；其尺度阶段已经学习/估计了
+米制恢复。当前 Area_1 全深度发布版已经完成一致迁移并从头重训。独立审计入口为
+`scripts/analysis/audit_da3_focal_scaling.py`。
 
 SLABIM 的 108 帧三维融合评测也优于 direct：Chamfer-L1 0.09109 m vs. 0.10515 m，
 F-score@10 cm 0.79622 vs. 0.74003。
@@ -93,22 +103,37 @@ hit-only 规则晋升为推荐协议，而将其保留为“覆盖率不等于�
 stage 指标、命中分布、命令与哈希见
 [attention-scale 实验记录](docs/ATTENTIVE_SCALE_EXPERIMENT.md#unbounded-hit-only-bim-prior-retraining)。
 
-### Area_1 官方全深度发布模型（当前推荐）
+### Area_1 三轮尺度条件 attention 官方全深度模型（当前推荐）
 
-当前 Area_1 学习模型已回退并冻结为这一版本。它用官方 regular depth 的全部有效值从头训练
-同一
-hit-only 网络：仅排除原始 `0` 和 `65535`，训练 loss、validation 选点与 val/test 评测均不再
-施加 `0.2–5.0 m` GT 截断，输出上限同时提高到 128 m。最终 pixel-micro 为：
+当前 Area_1 模型保持无 cross-attention、无加法头的 `scale + r_low + r_detail`，但把静态
+scale attention 改为从 `s=1` 开始的三轮共享权重迭代。每轮根据当前 BIM/DA3 ratio residual
+重算可靠性；三轮仅步长独立。每帧缓存深度先乘
+`mean(fx,fy)/300`，再进入 BIM 比值、尺度头、loss 与 refiner；全流程不读取 test GT 定尺度。
+GT 使用官方 regular depth 的全部有效值，仅排除原始 `0` 和 `65535`，输出上限为 128 m。
+human epoch 12 仅由 validation final AbsRel 选中，pixel-micro 为：
 
-| Split | Raw DA3 | BIM-direct | Learned scale | + low | + detail |
-|---|---:|---:|---:|---:|---:|
-| Validation AbsRel | 0.28399 | 0.12203 | 0.07635 | 0.06940 | **0.06861** |
-| Test AbsRel | 0.30275 | 0.10866 | 0.07794 | 0.06746 | **0.06741** |
+| Split | Raw DA3 | BIM-direct | Static scale/final | Round 1 | Round 2 | Round 3 | + low | + detail |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Validation | 0.09070 | 0.11815 | 0.07531 / 0.06445 | 0.07607 | 0.07093 | 0.06985 | 0.06476 | **0.06421** |
+| Test | 0.08545 | 0.11072 | 0.07847 / 0.06614 | 0.07360 | 0.06972 | 0.06889 | 0.06351 | **0.06305** |
 
-相对“仅在 0.2–5.0 m 监督、事后全图评测”的同网络，validation/test AbsRel 分别改善
-4.90%/0.054%。它在同一全深度 support 上相对 raw DA3/BIM-direct 的 test AbsRel 分别降低
-77.74%/37.97%，并作为 validation-selected 可发布 checkpoint 固定；由于 Area_1 test 在模型
-迭代前已揭盲，公开报告仍必须注明 test 是 post-hoc，而不能包装成新的 blind claim。
+非学习分支已重新扫描 q05--q95。validation pixel-micro 下，纯 scale 与完整
+consistency-gated/Gaussian BIM-direct 都在 q45 最优，分别为 `0.10568/0.10426`；但冻结到 test
+为 `0.11422/0.11437`。当前跨域 robust log-cap 规则的 scale/direct test 为
+`0.11033/0.11072`。它们都差于 corrected raw DA3 `0.08545`，因此 focal 修正后 BIM-direct
+只作为确定性比较器，不再宣称能增强 standalone DA3。train-only q52 在 test 退化到
+`0.12512`，已判定为跨房间过拟合。
+
+相对静态 attention，三轮 scale 在 validation/test 改善 7.25%/12.21%，final 改善
+0.36%/4.68%。scale 的 paired-room 95% CI 在两个 split 都不跨 0；final 的 validation CI
+跨 0，而 test CI 为 `[-0.00914,-0.00035]`。家具子集仍退化，不能声称所有场景都改善。
+Area_1 test 早已揭盲，因此 test 仍只能标为 post-hoc，不能包装成新的 blind claim。
+
+复现配置为
+`configs/stanford_area1_iterative_scale_3round_full_depth_metric_da3.yaml`，checkpoint 为
+`outputs/stanford_area1_iterative_scale_3round_full_depth_metric_da3/accepted.pt`（SHA256
+`74f2797dc42a4e7e8359440ea9d305a073e7ec0d2fe0850fb1ab79877bb7ae6d`）。静态 attention 与旧
+canonical-input 全深度权重只保留作审计。
 
 后续 reliability-gated 版本加入 attention-token 监督、RGB-aware BIM adapter gate 和
 `r_detail` 可靠性门，但 final val/test AbsRel 为 `0.06928/0.06884`，较发布模型退化
@@ -122,6 +147,10 @@ attention scale 的 `mean |GT-scaled|` 随深度的幂指数为 `0.404`（纯加
 完整分箱、重尾统计和图件见[同一实验记录](docs/ATTENTIVE_SCALE_EXPERIMENT.md#pixel-residual-distribution-after-scale-correction)。
 
 ### Area_1 pano 无训练联合评测
+
+> 焦距审计后的状态：下述 pano 历史实验同样读取 canonical cache，并曾将其误称为 raw metric
+> DA3。由于不同 regular/tangent 视图的 focal factor 不同，相关 absolute raw 数值和相对 raw
+> 改善暂时只保留为历史诊断，不能进入修正后的论文主结果；需要按每个视图的处理分辨率内参重跑。
 
 全景实验单独采用 exact ERP solid-angle、equal-station macro，不与上表的 pixel-micro 混合。
 融合方法按 validation 的 **regular-only raw DA3** 目标选择一次，冻结为 `joint_huber`，随后
@@ -314,7 +343,9 @@ regular+pano 分析。test 的缓存与评测都必须额外带 `--confirm-test`
 | `stanford_area1_transfer*.yaml` | SLABIM checkpoint 零样本迁移评测 |
 | `stanford_area1.yaml` | Area_1 最终 frozen target 模型 |
 | `stanford_area1_e2e.yaml` | 未晋级的 E2E challenger 协议 |
-| `stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml` | **Area_1 当前推荐的官方全深度发布模型** |
+| `stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml` | 旧 canonical-input 全深度基配置与审计模型 |
+| `stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3.yaml` | Area_1 冻结静态 attention 全深度对照 |
+| `stanford_area1_iterative_scale_3round_full_depth_metric_da3.yaml` | **Area_1 当前推荐的三轮 scale-conditioned attention 模型** |
 | `stanford_area1_reliability_gated_full_depth.yaml` | 已回退、禁止发布的负实验配置 |
 
 配置只保留当前语义版本；历史 V1–V6 过程配置已移除。checkpoint 会严格验证模型配置和数据

@@ -20,8 +20,9 @@ detail 三个有界 log-residual。乘法锚点始终是 `D_scaled`，不是 BIM
 数据集共享的确定性强比较器，也是训练 acceptance 的门槛。推理不读取 GT、语义或家具 mask。
 
 Area_1 当前推荐发布版本不是上面的 universal checkpoint，而是
-`stanford_area1_attentive_scale_da3_features_hit_only_full_depth`：官方全部有效 GT、hit-only
-BIM、冻结 DA3 layer-11/23 feature、attention scalar scale 与 low/detail refiner。旧
+`stanford_area1_iterative_scale_3round_full_depth_metric_da3`：官方全部有效 GT、逐帧
+focal-corrected DA3、hit-only BIM、冻结 DA3 layer-11/23 feature、三轮共享权重 attention
+scalar scale 与 low/detail refiner。旧
 universal Area_1 checkpoint 继续作为 `0.2–5.0 m` 兼容基线，两种支持域不得混表。
 
 尺度参数最初只用 Area_1 train rooms 选择，随后冻结并原样应用于 SLABIM；SLABIM validation
@@ -32,10 +33,12 @@ universal Area_1 checkpoint 继续作为 `0.2–5.0 m` 兼容基线，两种支�
 
 | 数据 / 方法 | AbsRel | MAE | RMSE | δ1 |
 |---|---:|---:|---:|---:|
-| SLABIM raw DA3 | 0.19935 | 0.31109 | 0.42167 | 0.76328 |
+| SLABIM DA3 cached canonical（历史误标 raw） | 0.19935 | 0.31109 | 0.42167 | 0.76328 |
+| SLABIM raw DA3 metric（focal-corrected） | 0.07373 | 0.11559 | 0.25568 | 0.93891 |
 | SLABIM universal BIM-direct | 0.06263 | 0.10334 | 0.24761 | 0.96320 |
 | SLABIM learned | **0.05601** | **0.09210** | **0.22725** | **0.97759** |
-| Area_1 raw DA3 | 0.30123 | 0.67323 | 0.83485 | 0.26437 |
+| Area_1 DA3 cached canonical（历史误标 raw） | 0.30123 | 0.67323 | 0.83485 | 0.26437 |
+| Area_1 raw DA3 metric（focal-corrected） | 0.08443 | 0.16107 | 0.33620 | 0.94065 |
 | Area_1 universal BIM-direct | 0.07815 | 0.13891 | 0.31350 | 0.93740 |
 | Area_1 learned | **0.06689** | **0.11761** | **0.30823** | **0.94295** |
 
@@ -61,6 +64,7 @@ hybrid 只保留为诊断。它与后续晋升发布的官方全深度 checkpoin
 - `results/stanford_area1/val_summary.json`
 - `results/stanford_area1/test_summary.json`
 - `results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_{val,test}/summary.json`
+- `results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_metric_da3_{val,test}/summary.json`
 - `results/manifest.json`
 
 ## 3. 对话驱动的关键演化
@@ -132,6 +136,39 @@ hybrid 只保留为诊断。它与后续晋升发布的官方全深度 checkpoin
     pixel-micro AbsRel 在 q05--q95 中选择 q56：train 从纯 q45 的 `0.14376` 改善到
     `0.13732`，但冻结后 test 退化到 `0.12759`，差于 robust `0.10840` 和 q45 `0.10984`。
     不再用已揭盲 test 尝试 q54 等候选；固定分位数搜索作为跨房间过拟合负结果归档。
+18. **发现并隔离 DA3 focal baseline 错误**：项目缓存的是 standalone DA3METRIC-LARGE 的
+    canonical-focal 输出，历史 evaluator 却直接把它标成 metric `raw_da3`；正确换算为
+    `D_metric=D_cache*mean(fx,fy)/300`，其中内参必须在 504 processing resolution 下。无需
+    GT 的复核把 SLABIM test AbsRel 从历史 canonical `0.19935` 修正为 `0.07373`；Area_1
+    `0.2--5.0 m` test 从 `0.30123` 修正为 `0.08443`，official-all-valid test 从
+    `0.30275` 修正为 `0.08545`。旧 task checkpoint 仍绑定 canonical cache，不能局部替换输入
+    后直接复用；旧 pano raw 结论也需按每个视图 focal 重跑。新增独立脚本与带 split
+    provenance 的 JSON，历史数值仅作为错误追踪保留。
+19. **回退结构并用修正 DA3 从头重训**：删除未晋级的 BIM cross-attention，恢复
+    `attention scale + r_low + r_detail`；dataset 在所有 BIM 比值、scale、loss 和 refiner 之前
+    应用逐帧 `mean(fx,fy)/300`，且禁止复用 canonical-input baseline cache。按原 3/9/3 schedule
+    从头训练，human epoch 13 仅由 validation 选中。official-all-valid final val/test AbsRel 为
+    `0.06445/0.06614`，相对 corrected raw DA3 的 `0.09070/0.08545` 下降 28.95%/22.60%，
+    相对旧全深度模型的 `0.06861/0.06741` 下降 6.06%/1.87%。stage 结果
+    `0.07531→0.06441→0.06445` 与 `0.07847→0.06628→0.06614` 表明 low 仍是主贡献，detail
+    跨 split 近似中性。旧 canonical-input checkpoint 改为审计资产，新 checkpoint 晋升发布；
+    test 仍是 post-hoc，不产生新的 blind claim。
+20. **重新验证非学习 BIM 分位数**：在 focal-corrected official-all-valid 协议上扫描
+    q05--q95。train scale-only 选择 q52，但冻结 test `0.12512`，差于 q45 `0.11422` 与 robust
+    `0.11033`，确认其跨房间过拟合。validation 对 scale-only 和完整 consistency-gated Gaussian
+    BIM-direct 的 91 点扫描都选择 q45；完整 direct 的 pixel/room-macro 最优均为 q45。
+    q45 scale/direct val/test 为 `0.10568/0.10426` 与 `0.11422/0.11437`，robust scale/direct 为
+    `0.11934/0.11815` 与 `0.11033/0.11072`。所有非学习 BIM 结果均差于 corrected raw DA3
+    `0.09070/0.08545`；Gaussian 局部传播只在 val 改善约 1%，test 略退化，不能再宣称为稳定
+    精度来源。
+21. **三轮 scale-conditioned attention**：把静态 attention + 固定权重 Huber 更新改为从
+    `s=1` 出发的三轮共享 reliability MLP。每轮读取当前 BIM/DA3 log-ratio residual，步长独立
+    可学习；仍使用原 refiner 和同一 3/9/3 scratch schedule。逐轮 scale val/test 为
+    `0.07607→0.07093→0.06985` / `0.07360→0.06972→0.06889`，final 为
+    `0.06421/0.06305`。相对静态模型 scale 改善 7.25%/12.21%，final 改善 0.36%/4.68%；
+    paired-room CI 表明 scale 两个 split 都稳定改善，final 只有 test CI 不跨 0。家具像素在
+    val/test 仍退化，故结论是全局尺度估计得到验证，前景 refiner 仍需改进。Area_1 test 已揭盲，
+    该结果是 post-hoc，不升级为新的 blind claim。
 
 ## 4. 不可破坏的实验约束
 
@@ -152,7 +189,7 @@ hybrid 只保留为诊断。它与后续晋升发布的官方全深度 checkpoin
   `stanford_area1_transfer.yaml`、`stanford_area1.yaml`
 - 数据协议：`ignore.txt`、`data/annotations/*.jsonl`、`data/provenance/*.json`
 - 发布 checkpoint：`outputs/slabim/accepted.pt`、`outputs/stanford_area1/accepted.pt`、
-  `outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt`
+  `outputs/stanford_area1_iterative_scale_3round_full_depth_metric_da3/accepted.pt`
 - 数据说明：`docs/DATA_PREPARATION.md`
 - 脚本与命令：`docs/USER_GUIDE.md`
 - 评测设计：`docs/EVALUATION_PROTOCOL.md`

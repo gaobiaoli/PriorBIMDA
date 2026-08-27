@@ -4,6 +4,11 @@
 
 - `metrics.json`：论文/README 主表的紧凑机器可读版本；
 - `manifest.json`：三份可发布 checkpoint、协议和结果文件的 SHA-256；
+- `slabim/da3_focal_scaling_audit/` 与
+  `stanford_area1/da3_focal_scaling_full_depth_audit/`：不运行 checkpoint、也不使用 GT
+  定尺度的 DA3METRIC canonical-to-metric 焦距审计。历史 `raw_da3` 实为未乘
+  `mean(fx,fy)/300` 的 canonical 输出；修正后的 SLABIM/Area_1 full-depth test AbsRel 为
+  `0.07373/0.08545`；
 - `slabim/`：108 帧 pooled-clean test 的 summary、逐帧 CSV、三维重建 summary、history 与
   run-state；
 - `stanford_area1/`：room-disjoint regular-view validation/test 的 summary、逐帧 CSV、history 与
@@ -30,13 +35,28 @@
   final 的 val/test AbsRel 为 `0.06306/0.06585`，较旧 bounded-core prior 退化
   `1.56%/5.47%`。机器可读的新旧协议汇总位于
   `attentive_scale_da3_features_hit_only_protocol_comparison.json`；这是负诊断，不替代推荐模型。
-  `attentive_scale_da3_features_hit_only_full_depth_{val,test}/` 是当前 Area_1 推荐发布结果；
+  `attentive_scale_da3_features_hit_only_full_depth_{val,test}/` 是旧 canonical-input 全深度结果；
   它不再只做事后全图评测，而是
   用官方全部有效 regular GT 从头训练、validation 选点并评测；仅排除 raw `0/65535`，模型
   输出上限为 128 m。final val/test AbsRel 为 `0.06861/0.06741`。相对旧 hit-only checkpoint
   在完全相同全深度 support 上改善 `4.90%/0.054%`，说明 validation 收益明确而 test AbsRel
-  基本持平。checkpoint 可以公开复现和部署，但该 test 已揭盲，论文中仍须标为 post-hoc，
-  不能作为新的 blind confirmation。
+  基本持平。它已被下述 focal-corrected 重训取代，仅保留作输入量定义错误的审计链。
+  `attentive_scale_da3_features_hit_only_full_depth_metric_da3_{val,test}/` 是冻结的静态 attention
+  对照结果。
+  它保持回退后的 attention-scale + low/detail 网络不变，但在所有 BIM 比值、尺度估计、loss 与
+  refiner 输入之前逐帧应用 `mean(fx,fy)/300`。validation human epoch 13 选点后的 final
+  val/test AbsRel 为 `0.06445/0.06614`，相对 corrected raw DA3 的 `0.09070/0.08545` 下降
+  `28.95%/22.60%`，相对旧全深度模型下降 `6.06%/1.87%`。stage 输出为 validation
+  `0.07531→0.06441→0.06445`、test `0.07847→0.06628→0.06614`，再次表明 low 是主要收益，
+  detail 跨 split 基本中性。该 test 已揭盲，论文中仍须标为 post-hoc，不能作为新的 blind
+  confirmation。
+  `iterative_scale_3round_full_depth_metric_da3_{val,test}/` 是当前聚合精度最优的 Area_1
+  checkpoint。它从 `s=1` 开始，以共享 reliability MLP 按当前 ratio residual 重算三轮
+  attention；round 1/2/3 的 val AbsRel 为 `0.07607/0.07093/0.06985`，test 为
+  `0.07360/0.06972/0.06889`。加入原 low/detail refiner 后 final 为 `0.06421/0.06305`，相对
+  静态对照改善 `0.36%/4.68%`。配对 room-bootstrap 显示 scale 两个 split 的 CI 都不跨 0；
+  final 只有 test CI 不跨 0。家具子集仍退化，因此该结果不能解释为所有语义子集都改善。
+  每个目录同时保存 `comparison_vs_static.json` 与 `scale_comparison_vs_static.json`。
   `attentive_scale_da3_features_hit_only_full_depth_train/` 是随后补充的同 checkpoint、同
   official-all-valid 协议训练集拟合诊断，覆盖 7,013 帧；final AbsRel/MAE/RMSE/delta1 为
   `0.06672/0.16256/0.62826/0.95047`。它只用于检查拟合与泛化间隙，不参与 checkpoint
@@ -50,6 +70,13 @@
   位于 `fixed_scale_quantile_full_depth_test/`。q56 的 train AbsRel 为 `0.13732`，优于纯 q45
   的 `0.14376`，但 test 为 `0.12759`，反而差于当前 robust scale 的 `0.10840` 和纯 q45 的
   `0.10984`。这是固定分位数跨房间过拟合的负结果，不修改发布协议。
+  `fixed_scale_quantile_metric_da3_full_depth_{train,test}/` 与
+  `fixed_bim_direct_quantile_metric_da3_full_depth_val/` 是 focal-corrected DA3 后的重新校验。
+  train scale-only 在 q05--q95 中选择 q52，但冻结 test 为 `0.12512`，差于 q45 `0.11422` 和
+  robust scale `0.11033`，因此拒绝 q52。validation 的完整 91 点扫描则显示 scale-only 与加入
+  一致性门/Gaussian 传播的完整 BIM-direct 均由 pixel-micro AbsRel 选择 q45，完整 direct
+  也是 room-macro q45。q45 full direct 的 val/test 为 `0.10426/0.11437`，当前 robust full
+  direct 为 `0.11815/0.11072`；两者都差于 corrected raw DA3 的 `0.09070/0.08545`。
 - `deterministic_baseline_ablation/`：两个 validation split 上的非学习 BIM-direct 逐因素
   post-hoc 消融；不属于 blind-test 主结果。
 - `stanford_area1/scale_residual_distribution_val/`：在 1,673 张 validation 图上对无 DA3-feature
@@ -71,7 +98,11 @@ sha256sum -c results/checkpoints.sha256
 的 Area_1 全深度 checkpoint 上传至 Release/Hugging
 Face，并在 `manifest.json` 补充 URL；不得把第三方数据或大型旧 E2E 权重提交到 Git 历史。
 推荐全深度 checkpoint 位于
-`outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt`。冻结
+`outputs/stanford_area1_iterative_scale_3round_full_depth_metric_da3/accepted.pt`。
+冻结静态对照位于
+`outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3/accepted.pt`。
+旧 canonical-input 全深度 checkpoint 仍在
+`outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt`，但不再发布。冻结
 bounded-core DA3-feature 与 hybrid 候选 checkpoint 本机分别位于
 `outputs/stanford_area1_attentive_scale_da3_features/accepted.pt` 和
 `outputs/stanford_area1_hybrid_additive/accepted.pt`；它们在 `manifest.json` 中标记为
@@ -84,7 +115,6 @@ Area_1 pano 主结果是无训练联合估计：冻结 `joint_huber` 后，test 
 产物中作审计，不进入 pano 主表。选择与一次性 test 回执位于 `data/provenance/`。
 
 必须区分“多 regular + pano”与“单图 + pano”：后者的探索性 validation AbsRel 为
-0.11586（single）、0.16454（+tangent6）和 0.31859（+tangent14），虽然原生球面覆盖率从
 10.87% 增至 99.38%/99.85%，但相同单图 support 上精度显著下降。它不是 test claim，作用是
 约束下一版协议先解决跨切平面尺度/上下文漂移。当前 `joint_huber` 又是按 regular-only
 validation 目标冻结，不能在 test 已揭盲后依据 pano sensitivity 改选方法。

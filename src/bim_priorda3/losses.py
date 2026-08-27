@@ -316,6 +316,10 @@ class BIMPriorLoss(nn.Module):
         self.attention_scale_oracle_min_support = int(
             cfg.loss.get("attention_scale_oracle_min_support", 100)
         )
+        self.attention_scale_iteration_weights = tuple(
+            float(value)
+            for value in cfg.loss.get("attention_scale_iteration_weights", [])
+        )
         self.attention_weight_target_weight = float(
             cfg.loss.get("attention_weight_target", 0.0)
         )
@@ -338,6 +342,20 @@ class BIMPriorLoss(nn.Module):
             raise ValueError("loss.attention_scale_oracle_beta must be positive")
         if self.attention_scale_oracle_min_support < 1:
             raise ValueError("loss.attention_scale_oracle_min_support must be positive")
+        if any(value < 0 for value in self.attention_scale_iteration_weights):
+            raise ValueError("attention scale iteration weights must be non-negative")
+        if self.attention_scale_iteration_weights and not any(
+            value > 0 for value in self.attention_scale_iteration_weights
+        ):
+            raise ValueError("at least one attention scale iteration weight must be positive")
+        configured_iterations = int(attention_cfg.get("iterative_updates", 0))
+        if self.attention_scale_iteration_weights and len(
+            self.attention_scale_iteration_weights
+        ) != configured_iterations:
+            raise ValueError(
+                "loss.attention_scale_iteration_weights must contain one value "
+                "per model.attention_scale.iterative_updates"
+            )
         if self.attention_weight_target_weight < 0:
             raise ValueError("loss.attention_weight_target must be non-negative")
         if self.attention_weight_target_weight > 0 and not self.attention_scale_enabled:
@@ -584,16 +602,52 @@ class BIMPriorLoss(nn.Module):
                         f"{tuple(predicted_log_scale.shape)} != "
                         f"{tuple(oracle_log_scale.shape)}"
                     )
-                oracle_raw = (
-                    functional.smooth_l1_loss(
-                        predicted_log_scale,
-                        oracle_log_scale,
+                if self.attention_scale_iteration_weights:
+                    if "attention_iteration_log_scales" not in output:
+                        raise KeyError(
+                            "Iteration-weighted scale supervision requires "
+                            "output['attention_iteration_log_scales']"
+                        )
+                    iteration_prediction = output[
+                        "attention_iteration_log_scales"
+                    ].float()
+                    expected_prefix = (
+                        predicted_log_scale.shape[0],
+                        len(self.attention_scale_iteration_weights),
+                    )
+                    if iteration_prediction.ndim != 4 or (
+                        iteration_prediction.shape[:2] != expected_prefix
+                    ):
+                        raise ValueError(
+                            "attention iteration log scales must have shape "
+                            f"[B,T,1,1] with prefix {expected_prefix}; got "
+                            f"{tuple(iteration_prediction.shape)}"
+                        )
+                    iteration_vector = iteration_prediction.flatten(2).mean(dim=-1)
+                    oracle_vector = oracle_log_scale.flatten(1).mean(dim=-1, keepdim=True)
+                    iteration_raw = functional.smooth_l1_loss(
+                        iteration_vector,
+                        oracle_vector.expand_as(iteration_vector),
                         reduction="none",
                         beta=self.attention_scale_oracle_beta,
                     )
-                    .flatten(1)
-                    .mean(dim=1)
-                )
+                    iteration_weights = iteration_raw.new_tensor(
+                        self.attention_scale_iteration_weights
+                    )
+                    oracle_raw = (
+                        iteration_raw * iteration_weights[None, :]
+                    ).sum(dim=1) / iteration_weights.sum().clamp_min(1e-8)
+                else:
+                    oracle_raw = (
+                        functional.smooth_l1_loss(
+                            predicted_log_scale,
+                            oracle_log_scale,
+                            reduction="none",
+                            beta=self.attention_scale_oracle_beta,
+                        )
+                        .flatten(1)
+                        .mean(dim=1)
+                    )
                 attention_scale_oracle = (
                     oracle_raw[oracle_supported].mean()
                     if bool(oracle_supported.any())

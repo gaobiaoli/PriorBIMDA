@@ -735,6 +735,8 @@ def test_batch_two_preserves_per_frame_and_aggregate_results(
                 "region": self.records[index]["region"],
                 "rgb": torch.full((3, height, width), 0.1 * (index + 1)),
                 "base_depth": base,
+                "da3_metric_scale": torch.tensor(1.5),
+                "da3_metric_scale_applied": torch.tensor(False),
                 "scaled_depth": base * 1.10,
                 "bim_depth": bim,
                 "bim_valid": bim_valid,

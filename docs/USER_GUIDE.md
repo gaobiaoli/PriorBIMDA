@@ -400,14 +400,14 @@ checkpoint 在相同 all-valid support 上为 validation `0.07420`、test `0.064
 
 ```bash
 .venv/bin/python scripts/model/train.py \
-  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
+  --config configs/stanford_area1_iterative_scale_3round_full_depth_metric_da3.yaml \
   --device cuda
 
 .venv/bin/python scripts/model/evaluate_stanford_area1.py \
-  --config configs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth.yaml \
-  --checkpoint outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt \
+  --config configs/stanford_area1_iterative_scale_3round_full_depth_metric_da3.yaml \
+  --checkpoint outputs/stanford_area1_iterative_scale_3round_full_depth_metric_da3/accepted.pt \
   --split val --depth-support all-valid \
-  --output results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_val \
+  --output results/stanford_area1/iterative_scale_3round_full_depth_metric_da3_val \
   --device cuda --batch-size 8 --inference-seed 42 \
   --bootstrap-repetitions 10000 --bootstrap-seed 42 \
   --allow-unverified-robust-comparator
@@ -415,17 +415,19 @@ checkpoint 在相同 all-valid support 上为 validation `0.07420`、test `0.064
 
 把 `val` 与目录后缀替换为 `test` 即可复现 test。该配置从官方 PNG 动态重载 GT，原始值
 `0`/`65535` 之外的全部深度都进入 loss 和指标，并把模型输出上限提高到 128 m；没有使用
-`0.2--5.0 m` GT mask。现有 pixel-micro final AbsRel 为 validation `0.06861`、test
-`0.06741`。checkpoint 由 validation 选择，SHA256 为
-`f330a987d638482636e225ebdf326612209fa672ea3c5c77a11049f05b655349`。它是当前公开复现和
+`0.2--5.0 m` GT mask。DA3 cache 还会在所有后续处理之前逐帧乘
+`mean(fx,fy)/300`。现有三轮 scale/final pixel-micro AbsRel 为 validation
+`0.06985/0.06421`、test `0.06889/0.06305`。checkpoint 由 validation 选择，SHA256 为
+`74f2797dc42a4e7e8359440ea9d305a073e7ec0d2fe0850fb1ab79877bb7ae6d`。它是当前公开复现和
 部署入口；Area_1 test 已在此前迭代中揭盲，所以论文仍须把 test 数字标成 post-hoc，而不能
 称为新盲测。完整逐阶段指标和旧 checkpoint 的同 support 对照见
-[ATTENTIVE_SCALE_EXPERIMENT.md](ATTENTIVE_SCALE_EXPERIMENT.md#full-depth-supervised-retraining)。
+[ATTENTIVE_SCALE_EXPERIMENT.md](ATTENTIVE_SCALE_EXPERIMENT.md#three-round-scale-conditioned-attention)。
 
-如需检查训练集拟合程度，可把同一评测命令中的 `--split val` 改为 `--split train`，输出目录
-改为 `attentive_scale_da3_features_hit_only_full_depth_train`。这会以 inference mode、无数据
-增强、无参数更新的方式评测全部 7,013 帧；GT 只用于预测后的指标计算。当前 final train
-AbsRel 为 `0.06672`，但该诊断不得用于 checkpoint 选择或论文主结果。
+旧 canonical-input checkpoint 的训练集拟合诊断保存在
+`attentive_scale_da3_features_hit_only_full_depth_train`；其中 `0.06672` 不属于新
+focal-corrected checkpoint，不能混用。若需为新 checkpoint 补同类诊断，可把上述评测命令的
+`--split val` 改为 `--split train` 并使用一个新的 `_metric_da3_train` 目录；该结果不得参与
+checkpoint 选择或论文主结果。
 
 固定 BIM/DA3 ratio 分位数的 train-only 搜索与冻结 test 审计使用独立脚本：
 
@@ -447,7 +449,8 @@ test 模式不提供 `--quantile` 参数，必须读取 train receipt，防止�
 不得替换 universal scale 协议。
 
 不要把 `configs/stanford_area1_reliability_gated_full_depth.yaml` 用作发布配置。它是回退后的
-负实验：final validation/test AbsRel 为 `0.06928/0.06884`，均差于上述发布模型；配置和结果
+负实验：final validation/test AbsRel 为 `0.06928/0.06884`，也均差于当前 focal-corrected
+发布模型；配置和结果
 仅用于审计。
 
 ### 3.7 全景联合评测

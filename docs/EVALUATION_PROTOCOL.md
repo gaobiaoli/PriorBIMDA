@@ -151,6 +151,14 @@ Area_1 使用房间作为重采样单位，对每个房间的
 
 ## 5. 已有证据
 
+> **DA3 quantity correction (2026-08):** historical `raw_da3` rows below are
+> cached canonical-focal outputs. Standalone DA3METRIC metric depth must multiply
+> each view by `mean(fx,fy)/300`, using focal lengths at the DA3 processing
+> resolution. Correct test AbsRel is `0.073729` for SLABIM and `0.084433` for
+> Area_1 on 0.2--5.0 m; Area_1 official-all-valid test is `0.085453`. Historical
+> tables remain for experiment provenance but cannot be used as metric raw
+> baselines. Pano raw comparisons are quarantined pending a per-view rerun.
+
 ### 5.1 两数据集正式主结果
 
 以下均为 0.2--5.0 m、pixel-micro、同一固定 support；来源为
@@ -165,9 +173,10 @@ Area_1 使用房间作为重采样单位，对每个房间的
 运行同一公式和参数，差异只来自数据、BIM 几何和训练权重。
 
 Area_1 当前另发布一份官方全深度模型。它只排除 regular-view raw depth 的 `0/65535`，不能
-与上表混表：validation/test 的 raw DA3、BIM-direct、最终 learned AbsRel 分别为
-`0.28399/0.12203/0.06861` 和 `0.30275/0.10866/0.06741`。该 checkpoint 由 validation
-选择；后续 reliability-gated 版本退化到 `0.06928/0.06884`，因此不发布。Area_1 test 已
+与上表混表。它在模型输入端逐帧完成 DA3 focal correction；validation/test 的 metric raw
+DA3、BIM-direct、最终 learned AbsRel 分别为 `0.09070/0.11815/0.06445` 和
+`0.08545/0.11072/0.06614`。该 checkpoint 由 validation 选择；旧 canonical-input 与后续
+reliability-gated 版本不再发布。Area_1 test 已
 揭盲，发布支持复现和应用，但这些 test 数字仍是 post-hoc，而不是新 blind confirmation。
 
 ### 5.2 Area_1 子集、聚合与 bootstrap

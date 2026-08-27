@@ -1,9 +1,9 @@
 {
-  "schema_version": 10,
-  "note": "Three checkpoints are approved for release: the two legacy universal 0.2-5.0 m models and the validation-selected Area_1 official-all-valid model. The reliability-gated successor and other architecture trials remain unpublished diagnostics. outputs/ is gitignored; publish only entries with publish=true as release assets.",
+  "schema_version": 14,
+  "note": "Three checkpoints are approved for release: two legacy universal 0.2-5.0 m models and the validation-selected three-round scale-conditioned focal-corrected Area_1 official-all-valid model. Static-attention and canonical-input full-depth checkpoints are retained for audit. Area_1 test is post-hoc. outputs/ is gitignored; publish only entries with publish=true.",
   "compact_metrics": {
     "path": "results/metrics.json",
-    "sha256": "24e2ff9641e8af007e9ac9aba7ec8c6246c54c8622f9a2a212bc54d5ac39259e"
+    "sha256": "6a08f0c40190c07952620ee70c45dfd5b196f01fdee936abef8597574d1785fd"
   },
   "universal_scale_protocol": {
     "path": "data/provenance/universal_scale_estimator_v1.json",
@@ -43,10 +43,26 @@
       "publish": false
     },
     {
-      "role": "stanford_area1_hit_only_full_depth_release",
+      "role": "stanford_area1_hit_only_full_depth_canonical_input_superseded",
       "path": "outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth/accepted.pt",
       "bytes": 51607581,
       "sha256": "f330a987d638482636e225ebdf326612209fa672ea3c5c77a11049f05b655349",
+      "download_url": null,
+      "publish": false
+    },
+    {
+      "role": "stanford_area1_metric_da3_static_attention_full_depth_superseded",
+      "path": "outputs/stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_da3/accepted.pt",
+      "bytes": 51608029,
+      "sha256": "64e154b9deeb0f3152406f1bae5bc6e19ae0fef69d4d313ccc8c8874208c8d24",
+      "download_url": null,
+      "publish": false
+    },
+    {
+      "role": "stanford_area1_iterative_scale_3round_full_depth_release",
+      "path": "outputs/stanford_area1_iterative_scale_3round_full_depth_metric_da3/accepted.pt",
+      "bytes": 51651165,
+      "sha256": "74f2797dc42a4e7e8359440ea9d305a073e7ec0d2fe0850fb1ab79877bb7ae6d",
       "download_url": null,
       "publish": true
     },
@@ -73,14 +89,50 @@
       "checkpoint_sha256": "f330a987d638482636e225ebdf326612209fa672ea3c5c77a11049f05b655349",
       "training_history_sha256": "b91e1224c8f9e1a912cec07f69511fff194176142cbe6717fd68b0265d095cd7",
       "training_run_state_sha256": "7cfb37bc2622b072190e88518b6f20c0595b6e880757445455687c32ddfe7f42",
-      "scope": "public_validation_selected_area1_official_all_valid_release"
+      "scope": "superseded_validation_selected_canonical_input_area1_official_all_valid_metrics"
     },
     {
       "path": "results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_test/summary.json",
       "sha256": "f5d006e72a4055d5275255d902618ae4df8fbc64600148dbcac1b985b9f0995a",
       "per_frame_sha256": "ad42d4ba65ea2ce0ebc3040b612f4453b651b3627f844e9bbb7fb235fcd77344",
       "checkpoint_sha256": "f330a987d638482636e225ebdf326612209fa672ea3c5c77a11049f05b655349",
-      "scope": "public_area1_official_all_valid_release_post_hoc_test_metrics"
+      "scope": "superseded_canonical_input_area1_official_all_valid_post_hoc_test_metrics"
+    },
+    {
+      "path": "results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_metric_da3_val/summary.json",
+      "sha256": "bb46f8dd05166a5fa8f286a5e0d1355143354ee48126b116c6d390b9a7f8b1dc",
+      "per_frame_sha256": "4899d06c464b3ec9e5b50e835d0ec7ca0d6b3496f5102c3bf0fc7a0442935c7c",
+      "checkpoint_sha256": "64e154b9deeb0f3152406f1bae5bc6e19ae0fef69d4d313ccc8c8874208c8d24",
+      "training_history_sha256": "72c4a197a38b45f0bcee08db407176696384f4730d7edf571aff7423338bf18b",
+      "training_run_state_sha256": "e23645da356288d96d3642ffcb8c2ada9518114faf4cd5d7b525f02ed9750df7",
+      "scope": "superseded_static_attention_focal_corrected_area1_official_all_valid_comparator"
+    },
+    {
+      "path": "results/stanford_area1/attentive_scale_da3_features_hit_only_full_depth_metric_da3_test/summary.json",
+      "sha256": "68413154d31f18af0e418ba8849bfb5fdb5a85a09a8832f1bb7a38c6e627a565",
+      "per_frame_sha256": "702b101111640894b70aaa7c5e21f26bce8fc046fa70acf0416eda73cdff5230",
+      "checkpoint_sha256": "64e154b9deeb0f3152406f1bae5bc6e19ae0fef69d4d313ccc8c8874208c8d24",
+      "scope": "superseded_static_attention_focal_corrected_area1_post_hoc_test_comparator"
+    },
+    {
+      "path": "results/stanford_area1/iterative_scale_3round_full_depth_metric_da3_val/summary.json",
+      "sha256": "916a333e1d769b109ce0ea7ddda7cd4ed17277ffc37f9ff620759fe91abbe37e",
+      "per_frame_sha256": "d10921b12e1674b639ec0ece9c3a20d1a6f26852ccff0f7f9d0cb388e43c69b3",
+      "checkpoint_sha256": "74f2797dc42a4e7e8359440ea9d305a073e7ec0d2fe0850fb1ab79877bb7ae6d",
+      "training_history_sha256": "7139c8b2ec333fa6d9d3b94cad2d73670216958a78979485b687c9dc8a91c959",
+      "training_run_state_sha256": "d00d3d535f50eedf437724983bc1113d4973b0cd01c5eaa690ba4fa079036409",
+      "comparison_vs_static_sha256": "c57986bf1a79774413068d7db7d52df460f2d7e4698a8c2297e97126103ce280",
+      "scale_comparison_vs_static_sha256": "40f2dd22611d5f2854b947029ba348505587d9ea53e5408d4a7c5622f0d60b4e",
+      "scope": "public_validation_selected_three_round_scale_conditioned_area1_official_all_valid_release"
+    },
+    {
+      "path": "results/stanford_area1/iterative_scale_3round_full_depth_metric_da3_test/summary.json",
+      "sha256": "a9e67c2c43d34211282fbe56b595c8fc273c8c9a24ebc6bc684a4771341efb29",
+      "per_frame_sha256": "59de94ac88321295170ceab751d3d2f5884e4ddc419dced2912efbe45b0838bf",
+      "checkpoint_sha256": "74f2797dc42a4e7e8359440ea9d305a073e7ec0d2fe0850fb1ab79877bb7ae6d",
+      "comparison_vs_static_sha256": "4b422748730108370f40ce22cca71a272552eb3a44cce946725c7a76a7930b58",
+      "scale_comparison_vs_static_sha256": "3582594f4fa12e0d2997e04515fbcfe63183ada72b02c149e00351c7040a3cd4",
+      "scope": "public_three_round_scale_conditioned_area1_official_all_valid_post_hoc_test_release"
     }
   ],
   "pano_protocol": {
@@ -106,9 +158,42 @@
     {"path": "results/slabim/history.json", "sha256": "384ad577e7f3cd68d61428ac0967ff8601324ab8fc41f63fb373557095422aa0"},
     {"path": "results/slabim/run_state.json", "sha256": "7d646a646cede6e90cfbfb59e9da1e5444178815b50bc07ce04abbe1482dc0a6"},
     {"path": "results/stanford_area1/history.json", "sha256": "54bd56f9a1e0b796b38a4b9ddb0ac43a67511040037413538ad03e3b4b896c28"},
-    {"path": "results/stanford_area1/run_state.json", "sha256": "16782b5eafa1078402851f880305a74552e865dd55bc89b2e61b23edfa1a3087"}
+    {"path": "results/stanford_area1/run_state.json", "sha256": "16782b5eafa1078402851f880305a74552e865dd55bc89b2e61b23edfa1a3087"},
+    {"path": "outputs/stanford_area1_iterative_scale_3round_full_depth_metric_da3/history.json", "sha256": "7139c8b2ec333fa6d9d3b94cad2d73670216958a78979485b687c9dc8a91c959"},
+    {"path": "outputs/stanford_area1_iterative_scale_3round_full_depth_metric_da3/run_state.json", "sha256": "d00d3d535f50eedf437724983bc1113d4973b0cd01c5eaa690ba4fa079036409"}
   ],
   "diagnostic_results": [
+    {
+      "path": "results/slabim/da3_focal_scaling_audit/summary.json",
+      "sha256": "9733f8591a04097919eb73038e02003d1d62ae905b471268d41fa4f308f8d0ae",
+      "script_sha256": "6b3f77e92a8820e98b917a19c01f02976d9a00cbb1d8c3e6df4521343aec7a0d",
+      "scope": "no-GT-scale standalone DA3METRIC canonical-to-metric focal audit on SLABIM val/test"
+    },
+    {
+      "path": "results/stanford_area1/da3_focal_scaling_full_depth_audit/summary.json",
+      "sha256": "a2bccce203cd3645d436cb55448bfe3325c36863601226c753c64507a2c07fb6",
+      "script_sha256": "6b3f77e92a8820e98b917a19c01f02976d9a00cbb1d8c3e6df4521343aec7a0d",
+      "scope": "no-GT-scale standalone DA3METRIC canonical-to-metric focal audit on Area_1 official-all-valid val/test"
+    },
+    {
+      "path": "results/stanford_area1/fixed_scale_quantile_metric_da3_full_depth_train/selection.json",
+      "sha256": "a0ec065b1a133469a07d6af24e422a6678ba48cd78a1dddb6a5311cc953fc965",
+      "script_sha256": "a9dc44f680e1f57b6e3ce52ae467cf9de232c11854ad8dd935fd25d6b254cb38",
+      "scope": "focal-corrected official-all-valid train-only q05-q95 scale quantile selection; q52 selected"
+    },
+    {
+      "path": "results/stanford_area1/fixed_scale_quantile_metric_da3_full_depth_test/summary.json",
+      "sha256": "99543d3447781b9bc687e872a3537edef9e819a0a6b80155d983c1e0a974ef32",
+      "per_frame_sha256": "2cc29b1a83e628674256c6475fce0b52f2f0641c237d46c28254e3255b13ca1f",
+      "selection_receipt_sha256": "a0ec065b1a133469a07d6af24e422a6678ba48cd78a1dddb6a5311cc953fc965",
+      "scope": "frozen train-selected q52 test audit; rejected because it regresses against q45 and robust scale"
+    },
+    {
+      "path": "results/stanford_area1/fixed_bim_direct_quantile_metric_da3_full_depth_val/selection.json",
+      "sha256": "a29065a85849c913a0c50156ce49beb3cce10981cf17b10a888b25bc11480377",
+      "script_sha256": "a9dc44f680e1f57b6e3ce52ae467cf9de232c11854ad8dd935fd25d6b254cb38",
+      "scope": "validation-only exhaustive q05-q95 scale-only and complete consistency-gated Gaussian BIM-direct scan; q45 selected for both"
+    },
     {
       "path": "results/stanford_area1/fixed_scale_quantile_full_depth_train/selection.json",
       "sha256": "1c8d74090facaf499e5655633846f14eb1310a361def9e51fd53149c66ab481c",
