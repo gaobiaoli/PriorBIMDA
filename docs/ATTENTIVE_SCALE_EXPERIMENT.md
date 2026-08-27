@@ -1515,3 +1515,66 @@ and `d00d3d535f50eedf437724983bc1113d4973b0cd01c5eaa690ba4fa079036409`.
 Validation/test summary SHA256 values are
 `916a333e1d769b109ce0ea7ddda7cd4ed17277ffc37f9ff620759fe91abbe37e`
 and `a9e67c2c43d34211282fbe56b595c8fc273c8c9a24ebc6bc684a4771341efb29`.
+
+## Registered static-zero/no-gate control for attention refresh
+
+The preceding static-versus-iterative result is not a pure attention-refresh
+ablation: the legacy static estimator starts from deterministic BIM fallback,
+uses two undamped IRLS updates, and retains a fallback gate, whereas the
+iterative estimator starts from `z=0` and uses three bounded/damped updates.
+The following matched pair was therefore defined before inspecting its test
+result:
+
+- `stanford_area1_static_scale_3round_zero_nogate_full_depth_metric_da3.yaml`:
+  compute reliability attention once at `z^(0)=0`, then freeze and reuse the
+  exact normalized weights for all three center updates;
+- `stanford_area1_dynamic_scale_3round_zero_nogate_full_depth_metric_da3.yaml`:
+  recompute reliability attention from the current signed/absolute ratio
+  residual and analytic Huber confidence in every round.
+
+Both variants disable learned fallback interpolation. An unsupported sample
+stays at `z=0` through the recurrence, so its scale remains one. They otherwise
+have identical trainable parameter count, shared reliability MLP, DA3/RGB/BIM
+inputs, pooled scale MLP, initialization, three learned damping coefficients,
+per-round oracle-scale loss (`0.25/0.50/1.00`), room split, official-all-valid
+GT, seed 42, batch 8, optimizer, and scratch `3/9/3` schedule. Thus the matched
+architectural variable is whether attention is refreshed after the first
+center update.
+
+The pre-registered primary diagnostic is validation pixel-micro AbsRel at the
+third scale output. Final `+r_low+r_detail` AbsRel is co-primary for practical
+performance but is less specific because a refiner can compensate for scale
+errors. Round-1/2 trajectories and furniture/conflict/no-hit subsets are
+secondary diagnostics. For every reported difference, dynamic minus static is
+computed per room and assessed with a 10,000-resample paired-room bootstrap:
+
+- upper 95% CI below zero: consistent evidence for refreshed attention;
+- CI crossing zero: inconclusive, even if pixel-micro AbsRel improves;
+- lower 95% CI above zero: consistent evidence against refreshed attention.
+
+Only validation chooses each checkpoint. Test is evaluated after freezing the
+validation-selected checkpoint and is confirmatory within this experiment,
+but Area_1 test has been examined in earlier project iterations and therefore
+is not a new blind benchmark. Per the project decision, no multi-seed sweep is
+performed; room bootstrap measures room-sampling uncertainty, not optimization
+seed uncertainty. Conclusions must therefore be phrased as conditional on the
+fixed seed/training protocol.
+
+### Stopped matched-dynamic run and fallback decision
+
+The matched refreshed/no-gate run was intentionally stopped during human epoch
+5 at step 800/876 and was never evaluated on test. Its partial checkpoints are
+invalid for reporting. After three completed scale-only epochs, validation
+scale AbsRel was `0.071034`, versus `0.070983` for the matched frozen-attention
+run, already effectively tied. Continuing this ablation was judged outside the
+immediate objective.
+
+The design decision is instead about fallback semantics. Focal-corrected raw
+DA3 has validation/test AbsRel `0.090705/0.085453`, while deterministic robust
+BIM-direct has `0.118152/0.110724`. Therefore a low-support or low-confidence
+learned-scale estimate must return `z=0` (`scale=1`, raw DA3), never the
+deterministic BIM-direct scale. In the current iterative implementation,
+deterministic BIM fallback is exported only as a diagnostic; the operational
+fallback is already `z=0`. The legacy static path retains BIM-direct fallback
+only to reproduce old checkpoints and must not be used as the template for new
+models.

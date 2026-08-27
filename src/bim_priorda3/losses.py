@@ -558,6 +558,7 @@ class BIMPriorLoss(nn.Module):
             additive_regularization = log_prediction.sum() * 0.0
             additive_scale_orthogonality = log_prediction.sum() * 0.0
 
+        attention_iteration_diagnostics: dict[str, torch.Tensor] = {}
         if self.attention_scale_enabled:
             if "spatial_log_residual" not in output:
                 raise KeyError("Attentive scale training requires spatial_log_residual")
@@ -625,6 +626,54 @@ class BIMPriorLoss(nn.Module):
                         )
                     iteration_vector = iteration_prediction.flatten(2).mean(dim=-1)
                     oracle_vector = oracle_log_scale.flatten(1).mean(dim=-1, keepdim=True)
+                    previous_prediction = torch.zeros_like(oracle_vector[:, 0])
+                    previous_update: torch.Tensor | None = None
+                    supported = oracle_supported.bool()
+                    diagnostic_zero = log_prediction.detach().sum() * 0.0
+                    for iteration_index in range(iteration_vector.shape[1]):
+                        prediction_vector = iteration_vector[:, iteration_index]
+                        oracle_flat = oracle_vector[:, 0]
+                        error = prediction_vector - oracle_flat
+                        previous_error = previous_prediction - oracle_flat
+                        update = prediction_vector - previous_prediction
+
+                        def supported_mean(values: torch.Tensor) -> torch.Tensor:
+                            return (
+                                values[supported].float().mean()
+                                if bool(supported.any())
+                                else diagnostic_zero
+                            )
+
+                        prefix = f"attention_iteration_{iteration_index + 1}"
+                        attention_iteration_diagnostics.update(
+                            {
+                                f"{prefix}_log_scale_mae": supported_mean(error.abs()),
+                                f"{prefix}_log_scale_rmse": supported_mean(
+                                    error.square()
+                                ).sqrt(),
+                                f"{prefix}_log_scale_bias": supported_mean(error),
+                                f"{prefix}_scale_relative_error": supported_mean(
+                                    (error.exp() - 1.0).abs()
+                                ),
+                                f"{prefix}_update_abs_mean": supported_mean(update.abs()),
+                                f"{prefix}_improved_rate": supported_mean(
+                                    (error.abs() < previous_error.abs()).float()
+                                ),
+                                f"{prefix}_regressed_rate": supported_mean(
+                                    (error.abs() > previous_error.abs()).float()
+                                ),
+                                f"{prefix}_overshoot_rate": supported_mean(
+                                    ((error * previous_error) < 0).float()
+                                ),
+                                f"{prefix}_oscillation_rate": (
+                                    supported_mean(((update * previous_update) < 0).float())
+                                    if previous_update is not None
+                                    else diagnostic_zero
+                                ),
+                            }
+                        )
+                        previous_prediction = prediction_vector
+                        previous_update = update
                     iteration_raw = functional.smooth_l1_loss(
                         iteration_vector,
                         oracle_vector.expand_as(iteration_vector),
@@ -812,4 +861,8 @@ class BIMPriorLoss(nn.Module):
             "attention_scale_residual": attention_scale_residual.detach(),
             "attention_scale_oracle": attention_scale_oracle.detach(),
             "attention_weight_target": attention_weight_target.detach(),
+            **{
+                key: value.detach()
+                for key, value in attention_iteration_diagnostics.items()
+            },
         }

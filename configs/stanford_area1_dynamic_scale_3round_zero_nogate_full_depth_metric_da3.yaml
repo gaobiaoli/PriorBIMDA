@@ -1,0 +1,18 @@
+extends: stanford_area1_iterative_scale_3round_full_depth_metric_da3.yaml
+
+# Gate-free refreshed counterpart of the matched static control.  Train this
+# from scratch under the same protocol; direct comparison with the frozen
+# config isolates whether recomputing attention from the current ratio residual
+# is useful.
+
+experiment:
+  name: stanford_area1_dynamic_scale_3round_zero_nogate_full_depth_metric_da3
+  output_dir: outputs/stanford_area1_dynamic_scale_3round_zero_nogate_full_depth_metric_da3
+
+model:
+  attention_scale:
+    iterative_refresh_attention: true
+    use_fallback_gate: false
+
+train:
+  log_every: 200

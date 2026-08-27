@@ -332,6 +332,26 @@ def resolve_scratch_stage_epochs(
     train_cfg = cfg.get("train", {})
     if not isinstance(train_cfg, Mapping):
         raise TypeError("train config must be a mapping")
+    scale_only_experiment = bool(train_cfg.get("scale_only_experiment", False))
+    if scale_only_experiment:
+        if e2e_enabled:
+            raise ValueError("train.scale_only_experiment requires frozen/cached DA3")
+        if not attention_scale_enabled:
+            raise ValueError(
+                "train.scale_only_experiment requires model.attention_scale.enabled=true"
+            )
+        total_epochs = train_cfg.get("epochs")
+        if isinstance(total_epochs, bool) or not isinstance(total_epochs, int):
+            raise TypeError("train.epochs must be an integer for scale-only training")
+        if total_epochs < 1:
+            raise ValueError("train.epochs must be positive for scale-only training")
+        warmup = train_cfg.get("refiner_head_warmup_epochs", 0)
+        if warmup != 0:
+            raise ValueError(
+                "train.refiner_head_warmup_epochs must be 0 for scale-only training"
+            )
+        return {"scale_only": total_epochs}
+
     raw = train_cfg.get("scratch_stage_epochs")
     if raw is None:
         return None
@@ -399,6 +419,34 @@ def build_scratch_stage_schedule(
             "Scratch staged training requires trainable scale and refiner parameters"
         )
     scale_end = int(stage_epochs["scale_only"])
+    if set(stage_epochs) == {"scale_only"}:
+        phases = ((SCRATCH_SCALE_STAGE, 0, scale_end, scale),)
+        schedule_kind = "scratch_scale_only"
+        joint_end = scale_end
+        return {
+            "schema_version": 2,
+            "kind": schedule_kind,
+            "initialization": "fresh_task_network_without_init_checkpoint",
+            "phases": [
+                {
+                    "name": name,
+                    "start_epoch_inclusive": start,
+                    "end_epoch_exclusive": end,
+                    "trainable_non_da3_parameter_names": list(names),
+                }
+                for name, start, end, names in phases
+            ],
+            "total_epochs": joint_end,
+            "da3_policy": "frozen_cached",
+            "optimizer_parameter_policy": (
+                "one optimizer contains all originally trainable tensors; only the "
+                "attention-scale family has requires_grad=true for the complete run"
+            ),
+            "optimizer_parameter_tensors": len(originally_trainable),
+            "optimizer_parameter_names_sha256": _canonical_sha256(
+                list(originally_trainable)
+            ),
+        }
     refiner_end = scale_end + int(stage_epochs["refiner_only"])
     if "additive_only" in stage_epochs:
         if not additive:

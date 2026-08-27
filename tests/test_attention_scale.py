@@ -10,6 +10,7 @@ from bim_priorda3.losses import (
 )
 from bim_priorda3.models import BIMPriorDA3
 from bim_priorda3.models.attention_scale import AttentiveBIMScaleHead
+from bim_priorda3.models.full_regression_scale import FullRegressionIterativeScaleHead
 from bim_priorda3.models.refiner import ScaleAnchoredDepthRefiner
 from scripts.model.train import (
     ATTENTION_SCALE_WARMUP_PARAMETER_PREFIXES,
@@ -103,6 +104,220 @@ def test_three_round_iterative_attention_starts_at_one_and_shares_reliability() 
     assert isinstance(reliability_output, torch.nn.Conv2d)
     assert reliability_output.weight.grad is not None
     assert torch.count_nonzero(reliability_output.weight.grad) > 0
+
+
+def test_full_regression_predicts_shared_bounded_residual_updates_without_damping() -> None:
+    head = FullRegressionIterativeScaleHead(
+        in_channels=5,
+        hidden_channels=4,
+        attention_heads=2,
+        min_support=8,
+        token_dropout_probability=0.0,
+        iterative_updates=3,
+        iterative_hidden_channels=5,
+        delta_hidden_channels=7,
+        iterative_max_log_update=0.15,
+    ).eval()
+    features = torch.randn(2, 5, 16, 16)
+    log_ratio = torch.full((2, 1, 16, 16), torch.log(torch.tensor(2.0)))
+    valid = torch.ones_like(log_ratio)
+    valid[1] = 0
+    deterministic_fallback = torch.log(torch.tensor([1.5, 1.5])).view(2, 1, 1, 1)
+
+    # Saturating the shared neural output makes every direct residual update
+    # exactly +Delta_max. No alpha/step-size multiplier may attenuate it.
+    final = head.shared_delta_head[-1]
+    assert isinstance(final, torch.nn.Linear)
+    with torch.no_grad():
+        final.weight.zero_()
+        final.bias.fill_(100.0)
+    calls = 0
+
+    def count_calls(_module: torch.nn.Module, _inputs: object, _output: object) -> None:
+        nonlocal calls
+        calls += 1
+
+    hook = head.shared_delta_head.register_forward_hook(count_calls)
+    output = head(features, log_ratio, valid, deterministic_fallback)
+    hook.remove()
+
+    expected_centers = torch.tensor([0.15, 0.30, 0.45])
+    assert calls == 3
+    assert torch.allclose(
+        output["iteration_log_scales"][0, :, 0, 0],
+        expected_centers,
+        atol=1e-6,
+    )
+    assert torch.allclose(
+        output["iteration_log_scale_updates"][0, :, 0, 0],
+        torch.full((3,), 0.15),
+        atol=1e-6,
+    )
+    assert torch.allclose(
+        output["scale"][0],
+        torch.exp(torch.tensor(0.45)).view(1, 1, 1),
+        atol=1e-6,
+    )
+    # Hard no-support fallback is raw DA3, never deterministic BIM direct.
+    assert torch.equal(output["scale"][1], torch.ones_like(output["scale"][1]))
+    parameter_names = {name for name, _ in head.named_parameters()}
+    assert not any(
+        "step" in name or "damping" in name or "huber" in name
+        for name in parameter_names
+    )
+    assert not hasattr(head, "huber_delta")
+
+
+def test_full_regression_config_is_three_epoch_scale_only_and_gt_supervised() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_full_regression_scale_3round_3epoch_full_depth_metric_da3.yaml"
+    )
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.hidden_channels = 4
+    cfg.model.attention_scale.iterative_hidden_channels = 5
+    cfg.model.attention_scale.delta_hidden_channels = 7
+    cfg.model.attention_scale.token_dropout_probability = 0.0
+    cfg.model.attention_scale.equivariance_probability = 0.0
+    cfg.model.da3_feature_fusion.channels = 6
+    model = BIMPriorDA3(cfg)
+
+    assert isinstance(model.attention_scale, FullRegressionIterativeScaleHead)
+    original = snapshot_parameter_trainability(model)
+    stages = resolve_scratch_stage_epochs(
+        cfg,
+        e2e_enabled=model.e2e_da3_enabled,
+        attention_scale_enabled=model.attention_scale_enabled,
+    )
+    assert stages == {"scale_only": 3}
+    schedule = build_scratch_stage_schedule(model, stages, original)
+    assert schedule["kind"] == "scratch_scale_only"
+    assert len(schedule["phases"]) == 1
+    stage = apply_scratch_training_stage(
+        model,
+        epoch=0,
+        schedule=schedule,
+        original_trainability=original,
+    )
+    assert stage["name"] == SCRATCH_SCALE_STAGE
+    assert all(
+        name.startswith("attention_scale.")
+        for name, parameter in model.named_parameters()
+        if parameter.requires_grad
+    )
+    model.train()
+    apply_scratch_stage_module_modes(model, SCRATCH_SCALE_STAGE)
+    assert model.attention_scale.training
+    assert not model.refiner.training
+
+    batch = _candidate_batch(size=32)
+    batch["da3_feature_mid"] = torch.randn(2, 6, 5, 5)
+    batch["da3_feature_deep"] = torch.randn(2, 6, 5, 5)
+    output = model(batch)
+    losses = BIMPriorLoss(cfg)(output, batch)
+
+    assert output["attention_iteration_log_scales"].shape == (2, 3, 1, 1)
+    assert output["attention_iteration_log_scale_updates"].shape == (2, 3, 1, 1)
+    assert "attention_iteration_step_sizes" not in output
+    assert losses["attention_scale_oracle"].item() >= 0
+    for iteration in range(1, 4):
+        assert f"attention_iteration_{iteration}_log_scale_mae" in losses
+        assert f"attention_iteration_{iteration}_overshoot_rate" in losses
+        assert f"attention_iteration_{iteration}_oscillation_rate" in losses
+    losses["total"].backward()
+    assert model.attention_scale.shared_delta_head[-1].weight.grad is not None
+
+
+def test_static_zero_control_freezes_attention_and_disables_fallback_gate() -> None:
+    head = AttentiveBIMScaleHead(
+        in_channels=5,
+        hidden_channels=4,
+        attention_heads=2,
+        min_support=8,
+        token_dropout_probability=0.0,
+        iterative_updates=3,
+        iterative_hidden_channels=5,
+        iterative_initial_log_scale=0.0,
+        iterative_damping=[0.5, 0.5, 0.5],
+        iterative_refresh_attention=False,
+        use_fallback_gate=False,
+    ).eval()
+    features = torch.randn(2, 5, 16, 16)
+    log_ratio = torch.linspace(-0.3, 0.3, 16).view(1, 1, 1, 16)
+    log_ratio = log_ratio.expand(2, 1, 16, 16).clone()
+    valid = torch.ones_like(log_ratio)
+    valid[1] = 0
+    deterministic_fallback = torch.log(torch.tensor([1.5, 1.5])).view(2, 1, 1, 1)
+
+    assert head.iterative_reliability is not None
+    calls = 0
+
+    def count_calls(_module: torch.nn.Module, _inputs: object, _output: object) -> None:
+        nonlocal calls
+        calls += 1
+
+    hook = head.iterative_reliability.register_forward_hook(count_calls)
+    output = head(features, log_ratio, valid, deterministic_fallback)
+    hook.remove()
+
+    assert calls == 1
+    assert head.fallback_gate is None
+    assert torch.equal(
+        output["iteration_fallback_gates"],
+        torch.ones_like(output["iteration_fallback_gates"]),
+    )
+    # Unsupported samples remain at z=0 without consulting deterministic BIM.
+    assert torch.equal(output["scale"][1], torch.ones_like(output["scale"][1]))
+
+
+def test_refresh_control_recomputes_attention_every_round() -> None:
+    head = AttentiveBIMScaleHead(
+        in_channels=5,
+        hidden_channels=4,
+        attention_heads=2,
+        min_support=8,
+        token_dropout_probability=0.0,
+        iterative_updates=3,
+        iterative_hidden_channels=5,
+        iterative_initial_log_scale=0.0,
+        iterative_damping=[0.5, 0.5, 0.5],
+        iterative_refresh_attention=True,
+        use_fallback_gate=False,
+    ).eval()
+    features = torch.randn(1, 5, 16, 16)
+    log_ratio = torch.linspace(-0.3, 0.3, 16).view(1, 1, 1, 16)
+    log_ratio = log_ratio.expand(1, 1, 16, 16)
+    valid = torch.ones_like(log_ratio)
+    fallback = torch.log(torch.tensor([1.5])).view(1, 1, 1, 1)
+
+    assert head.iterative_reliability is not None
+    calls = 0
+
+    def count_calls(_module: torch.nn.Module, _inputs: object, _output: object) -> None:
+        nonlocal calls
+        calls += 1
+
+    hook = head.iterative_reliability.register_forward_hook(count_calls)
+    head(features, log_ratio, valid, fallback)
+    hook.remove()
+
+    assert calls == 3
+
+
+def test_matched_static_and_dynamic_configs_only_change_attention_refresh() -> None:
+    static_cfg = load_config(
+        "configs/stanford_area1_static_scale_3round_zero_nogate_full_depth_metric_da3.yaml"
+    )
+    dynamic_cfg = load_config(
+        "configs/stanford_area1_dynamic_scale_3round_zero_nogate_full_depth_metric_da3.yaml"
+    )
+
+    assert static_cfg.model.attention_scale.iterative_refresh_attention is False
+    assert dynamic_cfg.model.attention_scale.iterative_refresh_attention is True
+    assert static_cfg.model.attention_scale.use_fallback_gate is False
+    assert dynamic_cfg.model.attention_scale.use_fallback_gate is False
+    assert static_cfg.model.attention_scale.iterative_updates == 3
+    assert dynamic_cfg.model.attention_scale.iterative_updates == 3
+    assert static_cfg.train.scratch_stage_epochs == dynamic_cfg.train.scratch_stage_epochs
 
 
 def test_three_round_config_applies_iteration_weighted_oracle_loss() -> None:

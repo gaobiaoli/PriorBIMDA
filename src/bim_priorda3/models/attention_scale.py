@@ -38,6 +38,8 @@ class AttentiveBIMScaleHead(nn.Module):
         iterative_initial_log_scale: float = 0.0,
         iterative_damping: tuple[float, ...] | list[float] | None = None,
         iterative_max_log_update: float = 0.15,
+        iterative_refresh_attention: bool = True,
+        use_fallback_gate: bool = True,
     ) -> None:
         super().__init__()
         if hidden_channels < 4:
@@ -76,6 +78,8 @@ class AttentiveBIMScaleHead(nn.Module):
         self.iterative_updates = int(iterative_updates)
         self.iterative_initial_log_scale = float(iterative_initial_log_scale)
         self.iterative_max_log_update = float(iterative_max_log_update)
+        self.iterative_refresh_attention = bool(iterative_refresh_attention)
+        self.use_fallback_gate = bool(use_fallback_gate)
         if self.da3_feature_channels < 0:
             raise ValueError("da3_feature_channels must be non-negative")
         if iterative_damping is None:
@@ -123,7 +127,11 @@ class AttentiveBIMScaleHead(nn.Module):
             kernel_size=1,
         )
         self.head_mixer = nn.Linear(condition_channels, self.attention_heads)
-        self.fallback_gate = nn.Linear(condition_channels + 2, 1)
+        self.fallback_gate: nn.Linear | None = (
+            nn.Linear(condition_channels + 2, 1)
+            if self.use_fallback_gate
+            else None
+        )
         self.iterative_reliability: nn.Sequential | None = None
         self.iterative_step_logits: nn.Parameter | None = None
         if self.iterative_updates:
@@ -157,8 +165,9 @@ class AttentiveBIMScaleHead(nn.Module):
         nn.init.zeros_(self.key_logits.bias)
         nn.init.zeros_(self.head_mixer.weight)
         nn.init.zeros_(self.head_mixer.bias)
-        nn.init.zeros_(self.fallback_gate.weight)
-        nn.init.constant_(self.fallback_gate.bias, float(fallback_gate_bias))
+        if self.fallback_gate is not None:
+            nn.init.zeros_(self.fallback_gate.weight)
+            nn.init.constant_(self.fallback_gate.bias, float(fallback_gate_bias))
         if self.iterative_reliability is not None:
             iterative_output = self.iterative_reliability[-1]
             if not isinstance(iterative_output, nn.Conv2d):
@@ -334,6 +343,7 @@ class AttentiveBIMScaleHead(nn.Module):
                 self.iterative_initial_log_scale,
             )
             step_sizes = torch.sigmoid(self.iterative_step_logits.float())
+            frozen_attention: torch.Tensor | None = None
             for iteration_index in range(self.iterative_updates):
                 # Detaching the current center only on the reliability path
                 # avoids a self-reinforcing shortcut. The robust center update
@@ -363,12 +373,24 @@ class AttentiveBIMScaleHead(nn.Module):
                     ),
                     dim=1,
                 )
-                dynamic_logits = self.iterative_reliability(dynamic_features).reshape(
-                    batch_size,
-                    self.attention_heads,
-                    token_count,
-                )
-                attention = normalized_attention(static_logits + dynamic_logits.float())
+                if frozen_attention is None or self.iterative_refresh_attention:
+                    dynamic_logits = self.iterative_reliability(dynamic_features).reshape(
+                        batch_size,
+                        self.attention_heads,
+                        token_count,
+                    )
+                    attention = normalized_attention(
+                        static_logits + dynamic_logits.float()
+                    )
+                    if not self.iterative_refresh_attention:
+                        # Matched static-attention control: compute reliability
+                        # once at z^(0), then reuse the exact normalized weights
+                        # for every subsequent robust center update.  Parameter
+                        # count, initialization, update count, damping, and
+                        # supervision stay identical to the refreshed variant.
+                        frozen_attention = attention
+                else:
+                    attention = frozen_attention
 
                 residual = expanded_values - center[:, :, None]
                 robust_weight = torch.rsqrt(
@@ -445,14 +467,21 @@ class AttentiveBIMScaleHead(nn.Module):
             ),
             dim=-1,
         )
-        learned_iteration_gate = torch.sigmoid(
-            self.fallback_gate(iteration_gate_features).float()
-        )
-        iteration_fallback_gate = learned_iteration_gate * sufficient[:, None, :]
-        iteration_log_scale = (
-            iteration_fallback_gate * attentive_iteration_stack
-            + (1.0 - iteration_fallback_gate) * fallback_flat[:, None, :]
-        )
+        if self.fallback_gate is None:
+            # With z^(0)=0, an unsupported recurrence stays exactly at raw DA3
+            # scale. No learned interpolation is needed, and supported frames
+            # expose the estimator output without attenuation.
+            iteration_fallback_gate = torch.ones_like(attentive_iteration_stack)
+            iteration_log_scale = attentive_iteration_stack
+        else:
+            learned_iteration_gate = torch.sigmoid(
+                self.fallback_gate(iteration_gate_features).float()
+            )
+            iteration_fallback_gate = learned_iteration_gate * sufficient[:, None, :]
+            iteration_log_scale = (
+                iteration_fallback_gate * attentive_iteration_stack
+                + (1.0 - iteration_fallback_gate) * fallback_flat[:, None, :]
+            )
         attentive_log_scale = attentive_iteration_stack[:, -1]
         fallback_gate = iteration_fallback_gate[:, -1]
         log_scale = iteration_log_scale[:, -1]

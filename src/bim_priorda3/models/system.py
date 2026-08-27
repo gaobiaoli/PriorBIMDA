@@ -18,6 +18,7 @@ from bim_priorda3.baselines import (
 from bim_priorda3.config import Config
 
 from .attention_scale import AttentiveBIMScaleHead
+from .full_regression_scale import FullRegressionIterativeScaleHead
 from .refiner import ScaleAnchoredDepthRefiner
 
 
@@ -176,72 +177,127 @@ class BIMPriorDA3(nn.Module):
                 "The attentive-scale candidate currently requires frozen/cached DA3; "
                 "disable model.e2e_da3"
             )
-        self.attention_scale: AttentiveBIMScaleHead | None = None
+        self.attention_scale: (
+            AttentiveBIMScaleHead | FullRegressionIterativeScaleHead | None
+        ) = None
         if self.attention_scale_enabled:
-            self.attention_scale = AttentiveBIMScaleHead(
-                in_channels=self.ATTENTION_SCALE_CHANNELS,
-                hidden_channels=int(self.attention_scale_config.get("hidden_channels", 24)),
-                attention_heads=int(self.attention_scale_config.get("attention_heads", 4)),
-                min_support=int(
+            attention_estimator = str(
+                self.attention_scale_config.get("estimator", "pseudo_huber_attention_v1")
+            )
+            shared_arguments = {
+                "in_channels": self.ATTENTION_SCALE_CHANNELS,
+                "hidden_channels": int(
+                    self.attention_scale_config.get("hidden_channels", 24)
+                ),
+                "attention_heads": int(
+                    self.attention_scale_config.get("attention_heads", 4)
+                ),
+                "min_support": int(
                     self.attention_scale_config.get(
                         "min_support",
                         self.da3_scale_min_samples,
                     )
                 ),
-                ratio_min=float(
+                "ratio_min": float(
                     self.attention_scale_config.get(
                         "ratio_min",
                         self.da3_scale_ratio_min,
                     )
                 ),
-                ratio_max=float(
+                "ratio_max": float(
                     self.attention_scale_config.get(
                         "ratio_max",
                         self.da3_scale_ratio_max,
                     )
                 ),
-                huber_delta=float(self.attention_scale_config.get("huber_delta", 0.15)),
-                token_dropout_probability=float(
+                "token_dropout_probability": float(
                     self.attention_scale_config.get(
                         "token_dropout_probability",
                         0.10,
                     )
                 ),
-                fallback_gate_bias=float(
-                    self.attention_scale_config.get("fallback_gate_bias", -1.5)
-                ),
-                bounded_log_scale_residual=float(
-                    self.attention_scale_config.get("bounded_log_scale_residual", 0.0)
-                ),
-                residual_hidden_channels=int(
-                    self.attention_scale_config.get("residual_hidden_channels", 32)
-                ),
-                da3_feature_channels=(
+                "da3_feature_channels": (
                     self.da3_feature_channels if self.da3_feature_scale_enabled else 0
                 ),
-                iterative_updates=int(
-                    self.attention_scale_config.get("iterative_updates", 0)
-                ),
-                iterative_hidden_channels=int(
-                    self.attention_scale_config.get("iterative_hidden_channels", 32)
-                ),
-                iterative_initial_log_scale=float(
-                    self.attention_scale_config.get(
-                        "iterative_initial_log_scale",
-                        0.0,
-                    )
-                ),
-                iterative_damping=list(
-                    self.attention_scale_config.get("iterative_damping", [])
+            }
+            if attention_estimator == FullRegressionIterativeScaleHead.ESTIMATOR_NAME:
+                self.attention_scale = FullRegressionIterativeScaleHead(
+                    **shared_arguments,
+                    iterative_updates=int(
+                        self.attention_scale_config.get("iterative_updates", 3)
+                    ),
+                    iterative_hidden_channels=int(
+                        self.attention_scale_config.get(
+                            "iterative_hidden_channels", 32
+                        )
+                    ),
+                    delta_hidden_channels=int(
+                        self.attention_scale_config.get(
+                            "delta_hidden_channels", 64
+                        )
+                    ),
+                    iterative_max_log_update=float(
+                        self.attention_scale_config.get(
+                            "iterative_max_log_update", 0.15
+                        )
+                    ),
                 )
-                or None,
-                iterative_max_log_update=float(
-                    self.attention_scale_config.get(
-                        "iterative_max_log_update",
-                        0.15,
+            elif attention_estimator == "pseudo_huber_attention_v1":
+                self.attention_scale = AttentiveBIMScaleHead(
+                    **shared_arguments,
+                    huber_delta=float(
+                        self.attention_scale_config.get("huber_delta", 0.15)
+                    ),
+                    fallback_gate_bias=float(
+                        self.attention_scale_config.get("fallback_gate_bias", -1.5)
+                    ),
+                    bounded_log_scale_residual=float(
+                        self.attention_scale_config.get(
+                            "bounded_log_scale_residual", 0.0
+                        )
+                    ),
+                    residual_hidden_channels=int(
+                        self.attention_scale_config.get("residual_hidden_channels", 32)
+                    ),
+                    iterative_updates=int(
+                        self.attention_scale_config.get("iterative_updates", 0)
+                    ),
+                    iterative_hidden_channels=int(
+                        self.attention_scale_config.get(
+                            "iterative_hidden_channels", 32
+                        )
+                    ),
+                    iterative_initial_log_scale=float(
+                        self.attention_scale_config.get(
+                            "iterative_initial_log_scale",
+                            0.0,
+                        )
+                    ),
+                    iterative_damping=list(
+                        self.attention_scale_config.get("iterative_damping", [])
                     )
-                ),
-            )
+                    or None,
+                    iterative_max_log_update=float(
+                        self.attention_scale_config.get(
+                            "iterative_max_log_update",
+                            0.15,
+                        )
+                    ),
+                    iterative_refresh_attention=bool(
+                        self.attention_scale_config.get(
+                            "iterative_refresh_attention",
+                            True,
+                        )
+                    ),
+                    use_fallback_gate=bool(
+                        self.attention_scale_config.get("use_fallback_gate", True)
+                    ),
+                )
+            else:
+                raise ValueError(
+                    "Unknown model.attention_scale.estimator "
+                    f"{attention_estimator!r}"
+                )
         self.attention_scale_equivariance_probability = float(
             self.attention_scale_config.get("equivariance_probability", 0.0)
         )
@@ -1025,14 +1081,19 @@ class BIMPriorDA3(nn.Module):
                         "attention_iteration_fallback_gates": attention_scale_output[
                             "iteration_fallback_gates"
                         ],
-                        "attention_iteration_step_sizes": attention_scale_output[
-                            "iteration_step_sizes"
-                        ],
                         "attention_iteration_normalized_entropy": attention_scale_output[
                             "iteration_normalized_attention_entropy"
                         ],
                     }
                 )
+                if "iteration_step_sizes" in attention_scale_output:
+                    output["attention_iteration_step_sizes"] = attention_scale_output[
+                        "iteration_step_sizes"
+                    ]
+                if "iteration_log_scale_updates" in attention_scale_output:
+                    output["attention_iteration_log_scale_updates"] = (
+                        attention_scale_output["iteration_log_scale_updates"]
+                    )
             spatial_residual = low_residual + detail_residual
             output["spatial_log_residual"] = spatial_residual
             if (

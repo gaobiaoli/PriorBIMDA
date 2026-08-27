@@ -13,7 +13,7 @@ import torch
 from torch.utils.data import DataLoader, Subset, WeightedRandomSampler
 
 from bim_priorda3.baselines import ROBUST_LOG_CAP_SCALE_ESTIMATOR
-from bim_priorda3.losses import BIMPriorLoss
+from bim_priorda3.losses import BIMPriorLoss, absrel_optimal_log_scale
 from bim_priorda3.metrics import depth_metrics
 
 
@@ -226,6 +226,9 @@ def validate(
     refined_frame_abs_rel: list[float] = []
     anchor_frame_abs_rel: list[float] = []
     residual_rms: list[float] = []
+    iteration_log_scale_predictions: list[torch.Tensor] = []
+    iteration_oracle_log_scales: list[torch.Tensor] = []
+    iteration_oracle_supported: list[torch.Tensor] = []
     robust_scale_enabled = uses_robust_scale_estimator(model)
     live_direct_output_key = "live_robust_bim_direct" if robust_scale_enabled else "live_bim_direct"
     model_output_max_depth = float(
@@ -242,7 +245,8 @@ def validate(
         batch["request_live_bim_direct"] = True
         with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=amp):
             output = model(batch)
-            loss = criterion(output, batch)["total"]
+            loss_output = criterion(output, batch)
+            loss = loss_output["total"]
         batch_uses_live_da3 = bool(output.get("uses_live_da3", False))
         if uses_live_da3 is None:
             uses_live_da3 = batch_uses_live_da3
@@ -289,6 +293,28 @@ def validate(
         anchor_predictions.append(batch["anchor_depth"].cpu())
         if "attention_scale" in output:
             learned_scale_predictions.append(output["scaled_depth"].cpu())
+            iteration_prediction = output.get("attention_iteration_log_scales")
+            if iteration_prediction is not None:
+                if iteration_prediction.ndim != 4 or iteration_prediction.shape[-2:] != (
+                    1,
+                    1,
+                ):
+                    raise ValueError(
+                        "Validation iterative log scales must have shape [B,T,1,1]"
+                    )
+                oracle_log_scale, oracle_supported = absrel_optimal_log_scale(
+                    output["base_depth"],
+                    batch["gt_depth"],
+                    batch["gt_valid"],
+                    min_support=criterion.attention_scale_oracle_min_support,
+                )
+                iteration_log_scale_predictions.append(
+                    iteration_prediction.detach().flatten(2).mean(dim=-1).cpu()
+                )
+                iteration_oracle_log_scales.append(
+                    oracle_log_scale.detach().flatten(1).mean(dim=-1).cpu()
+                )
+                iteration_oracle_supported.append(oracle_supported.detach().cpu())
         if batch_uses_live_da3:
             live_da3_predictions.append(output["base_depth"].cpu())
             live_scale_predictions.append(output["scaled_depth"].cpu())
@@ -419,6 +445,66 @@ def validate(
                 "learned_scale_minus_universal_scale_abs_rel": (
                     learned_scale["abs_rel"] - scaled["abs_rel"]
                 ),
+            }
+        )
+    if iteration_log_scale_predictions:
+        iteration_prediction = torch.cat(iteration_log_scale_predictions).float()
+        oracle_log_scale = torch.cat(iteration_oracle_log_scales).float()
+        oracle_supported = torch.cat(iteration_oracle_supported).bool()
+        if not bool(oracle_supported.any()):
+            raise RuntimeError("Iterative scale validation has no oracle-supported frames")
+        prediction = iteration_prediction[oracle_supported]
+        oracle = oracle_log_scale[oracle_supported]
+        previous_prediction = torch.zeros_like(oracle)
+        previous_update: torch.Tensor | None = None
+        for iteration_index in range(prediction.shape[1]):
+            current_prediction = prediction[:, iteration_index]
+            error = current_prediction - oracle
+            previous_error = previous_prediction - oracle
+            update = current_prediction - previous_prediction
+            prefix = f"attention_iteration_{iteration_index + 1}"
+            metrics.update(
+                {
+                    f"{prefix}_log_scale_mae": float(error.abs().mean()),
+                    f"{prefix}_log_scale_rmse": float(error.square().mean().sqrt()),
+                    f"{prefix}_log_scale_bias": float(error.mean()),
+                    f"{prefix}_scale_relative_error": float(
+                        (error.exp() - 1.0).abs().mean()
+                    ),
+                    f"{prefix}_prediction_mean": float(current_prediction.mean()),
+                    f"{prefix}_prediction_std": float(
+                        current_prediction.std(unbiased=False)
+                    ),
+                    f"{prefix}_update_abs_mean": float(update.abs().mean()),
+                    f"{prefix}_improved_rate": float(
+                        (error.abs() < previous_error.abs()).float().mean()
+                    ),
+                    f"{prefix}_regressed_rate": float(
+                        (error.abs() > previous_error.abs()).float().mean()
+                    ),
+                    f"{prefix}_overshoot_rate": float(
+                        ((error * previous_error) < 0).float().mean()
+                    ),
+                    f"{prefix}_oscillation_rate": (
+                        float(((update * previous_update) < 0).float().mean())
+                        if previous_update is not None
+                        else 0.0
+                    ),
+                }
+            )
+            previous_prediction = current_prediction
+            previous_update = update
+        metrics.update(
+            {
+                "attention_oracle_supported_frames": int(oracle_supported.sum()),
+                "attention_oracle_log_scale_mean": float(oracle.mean()),
+                "attention_oracle_log_scale_std": float(oracle.std(unbiased=False)),
+                "attention_final_log_scale_mae": metrics[
+                    f"attention_iteration_{prediction.shape[1]}_log_scale_mae"
+                ],
+                "attention_final_scale_relative_error": metrics[
+                    f"attention_iteration_{prediction.shape[1]}_scale_relative_error"
+                ],
             }
         )
     if robust_scale_enabled:
