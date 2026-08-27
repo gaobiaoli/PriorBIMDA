@@ -81,7 +81,6 @@ def test_three_round_iterative_attention_starts_at_one_and_shares_reliability() 
     valid = torch.ones_like(log_ratio)
     valid[1] = 0
     deterministic_fallback = torch.log(torch.tensor([1.5, 1.5])).view(2, 1, 1, 1)
-
     output = head(features, log_ratio, valid, deterministic_fallback)
 
     assert output["iteration_log_scales"].shape == (2, 3, 1, 1)
@@ -122,7 +121,6 @@ def test_full_regression_predicts_shared_bounded_residual_updates_without_dampin
     log_ratio = torch.full((2, 1, 16, 16), torch.log(torch.tensor(2.0)))
     valid = torch.ones_like(log_ratio)
     valid[1] = 0
-    deterministic_fallback = torch.log(torch.tensor([1.5, 1.5])).view(2, 1, 1, 1)
 
     # Saturating the shared neural output makes every direct residual update
     # exactly +Delta_max. No alpha/step-size multiplier may attenuate it.
@@ -138,7 +136,7 @@ def test_full_regression_predicts_shared_bounded_residual_updates_without_dampin
         calls += 1
 
     hook = head.shared_delta_head.register_forward_hook(count_calls)
-    output = head(features, log_ratio, valid, deterministic_fallback)
+    output = head(features, log_ratio, valid)
     hook.remove()
 
     expected_centers = torch.tensor([0.15, 0.30, 0.45])
@@ -160,6 +158,10 @@ def test_full_regression_predicts_shared_bounded_residual_updates_without_dampin
     )
     # Hard no-support fallback is raw DA3, never deterministic BIM direct.
     assert torch.equal(output["scale"][1], torch.ones_like(output["scale"][1]))
+    assert "fallback_log_scale" not in output
+    assert "deterministic_fallback_log_scale" not in output
+    assert "fallback_gate" not in output
+    assert "iteration_fallback_gates" not in output
     parameter_names = {name for name, _ in head.named_parameters()}
     assert not any(
         "step" in name or "damping" in name or "huber" in name
@@ -182,6 +184,7 @@ def test_full_regression_config_is_three_epoch_scale_only_and_gt_supervised() ->
     model = BIMPriorDA3(cfg)
 
     assert isinstance(model.attention_scale, FullRegressionIterativeScaleHead)
+    assert BIMPriorLoss(cfg).disable_degradation_anchor_access
     original = snapshot_parameter_trainability(model)
     stages = resolve_scratch_stage_epochs(
         cfg,
@@ -212,12 +215,19 @@ def test_full_regression_config_is_three_epoch_scale_only_and_gt_supervised() ->
     batch = _candidate_batch(size=32)
     batch["da3_feature_mid"] = torch.randn(2, 6, 5, 5)
     batch["da3_feature_deep"] = torch.randn(2, 6, 5, 5)
-    output = model(batch)
-    losses = BIMPriorLoss(cfg)(output, batch)
+    raw_only_batch = dict(batch)
+    raw_only_batch.pop("scaled_depth")
+    raw_only_batch.pop("anchor_depth")
+    output = model(raw_only_batch)
+    losses = BIMPriorLoss(cfg)(output, raw_only_batch)
 
     assert output["attention_iteration_log_scales"].shape == (2, 3, 1, 1)
     assert output["attention_iteration_log_scale_updates"].shape == (2, 3, 1, 1)
     assert "attention_iteration_step_sizes" not in output
+    assert "attention_fallback_log_scale" not in output
+    assert "attention_deterministic_fallback_log_scale" not in output
+    assert "attention_fallback_gate" not in output
+    assert "attention_iteration_fallback_gates" not in output
     assert losses["attention_scale_oracle"].item() >= 0
     for iteration in range(1, 4):
         assert f"attention_iteration_{iteration}_log_scale_mae" in losses
@@ -225,6 +235,17 @@ def test_full_regression_config_is_three_epoch_scale_only_and_gt_supervised() ->
         assert f"attention_iteration_{iteration}_oscillation_rate" in losses
     losses["total"].backward()
     assert model.attention_scale.shared_delta_head[-1].weight.grad is not None
+
+    # Cached deterministic robust scale and BIM-direct anchor are not scale
+    # estimator inputs. Arbitrarily corrupting both must leave c1/c2/c3 exact.
+    model.eval()
+    with torch.no_grad():
+        reference = model(raw_only_batch)["attention_iteration_log_scales"]
+        restored_batch = dict(raw_only_batch)
+        restored_batch["scaled_depth"] = batch["scaled_depth"] * 19.0
+        restored_batch["anchor_depth"] = batch["anchor_depth"] * 23.0
+        with_legacy_fields = model(restored_batch)["attention_iteration_log_scales"]
+    assert torch.equal(reference, with_legacy_fields)
 
 
 def test_static_zero_control_freezes_attention_and_disables_fallback_gate() -> None:

@@ -316,6 +316,9 @@ class BIMPriorLoss(nn.Module):
         self.attention_scale_oracle_min_support = int(
             cfg.loss.get("attention_scale_oracle_min_support", 100)
         )
+        self.disable_degradation_anchor_access = bool(
+            cfg.loss.get("disable_degradation_anchor_access", False)
+        )
         self.attention_scale_iteration_weights = tuple(
             float(value)
             for value in cfg.loss.get("attention_scale_iteration_weights", [])
@@ -405,6 +408,7 @@ class BIMPriorLoss(nn.Module):
         log_prediction = torch.log(output["depth"].clamp_min(1e-3))
         uses_live_da3 = bool(output.get("uses_live_da3", False))
         scaled_depth = output["scaled_depth"]
+        degradation_enabled = not self.disable_degradation_anchor_access
         residual_anchor_depth = output.get(
             "refinement_anchor_depth",
             scaled_depth,
@@ -416,22 +420,25 @@ class BIMPriorLoss(nn.Module):
                 f"{tuple(scaled_depth.shape)}"
             )
         log_residual_anchor = torch.log(residual_anchor_depth.clamp_min(1e-3))
-        if uses_live_da3:
-            live_direct_key = (
-                "live_robust_bim_direct" if self.robust_scale_enabled else "live_bim_direct"
-            )
-            if live_direct_key not in output:
-                raise KeyError(
-                    f"E2E loss requires output[{live_direct_key!r}] for the "
-                    "configured degradation anchor"
+        log_anchor: torch.Tensor | None = None
+        if degradation_enabled:
+            if uses_live_da3:
+                live_direct_key = (
+                    "live_robust_bim_direct"
+                    if self.robust_scale_enabled
+                    else "live_bim_direct"
                 )
-            degradation_anchor = output[live_direct_key]
-        else:
-            degradation_anchor = batch["anchor_depth"]
-        log_anchor = torch.log(degradation_anchor.clamp_min(1e-3))
+                if live_direct_key not in output:
+                    raise KeyError(
+                        f"E2E loss requires output[{live_direct_key!r}] for the "
+                        "configured degradation anchor"
+                    )
+                degradation_anchor = output[live_direct_key]
+            else:
+                degradation_anchor = batch["anchor_depth"]
+            log_anchor = torch.log(degradation_anchor.clamp_min(1e-3))
         log_error = log_prediction - log_target
         prediction_error = log_error.abs()
-        anchor_error = (log_anchor - log_target).abs()
 
         depth_loss = 0.5 * _masked_mean(
             prediction_error,
@@ -766,12 +773,19 @@ class BIMPriorLoss(nn.Module):
                 valid,
                 pixel_weight,
             )
-            anchor_frame_error = _per_sample_masked_mean_vector(
-                anchor_error,
-                valid,
-                pixel_weight,
-            )
-            degradation_loss = functional.relu(prediction_frame_error - anchor_frame_error).mean()
+            if degradation_enabled:
+                assert log_anchor is not None
+                anchor_error = (log_anchor - log_target).abs()
+                anchor_frame_error = _per_sample_masked_mean_vector(
+                    anchor_error,
+                    valid,
+                    pixel_weight,
+                )
+                degradation_loss = functional.relu(
+                    prediction_frame_error - anchor_frame_error
+                ).mean()
+            else:
+                degradation_loss = zero
         else:
             uncertainty_loss = zero
             trust_loss = zero

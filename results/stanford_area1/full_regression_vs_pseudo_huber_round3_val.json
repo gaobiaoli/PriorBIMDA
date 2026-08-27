@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "split": "val",
+  "candidate_summary": "results/stanford_area1/full_regression_scale_3round_3epoch_no_deterministic_input_val/summary.json",
+  "candidate_summary_sha256": "052b50addf0730d4605f89490673aa93546565c07f81b2e8027caf01e8dd48ce",
+  "candidate_method": "iterative_scale_round_3",
+  "reference_summary": "results/stanford_area1/iterative_scale_3round_full_depth_metric_da3_val/summary.json",
+  "reference_summary_sha256": "916a333e1d769b109ce0ea7ddda7cd4ed17277ffc37f9ff620759fe91abbe37e",
+  "reference_method": "iterative_scale_round_3",
+  "sample_count": 1673,
+  "rooms": [
+    "hallway_2",
+    "hallway_5",
+    "office_14",
+    "office_24",
+    "office_28",
+    "office_31",
+    "office_6"
+  ],
+  "bootstrap_repetitions": 10000,
+  "bootstrap_seed": 42,
+  "comparisons": {
+    "all": {
+      "candidate_abs_rel": 0.07093965172602375,
+      "reference_abs_rel": 0.06985334264551327,
+      "difference": 0.0010863090805104808,
+      "relative_change_fraction": 0.015551282721332438,
+      "pixel_count": 422186615,
+      "paired_room_bootstrap": {
+        "difference_definition": "candidate - reference (negative is better)",
+        "rooms": 7,
+        "mean_difference": 0.00011826994075489186,
+        "median_difference": 0.0013761923088791705,
+        "candidate_better_room_fraction": 0.2857142857142857,
+        "bootstrap_repetitions": 10000,
+        "seed": 42,
+        "confidence_interval_95": [
+          -0.002961093465061367,
+          0.0026833804265000015
+        ]
+      }
+    },
+    "bim_consistent": {
+      "candidate_abs_rel": 0.0458166993577881,
+      "reference_abs_rel": 0.043446079592750396,
+      "difference": 0.0023706197650377042,
+      "relative_change_fraction": 0.054564641672140146,
+      "pixel_count": 235819713,
+      "paired_room_bootstrap": {
+        "difference_definition": "candidate - reference (negative is better)",
+        "rooms": 7,
+        "mean_difference": 0.0007487025888575341,
+        "median_difference": 0.002446402729339485,
+        "candidate_better_room_fraction": 0.2857142857142857,
+        "bootstrap_repetitions": 10000,
+        "seed": 42,
+        "confidence_interval_95": [
+          -0.00317599166719314,
+          0.004220402318537596
+        ]
+      }
+    },
+    "bim_foreground_conflict": {
+      "candidate_abs_rel": 0.10556180375740916,
+      "reference_abs_rel": 0.10678912212156186,
+      "difference": -0.0012273183641526991,
+      "relative_change_fraction": -0.011492915568269146,
+      "pixel_count": 95065540,
+      "paired_room_bootstrap": {
+        "difference_definition": "candidate - reference (negative is better)",
+        "rooms": 7,
+        "mean_difference": -0.0017889683740790563,
+        "median_difference": -0.0021510195092417916,
+        "candidate_better_room_fraction": 0.5714285714285714,
+        "bootstrap_repetitions": 10000,
+        "seed": 42,
+        "confidence_interval_95": [
+          -0.004884420379390382,
+          0.0012487856948632376
+        ]
+      }
+    },
+    "bim_no_hit": {
+      "candidate_abs_rel": 0.07268084782680895,
+      "reference_abs_rel": 0.07923051849913157,
+      "difference": -0.006549670672322622,
+      "relative_change_fraction": -0.08266600795240808,
+      "pixel_count": 854645,
+      "paired_room_bootstrap": {
+        "difference_definition": "candidate - reference (negative is better)",
+        "rooms": 5,
+        "mean_difference": -0.00314301704735393,
+        "median_difference": 0.0001923897121143131,
+        "candidate_better_room_fraction": 0.4,
+        "bootstrap_repetitions": 10000,
+        "seed": 42,
+        "confidence_interval_95": [
+          -0.008657196164919912,
+          0.0008783886358215059
+        ]
+      }
+    },
+    "furniture": {
+      "candidate_abs_rel": 0.08965464369276124,
+      "reference_abs_rel": 0.08923023437868284,
+      "difference": 0.00042440931407840277,
+      "relative_change_fraction": 0.004756339788117847,
+      "pixel_count": 41794418,
+      "paired_room_bootstrap": {
+        "difference_definition": "candidate - reference (negative is better)",
+        "rooms": 7,
+        "mean_difference": 0.001917774332282402,
+        "median_difference": 0.0016566795685523938,
+        "candidate_better_room_fraction": 0.2857142857142857,
+        "bootstrap_repetitions": 10000,
+        "seed": 42,
+        "confidence_interval_95": [
+          -0.0008991055127745256,
+          0.004775608774351096
+        ]
+      }
+    },
+    "non_structural": {
+      "candidate_abs_rel": 0.09222945155357465,
+      "reference_abs_rel": 0.09225719028176319,
+      "difference": -2.773872818853662e-05,
+      "relative_change_fraction": -0.00030066738542355864,
+      "pixel_count": 133045337,
+      "paired_room_bootstrap": {
+        "difference_definition": "candidate - reference (negative is better)",
+        "rooms": 7,
+        "mean_difference": -0.0012233622221123877,
+        "median_difference": -0.00036423884656906075,
+        "candidate_better_room_fraction": 0.5714285714285714,
+        "bootstrap_repetitions": 10000,
+        "seed": 42,
+        "confidence_interval_95": [
+          -0.005110751603724339,
+          0.002169983529370197
+        ]
+      }
+    }
+  }
+}

@@ -5,8 +5,8 @@ extends: stanford_area1_attentive_scale_da3_features_hit_only_full_depth_metric_
 # fallback gate participates in the predicted scale.
 
 experiment:
-  name: stanford_area1_full_regression_scale_3round_3epoch_full_depth_metric_da3
-  output_dir: outputs/stanford_area1_full_regression_scale_3round_3epoch_full_depth_metric_da3
+  name: stanford_area1_full_regression_scale_3round_3epoch_no_deterministic_input
+  output_dir: outputs/stanford_area1_full_regression_scale_3round_3epoch_no_deterministic_input
 
 model:
   attention_scale:
@@ -23,9 +23,17 @@ model:
 loss:
   attention_scale_iteration_weights: [0.25, 0.50, 1.00]
   attention_scale_residual: 0.0
+  # The inherited degradation term compares against the cached BIM/robust
+  # anchor. It is disabled so that deterministic correction affects neither
+  # gradients nor selection for this raw-DA3-initialized experiment.
+  degradation: 0.0
+  disable_degradation_anchor_access: true
 
 train:
   epochs: 3
   scale_only_experiment: true
   early_stopping_patience: 3
   log_every: 200
+  acceptance:
+    enabled: false
+    require_learned_scale_better_than_universal: false

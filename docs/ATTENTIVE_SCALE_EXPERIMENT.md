@@ -1578,3 +1578,116 @@ deterministic BIM fallback is exported only as a diagnostic; the operational
 fallback is already `z=0`. The legacy static path retains BIM-direct fallback
 only to reproduce old checkpoints and must not be used as the template for new
 models.
+
+## Full-regression iterative scale control (3-epoch screen)
+
+This independent control replaces the analytic pseudo-Huber/M-estimator center
+with a neural scalar regression head. It is implemented in
+`src/bim_priorda3/models/full_regression_scale.py` and selected by
+`model.attention_scale.estimator: full_regression_iterative_v1`. The existing
+pseudo-Huber class and checkpoints are unchanged.
+
+Starting from `c_0=0`, one shared updater is recurrently reused three times:
+
+\[
+\hat\Delta c_t=g_\theta(F,\log(D_{BIM}/D_{DA3})-c_t,c_t),\qquad
+\Delta c_t=0.15\tanh(\hat\Delta c_t),\qquad
+c_{t+1}=c_t+\Delta c_t.
+\]
+
+The network attentively pools learned token features before the scalar MLP; it
+never averages BIM/DA3 ratio values to obtain scale. There are no Huber
+weights, IRLS steps, weighted-ratio means, damping coefficients, step-size
+multipliers, absolute-scale predictions, or learned fallback gates. Frames
+without sufficient measured BIM/DA3 support receive zero updates and therefore
+remain at raw DA3 scale one. All three outputs are supervised against the
+train-only AbsRel-optimal oracle log scale with weights `0.25/0.50/1.00`.
+
+An initial incomplete run exposed that the shared legacy feature builder still
+contained disagreement against cached deterministic robust scale. That run was
+stopped before completing epoch 1 and is invalid. The corrected full-regression
+path has a separate input builder whose final channels are raw
+`log(BIM/DA3)` disagreement and magnitude. Its forward and loss work after
+removing both `scaled_depth` and `anchor_depth` from the batch; restoring and
+arbitrarily changing those fields leaves `c_1/c_2/c_3` bit-identical. The
+inherited degradation-anchor loss and robust-scale acceptance gate are also
+disabled. Deterministic methods remain evaluation-only table comparators and
+cannot affect prediction, gradients, or checkpoint selection.
+
+The screening run keeps frozen focal-corrected DA3 and its layer-11/23 feature
+cache, RGB/BIM geometry inputs, room split, official-all-valid GT, scale
+augmentation/equivariance, optimizer, learning rates, batch 8, gradient
+accumulation 2, seed 42, and all other scale losses. Only the scale family is
+trainable for exactly three epochs: 828,109 trainable scale parameters,
+4,285,379 total task parameters, and 11.07 GiB peak allocated GPU memory. No
+refiner or joint stage is entered.
+
+### Iteration behavior during validation
+
+| Epoch | Final scale AbsRel | c1 log MAE | c2 log MAE | c3 log MAE | c3 regressed frames | c3 overshoot |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0.077666 | 0.039871 | **0.032791** | 0.038290 | 64.14% | 20.92% |
+| 2 | 0.071696 | 0.040984 | 0.030742 | **0.027700** | 45.67% | 20.62% |
+| 3 | **0.070939** | 0.039513 | 0.028086 | **0.026208** | 47.16% | 27.02% |
+
+At epoch 1 the third shared update overshoots. By epochs 2--3 its aggregate
+error improves beyond round 2, but almost half of frames still regress and
+round-3 sign crossing increases. Update-direction oscillation is exactly zero:
+the failure mode is repeated same-direction over-correction, not alternating
+updates. At epoch 3 the final scalar scale-relative error is `0.026352`.
+
+On the identical 1,673-frame validation benchmark (422,186,615 official-valid
+pixels), the formal per-round depth comparison is:
+
+| Estimator | Raw DA3 | Round 1 | Round 2 | Round 3 |
+|---|---:|---:|---:|---:|
+| Pseudo-Huber iterative baseline | 0.090705 | **0.076070** | **0.070925** | **0.069853** |
+| Full neural regression, 3 epochs | 0.090705 | 0.079099 | 0.071793 | 0.070940 |
+
+Full regression improves raw DA3 by 21.79% but does **not** exceed the current
+pseudo-Huber scale estimator: round 3 is worse by `0.001086` AbsRel, or 1.56%
+relative. A 10,000-resample paired-room bootstrap for full-regression minus
+pseudo-Huber gives a mean room difference of `+0.000118` and 95% CI
+`[-0.002961,+0.002683]`; with only seven validation rooms the between-estimator
+difference is inconclusive even though the registered pixel-micro score favors
+pseudo-Huber. Full regression is better in two of seven rooms. Round 3 also
+slightly regresses versus round 2 on furniture
+(`0.088194 -> 0.089655`), BIM-foreground conflict
+(`0.105433 -> 0.105562`), and all non-structural pixels
+(`0.092017 -> 0.092229`). This is a negative headline result with a useful
+diagnosis: unconstrained shared residual regression learns global scale, but
+needs a learned stopping/update-confidence mechanism or training objective that
+penalizes per-frame round regression before it is a credible replacement for
+robust aggregation. Such a change would be a new ablation; it is not added to
+this pre-registered three-epoch control.
+
+Reproduction:
+
+```bash
+.venv/bin/python scripts/model/train.py \
+  --config configs/stanford_area1_full_regression_scale_3round_3epoch_full_depth_metric_da3.yaml \
+  --device cuda
+
+.venv/bin/python scripts/model/evaluate_stanford_area1.py \
+  --config configs/stanford_area1_full_regression_scale_3round_3epoch_full_depth_metric_da3.yaml \
+  --checkpoint outputs/stanford_area1_full_regression_scale_3round_3epoch_no_deterministic_input/accepted.pt \
+  --split val --depth-support all-valid \
+  --output results/stanford_area1/full_regression_scale_3round_3epoch_no_deterministic_input_val \
+  --device cuda --batch-size 8 --inference-seed 42 \
+  --bootstrap-repetitions 10000 --bootstrap-seed 42 \
+  --allow-unverified-robust-comparator
+```
+
+Config/model/checkpoint/history/run-state SHA256 values are
+`12133b1dfe61755778c4bb6de048af6aee395c619032f2ccb4f711ef43484817`,
+`2882c4d3b65dceaddf3f6870b7751e875dce41864303f7377ec16494ed781155`,
+`0aaec4e5108f11711b4139710fe6fd9e7cc22ab3652ec72fbd3dbf735a623ec5`,
+`ebf3e6bd12a520c75e5ac3614a27b09eeba9c4bf6d4d1338d78139568cb4877c`,
+and `354cf00f760ce352e8e7f20248e83e1722c216a9d78fb151c6c745ada6569974`.
+Validation summary/per-frame CSV SHA256 values are
+`052b50addf0730d4605f89490673aa93546565c07f81b2e8027caf01e8dd48ce`
+and `32a056ba4ae8d763f159eda73d1cd46418bd30a24ac5c0d5a0b24d7a3e7971ba`.
+The paired round-3 comparison is
+`results/stanford_area1/full_regression_vs_pseudo_huber_round3_val.json`
+(SHA256
+`51740cf568d8d2618d725b30f46ab3b2f97ba23d8a56ec101cdbd22f534d9da9`).

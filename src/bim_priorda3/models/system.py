@@ -865,15 +865,73 @@ class BIMPriorDA3(nn.Module):
             )
         return features, log_ratio, ratio_valid.float(), fallback_log_scale
 
+    def _full_regression_scale_inputs(
+        self,
+        batch: dict[str, torch.Tensor],
+        base: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Build scale-regression inputs without any deterministic scale.
+
+        The final two spatial channels are measured BIM/raw-DA3 log-ratio
+        disagreement and its magnitude.  Neither the cached robust scale nor
+        BIM-direct/fallback depth is read by this path.
+        """
+
+        valid = batch["bim_valid"].clamp(0.0, 1.0)
+        bim = batch["bim_depth"]
+        log_base = safe_log(base)
+        ratio = bim / base.clamp_min(1e-6)
+        ratio_valid = (
+            (valid > 0)
+            & torch.isfinite(base)
+            & torch.isfinite(bim)
+            & torch.isfinite(ratio)
+            & (base > 0)
+            & (bim > 0)
+            & (ratio > self.da3_scale_ratio_min)
+            & (ratio < self.da3_scale_ratio_max)
+        )
+        log_ratio = torch.where(
+            ratio_valid,
+            ratio.clamp_min(1e-6).log(),
+            torch.zeros_like(ratio),
+        )
+        safe_bim = torch.where(valid > 0, bim, torch.ones_like(bim))
+        log_bim = safe_log(safe_bim)
+        raw_disagreement = (log_bim - log_base) * valid
+        rgb = batch["rgb"] if self.use_rgb_condition else torch.zeros_like(batch["rgb"])
+        features = torch.cat(
+            (
+                rgb,
+                log_base / 3.0,
+                batch["base_confidence"].clamp(0.0, 1.0),
+                (log_bim / 3.0) * valid,
+                valid,
+                batch["bim_normals"],
+                batch["bim_edge"].clamp(0.0, 1.0),
+                raw_disagreement.clamp(-1.0, 1.0),
+                raw_disagreement.abs().clamp(0.0, 1.0),
+            ),
+            dim=1,
+        )
+        if features.shape[1] != self.ATTENTION_SCALE_CHANNELS:
+            raise RuntimeError(
+                "Full-regression scale feature contract changed: "
+                f"expected {self.ATTENTION_SCALE_CHANNELS}, got {features.shape[1]}"
+            )
+        return features, log_ratio, ratio_valid.float()
+
     def _estimate_attention_scale(
         self,
         batch: dict[str, torch.Tensor],
         base: torch.Tensor,
-        deterministic_scaled: torch.Tensor,
     ) -> dict[str, torch.Tensor]:
         if self.attention_scale is None:
             raise RuntimeError("Attention scale estimation requested while disabled")
-        inputs = self._attention_scale_inputs(batch, base, deterministic_scaled)
+        if isinstance(self.attention_scale, FullRegressionIterativeScaleHead):
+            inputs = self._full_regression_scale_inputs(batch, base)
+        else:
+            inputs = self._attention_scale_inputs(batch, base, batch["scaled_depth"])
         return self.attention_scale(
             *inputs,
             da3_feature_mid=(
@@ -889,16 +947,15 @@ class BIMPriorDA3(nn.Module):
         batch: dict[str, torch.Tensor],
     ) -> dict[str, torch.Tensor]:
         base = batch["base_depth"]
-        deterministic_scaled = batch["scaled_depth"]
         attention_scale_output: dict[str, torch.Tensor] | None = None
         if self.attention_scale_enabled:
             attention_scale_output = self._estimate_attention_scale(
                 batch,
                 base,
-                deterministic_scaled,
             )
             scaled = base * attention_scale_output["scale"].to(dtype=base.dtype)
         else:
+            deterministic_scaled = batch["scaled_depth"]
             scaled = deterministic_scaled
         bim = batch["bim_depth"]
         valid = batch["bim_valid"].clamp(0.0, 1.0)
@@ -1007,7 +1064,6 @@ class BIMPriorDA3(nn.Module):
             "base_confidence": batch["base_confidence"],
             "scaled_depth": scaled,
             "coarse_depth": scaled,
-            "deterministic_scaled_depth": deterministic_scaled,
             "refinement_anchor_depth": residual_anchor,
             "geometry_scale_channel": geometry_scale_channel,
             "geometry_scale_channel_semantics": (geometry_scale_channel_semantics),
@@ -1035,6 +1091,8 @@ class BIMPriorDA3(nn.Module):
             "residual_routing_scope": self.residual_routing_scope,
             "log_variance": prediction["log_variance"],
         }
+        if not isinstance(self.attention_scale, FullRegressionIterativeScaleHead):
+            output["deterministic_scaled_depth"] = batch["scaled_depth"]
         if attention_scale_output is not None:
             output.update(
                 {
@@ -1045,11 +1103,6 @@ class BIMPriorDA3(nn.Module):
                     "attention_bounded_log_scale_residual": attention_scale_output[
                         "bounded_log_scale_residual"
                     ],
-                    "attention_fallback_log_scale": attention_scale_output["fallback_log_scale"],
-                    "attention_deterministic_fallback_log_scale": attention_scale_output[
-                        "deterministic_fallback_log_scale"
-                    ],
-                    "attention_fallback_gate": attention_scale_output["fallback_gate"],
                     "attention_scale_pixel_support": attention_scale_output["pixel_support"],
                     "attention_scale_token_support": attention_scale_output["token_support"],
                     "attention_scale_head_log_scale": attention_scale_output["head_log_scale"],
@@ -1066,6 +1119,18 @@ class BIMPriorDA3(nn.Module):
                     ],
                 }
             )
+            if "fallback_log_scale" in attention_scale_output:
+                output["attention_fallback_log_scale"] = attention_scale_output[
+                    "fallback_log_scale"
+                ]
+            if "fallback_gate" in attention_scale_output:
+                output["attention_fallback_gate"] = attention_scale_output[
+                    "fallback_gate"
+                ]
+            if "deterministic_fallback_log_scale" in attention_scale_output:
+                output["attention_deterministic_fallback_log_scale"] = (
+                    attention_scale_output["deterministic_fallback_log_scale"]
+                )
             if "iteration_log_scales" in attention_scale_output:
                 output.update(
                     {
@@ -1078,14 +1143,15 @@ class BIMPriorDA3(nn.Module):
                         "attention_iteration_head_log_scales": attention_scale_output[
                             "iteration_head_log_scales"
                         ],
-                        "attention_iteration_fallback_gates": attention_scale_output[
-                            "iteration_fallback_gates"
-                        ],
                         "attention_iteration_normalized_entropy": attention_scale_output[
                             "iteration_normalized_attention_entropy"
                         ],
                     }
                 )
+                if "iteration_fallback_gates" in attention_scale_output:
+                    output["attention_iteration_fallback_gates"] = (
+                        attention_scale_output["iteration_fallback_gates"]
+                    )
                 if "iteration_step_sizes" in attention_scale_output:
                     output["attention_iteration_step_sizes"] = attention_scale_output[
                         "iteration_step_sizes"
@@ -1121,7 +1187,6 @@ class BIMPriorDA3(nn.Module):
                 perturbed = self._estimate_attention_scale(
                     batch,
                     base * factor,
-                    deterministic_scaled,
                 )
                 output["attention_scale_equivariance_error"] = (
                     perturbed["log_scale"] + log_factor - attention_scale_output["log_scale"]

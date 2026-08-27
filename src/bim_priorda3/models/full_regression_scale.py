@@ -141,7 +141,6 @@ class FullRegressionIterativeScaleHead(nn.Module):
         features: torch.Tensor,
         log_ratio: torch.Tensor,
         ratio_valid: torch.Tensor,
-        fallback_log_scale: torch.Tensor,
         da3_feature_mid: torch.Tensor | None = None,
         da3_feature_deep: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
@@ -153,12 +152,6 @@ class FullRegressionIterativeScaleHead(nn.Module):
             raise ValueError("full regression expects one log-ratio channel")
         if features.shape[0] != log_ratio.shape[0] or features.shape[-2:] != log_ratio.shape[-2:]:
             raise ValueError("feature and ratio spatial shapes differ")
-        expected_fallback_shape = (features.shape[0], 1, 1, 1)
-        if fallback_log_scale.shape != expected_fallback_shape:
-            raise ValueError(
-                "fallback_log_scale must have shape "
-                f"{expected_fallback_shape}; got {tuple(fallback_log_scale.shape)}"
-            )
 
         valid_pixels = (
             (ratio_valid > 0)
@@ -306,7 +299,6 @@ class FullRegressionIterativeScaleHead(nn.Module):
             align_corners=False,
         )
         zero = torch.zeros_like(center)
-        one = torch.ones_like(center)
         uniform_head_mixture = center.new_full(
             (batch_size, self.attention_heads),
             1.0 / self.attention_heads,
@@ -317,9 +309,6 @@ class FullRegressionIterativeScaleHead(nn.Module):
             "attentive_log_scale": center.view(-1, 1, 1, 1),
             "raw_attentive_log_scale": center.view(-1, 1, 1, 1),
             "bounded_log_scale_residual": zero.view(-1, 1, 1, 1),
-            "fallback_log_scale": zero.view(-1, 1, 1, 1),
-            "deterministic_fallback_log_scale": fallback_log_scale.float(),
-            "fallback_gate": one.view(-1, 1, 1, 1),
             "pixel_support": pixel_support,
             "token_support": token_support,
             "head_log_scale": center.expand(-1, self.attention_heads),
@@ -335,9 +324,6 @@ class FullRegressionIterativeScaleHead(nn.Module):
             "iteration_log_scale_updates": update_stack.unsqueeze(-1),
             "iteration_head_log_scales": iteration_stack.expand(
                 -1, -1, self.attention_heads
-            ),
-            "iteration_fallback_gates": one[:, None, :, None].expand(
-                -1, self.iterative_updates, -1, -1
             ),
             "iteration_normalized_attention_entropy": (
                 normalized_iteration_entropy.mean(dim=-1)
