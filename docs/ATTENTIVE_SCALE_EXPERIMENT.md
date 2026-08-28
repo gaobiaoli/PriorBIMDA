@@ -1790,3 +1790,152 @@ The controlled with/without-DA3 and rejected-candidate comparisons are
 `results/stanford_area1/full_regression_no_da3_features_vs_with_da3_round3_val.json`
 and
 `results/stanford_area1/full_regression_rgb_dinov2_vs_no_da3_features_round3_val.json`.
+
+## DA3-confidence removal control
+
+A second single-factor control starts from the restored full-regression model
+without DA3 latent features and removes only the spatial `base_confidence`
+channel. The joint scale input therefore changes from 13 to 12 channels; the
+three-round shared updater, data, seed, optimizer, loss, scale augmentation,
+three-epoch schedule and evaluation support stay unchanged. A contract test
+removes or arbitrarily corrupts `base_confidence` and verifies bit-identical
+scale inputs and ratio tensors for this configuration.
+
+Training completed all 1,314 optimizer steps without a skipped step. The
+epoch-3 validation scale AbsRel was `0.069990`; round-1/2/3 log-scale MAE was
+`0.041902 / 0.030771 / 0.024558`. The formal 1,673-frame validation result is:
+
+| Full-regression scale input | Round 1 AbsRel | Round 2 AbsRel | Round 3 AbsRel |
+|---|---:|---:|---:|
+| No DA3 latent, with DA3 confidence | 0.081131 | 0.074054 | 0.070756 |
+| No DA3 latent, no DA3 confidence | 0.080819 | 0.073414 | **0.069993** |
+
+Removing confidence improves round-3 AbsRel by `0.000763` (1.08% relative),
+is better in six of seven validation rooms, and has a paired-room bootstrap
+95% CI of `[-0.001339,-0.000238]`. The same pixel-micro direction appears on
+BIM-consistent (`0.045283 -> 0.044567`), furniture
+(`0.087629 -> 0.086658`), BIM-foreground-conflict
+(`0.107414 -> 0.106076`) and non-structural
+(`0.091226 -> 0.090516`) subsets. Only the overall and non-structural paired
+room CIs exclude zero. This indicates the cached gradient-based DA3 confidence
+is mildly harmful to this learned scale regressor rather than a useful
+reliability signal.
+
+The requested test evaluation was stopped after roughly 50/1,641 frames when
+the next extreme control was specified; this partial run is invalid and no test
+metric is reported. The validation summary and per-frame CSV SHA256 values are
+`b160d2aede5c92927a6f848a32ff86e5873776a39cdcf3b4912a440ec2431a64`
+and `8255fb8407482e623c900b369f7bbd9c6a8c1da23362d630217ee7acadd62022`.
+The checkpoint/history/run-state/config SHA256 values are
+`e342be31aae512cfe6999352d84379740824962a1faa4e068b349a864b6baffe`,
+`12130acd7a89678061de89757b98f6422bf6ec89b8b73898d36ccd92ec5328f5`,
+`e9e118c38aae4e870b797de007fa75772219d874f1e343073c56880101973e3d`
+and `4d2652ba3af28c0de2fe9cb38ab73004404190211af5459894ac1bb15bffbd96`.
+The paired comparison is
+`results/stanford_area1/full_regression_no_confidence_vs_confidence_round3_val.json`.
+
+## RGB+DA3-only unit-BIM extreme control
+
+The next control removes all measured/rendered BIM information from the
+learned prediction. The scale encoder receives only four spatial channels:
+RGB and `log(raw focal-corrected DA3 depth)`. Inside the recurrent updater,
+`D_BIM` is the fixed constant one, so the ratio feature is
+`log(1 / D_DA3)` and its validity depends only on finite positive DA3 depth and
+the unchanged ratio bounds. The estimator does not read BIM depth, hit mask,
+normal, edge, DA3 confidence or cached DA3 latent features. A contract test
+runs it with a minimal `{rgb, base_depth}` batch and verifies bit-identical
+three-round predictions after arbitrarily corrupting every BIM/confidence
+tensor. Refiner BIM conditioning, DA3 feature fusion and all residual outputs
+are neutralized, so final candidate depth is exactly scaled raw DA3.
+
+This remains a supervised scale experiment: train-only GT supplies the same
+oracle scale and final depth losses, but GT is not a forward input. The unit
+constant is not scene geometry; it gives the network a fixed metric reference
+against which DA3 depth is re-expressed and permits learning a dataset-level
+RGB/depth scale prior.
+
+All 1,314 optimizer steps completed without skips. The requested stopping point
+was the built-in epoch-3 validation; no formal evaluator, bootstrap or test run
+was started afterward.
+
+| Epoch | Validation AbsRel | c1 log MAE | c2 log MAE | c3 log MAE | c3 regressed frames |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 0.086495 | 0.047798 | **0.045625** | 0.049180 | 60.43% |
+| 2 | 0.085309 | 0.048210 | **0.045099** | 0.046705 | 54.57% |
+| 3 | **0.084219** | 0.048937 | 0.045563 | **0.045466** | 49.49% |
+
+Epoch 3 improves focal-corrected raw DA3 (`0.090705`) by only 7.15% relative.
+It is 20.33% worse than the otherwise closest no-confidence model with BIM
+inputs (`0.069990`). At epoch 3, round 3 improves log-scale MAE over round 2 by
+only `0.000096`, while almost half of frames regress. Thus RGB+DA3 can learn a
+weak room-distribution scale prior, but the substantial gain of the full model
+comes from actual BIM/DA3 correspondence rather than RGB/depth alone. The
+iterative design also lacks a reliable per-frame stopping cue without BIM
+evidence.
+
+The config/checkpoint/history/run-state SHA256 values are
+`83a475f04d4e43e4235ad3126a747489c6a39c62045ec5ff77cfbe631a8c507b`,
+`7f1dc1894a2e4356f8d487e614ad5b253b605589bf08f9bbf0a1c5d9bb121662`,
+`f21cf2510819963010ca4a93d7e5e7095e0a4d5df7169bd23ff426b268b7667a`
+and `629144c39ce1fd4e3cb5cc33e162ef81cba3c2239578c5dbc598daf4f578611a`.
+
+## BIM-normal and BIM-edge removal control
+
+This single-factor ablation returns to the real-BIM, no-DA3-latent,
+no-confidence configuration and removes only the three rendered BIM-normal
+channels and the one BIM-edge channel. The spatial scale encoder therefore
+changes from 12 to 8 channels. Its remaining inputs are RGB (3), log DA3 depth
+(1), masked log BIM depth (1), BIM hit/valid mask (1), signed BIM/DA3 log-ratio
+(1), and absolute log-ratio (1). Real BIM depth, the BIM hit mask and recurrent
+log-ratio/residual features remain active. The shared three-round full-
+regression updater, zero log-scale initialization, bounded update, training
+split, supervision, optimizer, seed and three-epoch schedule are unchanged.
+
+A contract test verifies both the expected `12 -> 8` channel change and
+bit-identical candidate inputs/predictions when omitted normal/edge tensors are
+removed or corrupted. Training completed all 1,314 optimizer steps without a
+skip. The built-in epoch-3 validation AbsRel was `0.069229`; round-1/2/3
+log-scale MAE was `0.040863 / 0.028636 / 0.022741`.
+
+Formal all-valid results are:
+
+| Split / method | Frames | AbsRel | RMSE | MAE | delta1 |
+|---|---:|---:|---:|---:|---:|
+| Validation raw DA3 | 1,673 | 0.090705 | 0.654622 | 0.266045 | 0.926403 |
+| Validation robust BIM direct | 1,673 | 0.118152 | 0.837841 | 0.316482 | 0.849215 |
+| Validation round 1 | 1,673 | 0.080077 | 0.644309 | 0.237712 | 0.933607 |
+| Validation round 2 | 1,673 | 0.072259 | 0.644123 | 0.219794 | 0.937497 |
+| Validation round 3 | 1,673 | **0.069230** | 0.653162 | 0.218655 | 0.937842 |
+| Test raw DA3 | 1,641 | 0.085453 | 0.435242 | 0.177124 | 0.938046 |
+| Test robust BIM direct | 1,641 | 0.110724 | 0.557609 | 0.217921 | 0.879482 |
+| Test round 1 | 1,641 | 0.077186 | 0.426562 | 0.159806 | 0.944358 |
+| Test round 2 | 1,641 | 0.070724 | 0.421158 | 0.146515 | 0.944794 |
+| Test round 3 | 1,641 | **0.067578** | **0.419013** | **0.140437** | 0.943483 |
+
+On validation, removing normal/edge improves round-3 pixel-micro AbsRel from
+`0.069993` to `0.069230` (`-0.000763`, 1.09% relative) versus the otherwise
+identical no-confidence model. Five of seven rooms improve, but the paired-room
+bootstrap 95% CI is `[-0.002273, 0.000568]`, so this is not a statistically
+stable room-level improvement. BIM-consistent pixels improve from `0.044567`
+to `0.043040` (3.43%), while furniture pixels regress from `0.086658` to
+`0.087176` (0.60%). This suggests rendered normals/edges are not necessary for
+the current global scale task and may add alignment noise, but the evidence is
+not strong enough to claim a general gain. The frozen candidate test result is
+reported as an absolute generalization check; the matching reference test was
+previously stopped and therefore no strict test-set ablation difference is
+claimed.
+
+The config/checkpoint/history/run-state SHA256 values are
+`904c20b87adcaaa5bb7d0ddaac6415ba7ccb0655a9f57a697973a481730e9e93`,
+`fb1ff60db54c02df7c6d869e8bc5d33ed269eb1ee64a49760d2c6d4d6aa275fc`,
+`292986608f5f4eaa8b6ecbf8c41eaed42078f7c6f9f59cfdd1ca1d6976f8f397`
+and `7c551d0a6452fe655ef8ce12f896089f7af3a08ecb83c7fd5d35532596d490d2`.
+The validation summary/per-frame SHA256 values are
+`fd3b6f649d30ea3197ae48e33e14bb7cf9f39eb524e762a72341f996b08a1ca6`
+and `2f7715b86a00721e7df3d7d2a3df086929d7ea0da242ee9af63bcdd51adcc2fb`;
+the test values are
+`18b9fb371cd30ed4df8fb4a7e6f2e78980095ff08050e6310d6cdeea78a0999f`
+and `167b4149fa200344cd89841bb065f4312cfc673460466eb410e873c5a0ba1116`.
+The paired validation comparison is
+`results/stanford_area1/full_regression_no_bim_geometry_vs_with_bim_geometry_round3_val.json`
+(SHA256 `d2bc6f7fd6a033b6202305ec399c81816512478237b4ce74ed9339c82936dad2`).

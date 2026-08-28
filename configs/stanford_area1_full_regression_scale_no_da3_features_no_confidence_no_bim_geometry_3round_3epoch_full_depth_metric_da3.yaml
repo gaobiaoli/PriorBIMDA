@@ -1,0 +1,15 @@
+extends: stanford_area1_full_regression_scale_no_da3_features_no_confidence_3round_3epoch_full_depth_metric_da3.yaml
+
+# Single-factor ablation of BIM surface geometry. Relative to the 12-channel
+# real-BIM/no-confidence control, only the three normal channels and one edge
+# channel are removed. BIM depth, hit mask, BIM/DA3 disagreement and recurrent
+# measured log-ratio remain unchanged.
+
+experiment:
+  name: stanford_area1_full_regression_scale_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch
+  output_dir: outputs/stanford_area1_full_regression_scale_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch
+
+model:
+  attention_scale:
+    use_bim_normals: false
+    use_bim_edge: false

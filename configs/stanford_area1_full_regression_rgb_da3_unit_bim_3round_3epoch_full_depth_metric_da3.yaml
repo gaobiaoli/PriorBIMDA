@@ -1,0 +1,23 @@
+extends: stanford_area1_full_regression_scale_no_da3_features_no_confidence_3round_3epoch_full_depth_metric_da3.yaml
+
+# Extreme no-BIM control. The trainable scale estimator sees only RGB and raw
+# focal-corrected DA3 depth. Its recurrent ratio channel uses D_BIM == 1, so
+# log-ratio == log(1 / D_DA3) and carries no measured/rendered BIM information.
+# Refiner outputs are neutralized to keep final depth equal to scaled DA3.
+
+experiment:
+  name: stanford_area1_full_regression_rgb_da3_unit_bim_3round_3epoch
+  output_dir: outputs/stanford_area1_full_regression_rgb_da3_unit_bim_3round_3epoch
+
+model:
+  use_bim_condition: false
+  use_frame_residual: false
+  use_low_residual: false
+  max_detail_log_residual: 0.0
+  da3_feature_fusion:
+    enabled: false
+    scale_enabled: false
+    refiner_enabled: false
+  attention_scale:
+    input_mode: rgb_da3_unit_bim
+    use_base_confidence: false

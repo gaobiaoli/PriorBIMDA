@@ -38,6 +38,8 @@ class BIMPriorDA3(nn.Module):
     GEOMETRY_CHANNELS = 4
     BIM_CHANNELS = 8
     ATTENTION_SCALE_CHANNELS = 13
+    FULL_REGRESSION_INPUT_JOINT = "joint"
+    FULL_REGRESSION_INPUT_RGB_DA3_UNIT_BIM = "rgb_da3_unit_bim"
     RESIDUAL_ANCHOR_SCALED = "scaled_depth"
     RESIDUAL_ROUTING_FRAME_AND_LOW = "frame_and_low"
     RESIDUAL_ROUTING_FRAME_ONLY = "frame_only"
@@ -184,6 +186,11 @@ class BIMPriorDA3(nn.Module):
         self.da3_scale_min_samples = int(self.scale_estimator_config["min_samples"])
         self.attention_scale_config = Config(model.get("attention_scale", {}))
         self.attention_scale_enabled = bool(self.attention_scale_config.get("enabled", False))
+        self.attention_scale_use_base_confidence = True
+        self.attention_scale_use_bim_normals = True
+        self.attention_scale_use_bim_edge = True
+        self.full_regression_input_mode = self.FULL_REGRESSION_INPUT_JOINT
+        self.attention_scale_input_channels = self.ATTENTION_SCALE_CHANNELS
         if self.attention_scale_enabled and self.e2e_da3_enabled:
             raise ValueError(
                 "The attentive-scale candidate currently requires frozen/cached DA3; "
@@ -199,8 +206,58 @@ class BIMPriorDA3(nn.Module):
             attention_estimator = str(
                 self.attention_scale_config.get("estimator", "pseudo_huber_attention_v1")
             )
+            if attention_estimator == FullRegressionIterativeScaleHead.ESTIMATOR_NAME:
+                self.full_regression_input_mode = str(
+                    self.attention_scale_config.get(
+                        "input_mode",
+                        self.FULL_REGRESSION_INPUT_JOINT,
+                    )
+                )
+                supported_input_modes = {
+                    self.FULL_REGRESSION_INPUT_JOINT,
+                    self.FULL_REGRESSION_INPUT_RGB_DA3_UNIT_BIM,
+                }
+                if self.full_regression_input_mode not in supported_input_modes:
+                    raise ValueError(
+                        "model.attention_scale.input_mode must be one of "
+                        f"{sorted(supported_input_modes)}"
+                    )
+                self.attention_scale_use_base_confidence = bool(
+                    self.attention_scale_config.get("use_base_confidence", True)
+                )
+                self.attention_scale_use_bim_normals = bool(
+                    self.attention_scale_config.get("use_bim_normals", True)
+                )
+                self.attention_scale_use_bim_edge = bool(
+                    self.attention_scale_config.get("use_bim_edge", True)
+                )
+                if (
+                    self.full_regression_input_mode
+                    == self.FULL_REGRESSION_INPUT_RGB_DA3_UNIT_BIM
+                ):
+                    if self.attention_scale_use_base_confidence:
+                        raise ValueError(
+                            "rgb_da3_unit_bim input mode requires "
+                            "model.attention_scale.use_base_confidence=false"
+                        )
+                    if self.da3_feature_scale_enabled:
+                        raise ValueError(
+                            "rgb_da3_unit_bim input mode forbids cached DA3 latent "
+                            "features in the scale estimator"
+                        )
+                    self.attention_scale_input_channels = 4
+                elif not self.attention_scale_use_base_confidence:
+                    self.attention_scale_input_channels -= 1
+                if (
+                    self.full_regression_input_mode
+                    == self.FULL_REGRESSION_INPUT_JOINT
+                ):
+                    if not self.attention_scale_use_bim_normals:
+                        self.attention_scale_input_channels -= 3
+                    if not self.attention_scale_use_bim_edge:
+                        self.attention_scale_input_channels -= 1
             shared_arguments = {
-                "in_channels": self.ATTENTION_SCALE_CHANNELS,
+                "in_channels": self.attention_scale_input_channels,
                 "hidden_channels": int(
                     self.attention_scale_config.get("hidden_channels", 24)
                 ),
@@ -959,9 +1016,39 @@ class BIMPriorDA3(nn.Module):
         BIM-direct/fallback depth is read by this path.
         """
 
+        log_base = safe_log(base)
+        rgb = batch["rgb"] if self.use_rgb_condition else torch.zeros_like(batch["rgb"])
+        if (
+            self.full_regression_input_mode
+            == self.FULL_REGRESSION_INPUT_RGB_DA3_UNIT_BIM
+        ):
+            # Deliberately contains no measured/rendered BIM information. The
+            # unit constant follows the registered extreme control protocol;
+            # both the resulting ratio and its validity depend only on DA3.
+            ratio = torch.ones_like(base) / base.clamp_min(1e-6)
+            ratio_valid = (
+                torch.isfinite(base)
+                & torch.isfinite(ratio)
+                & (base > 0)
+                & (ratio > self.da3_scale_ratio_min)
+                & (ratio < self.da3_scale_ratio_max)
+            )
+            log_ratio = torch.where(
+                ratio_valid,
+                ratio.clamp_min(1e-6).log(),
+                torch.zeros_like(ratio),
+            )
+            features = torch.cat((rgb, log_base / 3.0), dim=1)
+            if features.shape[1] != self.attention_scale_input_channels:
+                raise RuntimeError(
+                    "RGB+DA3 unit-BIM feature contract changed: "
+                    f"expected {self.attention_scale_input_channels}, "
+                    f"got {features.shape[1]}"
+                )
+            return features, log_ratio, ratio_valid.float()
+
         valid = batch["bim_valid"].clamp(0.0, 1.0)
         bim = batch["bim_depth"]
-        log_base = safe_log(base)
         ratio = bim / base.clamp_min(1e-6)
         ratio_valid = (
             (valid > 0)
@@ -981,25 +1068,25 @@ class BIMPriorDA3(nn.Module):
         safe_bim = torch.where(valid > 0, bim, torch.ones_like(bim))
         log_bim = safe_log(safe_bim)
         raw_disagreement = (log_bim - log_base) * valid
-        rgb = batch["rgb"] if self.use_rgb_condition else torch.zeros_like(batch["rgb"])
-        features = torch.cat(
+        feature_parts = [rgb, log_base / 3.0]
+        if self.attention_scale_use_base_confidence:
+            feature_parts.append(batch["base_confidence"].clamp(0.0, 1.0))
+        feature_parts.extend(((log_bim / 3.0) * valid, valid))
+        if self.attention_scale_use_bim_normals:
+            feature_parts.append(batch["bim_normals"])
+        if self.attention_scale_use_bim_edge:
+            feature_parts.append(batch["bim_edge"].clamp(0.0, 1.0))
+        feature_parts.extend(
             (
-                rgb,
-                log_base / 3.0,
-                batch["base_confidence"].clamp(0.0, 1.0),
-                (log_bim / 3.0) * valid,
-                valid,
-                batch["bim_normals"],
-                batch["bim_edge"].clamp(0.0, 1.0),
                 raw_disagreement.clamp(-1.0, 1.0),
                 raw_disagreement.abs().clamp(0.0, 1.0),
-            ),
-            dim=1,
+            )
         )
-        if features.shape[1] != self.ATTENTION_SCALE_CHANNELS:
+        features = torch.cat(feature_parts, dim=1)
+        if features.shape[1] != self.attention_scale_input_channels:
             raise RuntimeError(
                 "Full-regression scale feature contract changed: "
-                f"expected {self.ATTENTION_SCALE_CHANNELS}, got {features.shape[1]}"
+                f"expected {self.attention_scale_input_channels}, got {features.shape[1]}"
             )
         return features, log_ratio, ratio_valid.float()
 

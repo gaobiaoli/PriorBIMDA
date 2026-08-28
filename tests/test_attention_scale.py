@@ -388,6 +388,171 @@ def test_full_regression_no_da3_feature_ablation_changes_only_scale_feature_fusi
     assert baseline_cfg.train == ablation_cfg.train
 
 
+def test_full_regression_no_confidence_ablation_changes_only_one_input_channel() -> None:
+    reference_cfg = load_config(
+        "configs/stanford_area1_full_regression_scale_no_da3_features_3round_3epoch_full_depth_metric_da3.yaml"
+    )
+    ablation_cfg = load_config(
+        "configs/stanford_area1_full_regression_scale_no_da3_features_no_confidence_3round_3epoch_full_depth_metric_da3.yaml"
+    )
+    reference_cfg.model.base_channels = 4
+    ablation_cfg.model.base_channels = 4
+    reference_cfg.model.attention_scale.hidden_channels = 4
+    ablation_cfg.model.attention_scale.hidden_channels = 4
+    reference_cfg.model.attention_scale.iterative_hidden_channels = 5
+    ablation_cfg.model.attention_scale.iterative_hidden_channels = 5
+    reference_cfg.model.attention_scale.delta_hidden_channels = 7
+    ablation_cfg.model.attention_scale.delta_hidden_channels = 7
+    reference_cfg.model.da3_feature_fusion.channels = 6
+    ablation_cfg.model.da3_feature_fusion.channels = 6
+
+    reference = BIMPriorDA3(reference_cfg)
+    ablation = BIMPriorDA3(ablation_cfg)
+    assert isinstance(reference.attention_scale, FullRegressionIterativeScaleHead)
+    assert isinstance(ablation.attention_scale, FullRegressionIterativeScaleHead)
+    assert not reference.da3_feature_scale_enabled
+    assert not ablation.da3_feature_scale_enabled
+    assert reference.attention_scale_use_base_confidence
+    assert not ablation.attention_scale_use_base_confidence
+    assert reference.attention_scale.encoder[0][0].in_channels == 13
+    assert ablation.attention_scale.encoder[0][0].in_channels == 12
+    assert reference_cfg.loss == ablation_cfg.loss
+    assert reference_cfg.train == ablation_cfg.train
+
+    batch = _candidate_batch(size=32)
+    without_confidence = dict(batch)
+    without_confidence.pop("base_confidence")
+    features_without, ratio_without, valid_without = (
+        ablation._full_regression_scale_inputs(
+            without_confidence,
+            without_confidence["base_depth"],
+        )
+    )
+    changed_confidence = dict(batch)
+    changed_confidence["base_confidence"] = torch.rand_like(
+        batch["base_confidence"]
+    )
+    features_changed, ratio_changed, valid_changed = (
+        ablation._full_regression_scale_inputs(
+            changed_confidence,
+            changed_confidence["base_depth"],
+        )
+    )
+    assert features_without.shape[1] == 12
+    assert torch.equal(features_without, features_changed)
+    assert torch.equal(ratio_without, ratio_changed)
+    assert torch.equal(valid_without, valid_changed)
+
+
+def test_full_regression_rgb_da3_unit_bim_has_no_bim_input_dependency() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_full_regression_rgb_da3_unit_bim_3round_3epoch_full_depth_metric_da3.yaml"
+    )
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.hidden_channels = 4
+    cfg.model.attention_scale.iterative_hidden_channels = 5
+    cfg.model.attention_scale.delta_hidden_channels = 7
+    model = BIMPriorDA3(cfg).eval()
+    assert isinstance(model.attention_scale, FullRegressionIterativeScaleHead)
+    assert model.full_regression_input_mode == model.FULL_REGRESSION_INPUT_RGB_DA3_UNIT_BIM
+    assert model.attention_scale.encoder[0][0].in_channels == 4
+    assert not model.attention_scale_use_base_confidence
+    assert not model.da3_feature_fusion_enabled
+    assert not model.use_bim_condition
+    assert not model.use_frame_residual
+    assert not model.use_low_residual
+    assert model.refiner.max_detail_log_residual == 0.0
+
+    batch = _candidate_batch(size=32)
+    minimal_batch = {
+        "rgb": batch["rgb"],
+        "base_depth": batch["base_depth"],
+    }
+    features, log_ratio, ratio_valid = model._full_regression_scale_inputs(
+        minimal_batch,
+        minimal_batch["base_depth"],
+    )
+    expected_ratio = 1.0 / minimal_batch["base_depth"]
+    expected_valid = (
+        torch.isfinite(expected_ratio)
+        & (expected_ratio > model.da3_scale_ratio_min)
+        & (expected_ratio < model.da3_scale_ratio_max)
+    )
+    assert features.shape[1] == 4
+    assert torch.equal(ratio_valid.bool(), expected_valid)
+    assert torch.allclose(
+        log_ratio[expected_valid],
+        expected_ratio[expected_valid].log(),
+    )
+
+    reference = model._estimate_attention_scale(minimal_batch, batch["base_depth"])
+    corrupted = dict(batch)
+    corrupted["bim_depth"] = torch.rand_like(batch["bim_depth"]) * 1000.0
+    corrupted["bim_valid"] = torch.zeros_like(batch["bim_valid"])
+    corrupted["bim_normals"] = torch.randn_like(batch["bim_normals"])
+    corrupted["bim_edge"] = torch.rand_like(batch["bim_edge"])
+    corrupted["base_confidence"] = torch.rand_like(batch["base_confidence"])
+    candidate = model._estimate_attention_scale(corrupted, corrupted["base_depth"])
+    assert torch.equal(
+        reference["iteration_log_scales"],
+        candidate["iteration_log_scales"],
+    )
+
+
+def test_full_regression_no_bim_geometry_ablation_removes_only_four_channels() -> None:
+    reference_cfg = load_config(
+        "configs/stanford_area1_full_regression_scale_no_da3_features_no_confidence_3round_3epoch_full_depth_metric_da3.yaml"
+    )
+    ablation_cfg = load_config(
+        "configs/stanford_area1_full_regression_scale_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch_full_depth_metric_da3.yaml"
+    )
+    for cfg in (reference_cfg, ablation_cfg):
+        cfg.model.base_channels = 4
+        cfg.model.attention_scale.hidden_channels = 4
+        cfg.model.attention_scale.iterative_hidden_channels = 5
+        cfg.model.attention_scale.delta_hidden_channels = 7
+        cfg.model.da3_feature_fusion.channels = 6
+
+    reference = BIMPriorDA3(reference_cfg).eval()
+    ablation = BIMPriorDA3(ablation_cfg).eval()
+    assert isinstance(reference.attention_scale, FullRegressionIterativeScaleHead)
+    assert isinstance(ablation.attention_scale, FullRegressionIterativeScaleHead)
+    assert reference.attention_scale.encoder[0][0].in_channels == 12
+    assert ablation.attention_scale.encoder[0][0].in_channels == 8
+    assert reference.attention_scale_use_bim_normals
+    assert reference.attention_scale_use_bim_edge
+    assert not ablation.attention_scale_use_bim_normals
+    assert not ablation.attention_scale_use_bim_edge
+    assert not ablation.attention_scale_use_base_confidence
+    assert not ablation.da3_feature_scale_enabled
+    assert reference_cfg.loss == ablation_cfg.loss
+    assert reference_cfg.train == ablation_cfg.train
+
+    batch = _candidate_batch(size=32)
+    without_geometry = dict(batch)
+    without_geometry.pop("bim_normals")
+    without_geometry.pop("bim_edge")
+    features_without, ratio_without, valid_without = (
+        ablation._full_regression_scale_inputs(
+            without_geometry,
+            without_geometry["base_depth"],
+        )
+    )
+    corrupted = dict(batch)
+    corrupted["bim_normals"] = torch.randn_like(batch["bim_normals"]) * 100.0
+    corrupted["bim_edge"] = torch.rand_like(batch["bim_edge"])
+    features_corrupted, ratio_corrupted, valid_corrupted = (
+        ablation._full_regression_scale_inputs(
+            corrupted,
+            corrupted["base_depth"],
+        )
+    )
+    assert features_without.shape[1] == 8
+    assert torch.equal(features_without, features_corrupted)
+    assert torch.equal(ratio_without, ratio_corrupted)
+    assert torch.equal(valid_without, valid_corrupted)
+
+
 def test_static_zero_control_freezes_attention_and_disables_fallback_gate() -> None:
     head = AttentiveBIMScaleHead(
         in_channels=5,

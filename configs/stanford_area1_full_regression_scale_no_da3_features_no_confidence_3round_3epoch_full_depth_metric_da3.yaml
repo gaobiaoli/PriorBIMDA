@@ -1,0 +1,15 @@
+extends: stanford_area1_full_regression_scale_no_da3_features_3round_3epoch_full_depth_metric_da3.yaml
+
+# Second single-factor ablation. Relative to the restored no-DA3-latent
+# full-regression control, only the cached DA3 confidence map is removed from
+# the scale-head spatial input. The 12 remaining joint RGB/depth/BIM channels,
+# recurrent updater, losses, data, optimizer and three-epoch schedule are
+# unchanged.
+
+experiment:
+  name: stanford_area1_full_regression_scale_no_da3_features_no_confidence_3round_3epoch
+  output_dir: outputs/stanford_area1_full_regression_scale_no_da3_features_no_confidence_3round_3epoch
+
+model:
+  attention_scale:
+    use_base_confidence: false
