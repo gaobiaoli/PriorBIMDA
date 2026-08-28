@@ -1691,3 +1691,102 @@ The paired round-3 comparison is
 `results/stanford_area1/full_regression_vs_pseudo_huber_round3_val.json`
 (SHA256
 `51740cf568d8d2618d725b30f46ab3b2f97ba23d8a56ec101cdbd22f534d9da9`).
+
+## RGB/DINO candidate rollback and DA3-feature removal control
+
+The subsequent RGB+DINO candidate was rejected after its registered validation
+run. To identify whether its regression came simply from removing cached DA3
+layer-11/23 features, the model was restored to the preceding
+`FullRegressionIterativeScaleHead` and one controlled variant was trained from
+scratch. The control keeps the original 13-channel joint encoder, shared
+three-round recurrent updater, oracle-scale losses, augmentation, optimizer,
+three-epoch scale-only schedule, frozen DA3 prediction, and frozen refiner
+unchanged. Its only experimental change is
+`model.da3_feature_fusion.scale_enabled: false`. Refiner-side DA3 features stay
+enabled so this is a scale-head-only ablation.
+
+On the identical 1,673-frame / seven-room validation split with 422,186,615
+official-valid pixels:
+
+| Scale estimator | Round 1 AbsRel | Round 2 AbsRel | Round 3 AbsRel |
+|---|---:|---:|---:|
+| Previous full regression, with DA3 latent features | **0.079099** | **0.071793** | 0.070940 |
+| Restored full regression, without DA3 latent features | 0.081131 | 0.074054 | **0.070756** |
+| Rejected separate RGB+DINO/geometry candidate | 0.081669 | 0.076409 | 0.076041 |
+
+The frozen restored no-DA3 checkpoint was then evaluated once on the formal
+1,641-frame / seven-room test split (413,756,559 official-valid pixels). No
+test result was used for checkpoint selection:
+
+| Test method | AbsRel | RMSE (m) | MAE (m) | delta1 |
+|---|---:|---:|---:|---:|
+| Focal-corrected raw DA3 | 0.085453 | 0.435242 | 0.177124 | 0.938046 |
+| No-DA3 full regression, round 1 | 0.078213 | 0.428065 | 0.162479 | 0.943957 |
+| No-DA3 full regression, round 2 | 0.072546 | 0.423312 | 0.150918 | **0.944884** |
+| No-DA3 full regression, round 3 | **0.069512** | **0.421009** | **0.144475** | 0.944841 |
+
+Round 3 improves test raw DA3 AbsRel by 18.65% relative and continues to
+improve AbsRel, RMSE and MAE over round 2. Its minute delta1 decrease from
+round 2 (`0.944884 -> 0.944841`) does not change the scale-error conclusion.
+
+Removing DA3 latent features is therefore **not** the cause of the RGB+DINO
+regression. The restored no-DA3 control is slightly better in aggregate than
+the with-DA3 version by `0.000183` AbsRel (0.26% relative), although the paired
+room bootstrap CI `[-0.002466,+0.002269]` crosses zero. The cached DA3 features
+do help the BIM-foreground-conflict subset: removing them changes its AbsRel
+from `0.105562` to `0.107414` (+1.76%, room-bootstrap CI
+`[+0.000355,+0.009471]`). Their effect is thus localized rather than the source
+of the overall candidate failure.
+
+The rejected candidate is worse than the restored no-DA3 model by `0.005285`
+AbsRel (7.47% relative), loses in all seven rooms, and has a room-bootstrap CI
+of `[+0.003500,+0.008957]`. Its largest registered loss is on BIM-consistent
+pixels (`0.054003` versus `0.045283`, +19.26%; zero of seven rooms better).
+This localizes the remaining failure to the RGB/DINO architecture bundle. The
+most direct structural explanation is late cross-modal fusion: the restored
+model lets RGB, DA3 depth/confidence, BIM depth/mask/normals/edge and ratio
+disagreement interact through spatial 3x3 convolutions before and during
+downsampling. The rejected candidate encoded RGB+DINO separately from geometry
+and did not combine them until a pointwise updater at the 63x63 bottleneck.
+Consequently it removed early spatial RGB/BIM matching exactly where the
+BIM-consistent subset needs it. Last-layer normalized DINO tokens and an
+unmasked RGB+DINO global condition did not recover that lost metric/edge
+alignment. The candidate also increased trainable scale parameters from
+292,429 to 971,797 without extending the fixed three-epoch screen.
+
+These observations identify the late/separate fusion redesign as the likely
+main cause. They do not individually distinguish DINO token choice, the global
+condition, or parameter-count/optimization effects; doing so would require
+additional ablations, which were intentionally not run after the rollback.
+The active control is the restored no-DA3 configuration:
+
+```bash
+.venv/bin/python scripts/model/train.py \
+  --config configs/stanford_area1_full_regression_scale_no_da3_features_3round_3epoch_full_depth_metric_da3.yaml \
+  --device cuda
+
+.venv/bin/python scripts/model/evaluate_stanford_area1.py \
+  --config configs/stanford_area1_full_regression_scale_no_da3_features_3round_3epoch_full_depth_metric_da3.yaml \
+  --checkpoint outputs/stanford_area1_full_regression_scale_no_da3_features_3round_3epoch/accepted.pt \
+  --split val --depth-support all-valid \
+  --output results/stanford_area1/full_regression_scale_no_da3_features_3round_3epoch_val \
+  --device cuda --batch-size 8 --inference-seed 42 \
+  --bootstrap-repetitions 10000 --bootstrap-seed 42 \
+  --allow-unverified-robust-comparator
+```
+
+The no-DA3 config/checkpoint/history/run-state SHA256 values are
+`38cc6dd9e88ba7f5a0cf2aeb414114ebd0cc3ee7587f65436bc397cf9e382067`,
+`0a5e59c51e1e75c60e18f8d13dc7f66985d3f77e45dad2bfc3146197b31e9a2d`,
+`b76e007d4c803a3ee14b88445787dfdbf0f9a312221b52dc18fbe0ccee7a265e`,
+and `09fb1fab289a648d24ebb5f74e6fa2c44c6b32563d3082554b4638a07b4ddf75`.
+Its validation summary/per-frame SHA256 values are
+`9cf1d69a659cff9f9477505a49b4961964a91b4d764a00b2bb5fe2d703d53909`
+and `10d50abc32e30d4a45b8194be5be63fad3c40fca9098a2afc4673858cac4a822`.
+Its test summary/per-frame SHA256 values are
+`5eee1db22caacd22f1a8cb85bc609fe650db41bc20f1f6faa71c4245bad3635e`
+and `e6a1d89a1316ca45cbbc43bea2dfccde337edc48fb82029f837911bca87471fa`.
+The controlled with/without-DA3 and rejected-candidate comparisons are
+`results/stanford_area1/full_regression_no_da3_features_vs_with_da3_round3_val.json`
+and
+`results/stanford_area1/full_regression_rgb_dinov2_vs_no_da3_features_round3_val.json`.

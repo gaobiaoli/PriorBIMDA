@@ -1,0 +1,18 @@
+extends: stanford_area1_full_regression_scale_3round_3epoch_full_depth_metric_da3.yaml
+
+# Single-factor ablation of the current full-regression baseline.  The original
+# 13-channel RGB/depth/confidence/BIM input encoder and shared three-round
+# updater are unchanged; only cached DA3 latent features are hidden from the
+# scale head.  The frozen refiner keeps its original DA3 features so its
+# forward response and gradient path back to scale remain matched.
+
+experiment:
+  name: stanford_area1_full_regression_scale_no_da3_features_3round_3epoch
+  output_dir: outputs/stanford_area1_full_regression_scale_no_da3_features_3round_3epoch
+
+model:
+  da3_feature_fusion:
+    enabled: true
+    scale_enabled: false
+    refiner_enabled: true
+

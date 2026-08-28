@@ -20,6 +20,9 @@ from bim_priorda3.config import Config
 from .attention_scale import AttentiveBIMScaleHead
 from .full_regression_scale import FullRegressionIterativeScaleHead
 from .refiner import ScaleAnchoredDepthRefiner
+from .rgb_dinov2_full_regression_scale import (
+    RGBDINOFullRegressionIterativeScaleHead,
+)
 
 
 def safe_log(depth: torch.Tensor) -> torch.Tensor:
@@ -115,6 +118,15 @@ class BIMPriorDA3(nn.Module):
                 raise ValueError("model.da3_feature_fusion.channels must be positive")
             if len(self.da3_feature_layers) != 2:
                 raise ValueError("model.da3_feature_fusion.layers must contain two layers")
+        self.dinov2_feature_config = Config(model.get("dinov2_feature_fusion", {}))
+        self.dinov2_feature_fusion_enabled = bool(
+            self.dinov2_feature_config.get("enabled", False)
+        )
+        self.dinov2_feature_channels = int(
+            self.dinov2_feature_config.get("channels", 768)
+        )
+        if self.dinov2_feature_fusion_enabled and self.dinov2_feature_channels < 1:
+            raise ValueError("model.dinov2_feature_fusion.channels must be positive")
         self.additive_residual_config = Config(model.get("additive_residual", {}))
         self.additive_residual_enabled = bool(
             self.additive_residual_config.get("enabled", False)
@@ -178,7 +190,10 @@ class BIMPriorDA3(nn.Module):
                 "disable model.e2e_da3"
             )
         self.attention_scale: (
-            AttentiveBIMScaleHead | FullRegressionIterativeScaleHead | None
+            AttentiveBIMScaleHead
+            | FullRegressionIterativeScaleHead
+            | RGBDINOFullRegressionIterativeScaleHead
+            | None
         ) = None
         if self.attention_scale_enabled:
             attention_estimator = str(
@@ -220,7 +235,74 @@ class BIMPriorDA3(nn.Module):
                     self.da3_feature_channels if self.da3_feature_scale_enabled else 0
                 ),
             }
-            if attention_estimator == FullRegressionIterativeScaleHead.ESTIMATOR_NAME:
+            if (
+                attention_estimator
+                == RGBDINOFullRegressionIterativeScaleHead.ESTIMATOR_NAME
+            ):
+                if not self.dinov2_feature_fusion_enabled:
+                    raise ValueError(
+                        "RGB+DINO full regression requires "
+                        "model.dinov2_feature_fusion.enabled=true"
+                    )
+                if self.da3_feature_scale_enabled:
+                    raise ValueError(
+                        "RGB+DINO full regression must not enable cached DA3 features "
+                        "for the scale estimator"
+                    )
+                self.attention_scale = RGBDINOFullRegressionIterativeScaleHead(
+                    geometry_channels=int(
+                        self.attention_scale_config.get("geometry_channels", 7)
+                    ),
+                    rgb_base_channels=int(
+                        self.attention_scale_config.get("rgb_base_channels", 24)
+                    ),
+                    fusion_channels=int(
+                        self.attention_scale_config.get("fusion_channels", 96)
+                    ),
+                    dinov2_channels=self.dinov2_feature_channels,
+                    attention_heads=int(
+                        self.attention_scale_config.get("attention_heads", 4)
+                    ),
+                    min_support=int(
+                        self.attention_scale_config.get(
+                            "min_support", self.da3_scale_min_samples
+                        )
+                    ),
+                    ratio_min=float(
+                        self.attention_scale_config.get(
+                            "ratio_min", self.da3_scale_ratio_min
+                        )
+                    ),
+                    ratio_max=float(
+                        self.attention_scale_config.get(
+                            "ratio_max", self.da3_scale_ratio_max
+                        )
+                    ),
+                    token_dropout_probability=float(
+                        self.attention_scale_config.get(
+                            "token_dropout_probability", 0.10
+                        )
+                    ),
+                    iterative_updates=int(
+                        self.attention_scale_config.get("iterative_updates", 3)
+                    ),
+                    iterative_hidden_channels=int(
+                        self.attention_scale_config.get(
+                            "iterative_hidden_channels", 32
+                        )
+                    ),
+                    delta_hidden_channels=int(
+                        self.attention_scale_config.get(
+                            "delta_hidden_channels", 64
+                        )
+                    ),
+                    iterative_max_log_update=float(
+                        self.attention_scale_config.get(
+                            "iterative_max_log_update", 0.15
+                        )
+                    ),
+                )
+            elif attention_estimator == FullRegressionIterativeScaleHead.ESTIMATOR_NAME:
                 self.attention_scale = FullRegressionIterativeScaleHead(
                     **shared_arguments,
                     iterative_updates=int(
@@ -921,6 +1003,65 @@ class BIMPriorDA3(nn.Module):
             )
         return features, log_ratio, ratio_valid.float()
 
+    def _rgb_dinov2_full_regression_scale_inputs(
+        self,
+        batch: dict[str, torch.Tensor],
+        base: torch.Tensor,
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+    ]:
+        """Build RGB+DINO scale inputs without confidence, DA3 features or fallback."""
+
+        valid = batch["bim_valid"].clamp(0.0, 1.0)
+        bim = batch["bim_depth"]
+        log_base = safe_log(base)
+        ratio = bim / base.clamp_min(1e-6)
+        ratio_valid = (
+            (valid > 0)
+            & torch.isfinite(base)
+            & torch.isfinite(bim)
+            & torch.isfinite(ratio)
+            & (base > 0)
+            & (bim > 0)
+            & (ratio > self.da3_scale_ratio_min)
+            & (ratio < self.da3_scale_ratio_max)
+        )
+        log_ratio = torch.where(
+            ratio_valid,
+            ratio.clamp_min(1e-6).log(),
+            torch.zeros_like(ratio),
+        )
+        safe_bim = torch.where(valid > 0, bim, torch.ones_like(bim))
+        log_bim = safe_log(safe_bim)
+        geometry = torch.cat(
+            (
+                log_base / 3.0,
+                (log_bim / 3.0) * valid,
+                valid,
+                batch["bim_normals"],
+                batch["bim_edge"].clamp(0.0, 1.0),
+            ),
+            dim=1,
+        )
+        expected_geometry_channels = 7
+        if geometry.shape[1] != expected_geometry_channels:
+            raise RuntimeError(
+                "RGB+DINO geometry feature contract changed: "
+                f"expected {expected_geometry_channels}, got {geometry.shape[1]}"
+            )
+        rgb = batch["rgb"] if self.use_rgb_condition else torch.zeros_like(batch["rgb"])
+        return (
+            rgb,
+            geometry,
+            log_ratio,
+            ratio_valid.float(),
+            batch["dinov2_feature"],
+        )
+
     def _estimate_attention_scale(
         self,
         batch: dict[str, torch.Tensor],
@@ -928,6 +1069,12 @@ class BIMPriorDA3(nn.Module):
     ) -> dict[str, torch.Tensor]:
         if self.attention_scale is None:
             raise RuntimeError("Attention scale estimation requested while disabled")
+        if isinstance(
+            self.attention_scale,
+            RGBDINOFullRegressionIterativeScaleHead,
+        ):
+            inputs = self._rgb_dinov2_full_regression_scale_inputs(batch, base)
+            return self.attention_scale(*inputs)
         if isinstance(self.attention_scale, FullRegressionIterativeScaleHead):
             inputs = self._full_regression_scale_inputs(batch, base)
         else:
@@ -1091,7 +1238,13 @@ class BIMPriorDA3(nn.Module):
             "residual_routing_scope": self.residual_routing_scope,
             "log_variance": prediction["log_variance"],
         }
-        if not isinstance(self.attention_scale, FullRegressionIterativeScaleHead):
+        if not isinstance(
+            self.attention_scale,
+            (
+                FullRegressionIterativeScaleHead,
+                RGBDINOFullRegressionIterativeScaleHead,
+            ),
+        ):
             output["deterministic_scaled_depth"] = batch["scaled_depth"]
         if attention_scale_output is not None:
             output.update(

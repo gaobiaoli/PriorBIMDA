@@ -12,6 +12,9 @@ from bim_priorda3.models import BIMPriorDA3
 from bim_priorda3.models.attention_scale import AttentiveBIMScaleHead
 from bim_priorda3.models.full_regression_scale import FullRegressionIterativeScaleHead
 from bim_priorda3.models.refiner import ScaleAnchoredDepthRefiner
+from bim_priorda3.models.rgb_dinov2_full_regression_scale import (
+    RGBDINOFullRegressionIterativeScaleHead,
+)
 from scripts.model.train import (
     ATTENTION_SCALE_WARMUP_PARAMETER_PREFIXES,
     ATTENTION_SCALE_WARMUP_STAGE,
@@ -170,6 +173,108 @@ def test_full_regression_predicts_shared_bounded_residual_updates_without_dampin
     assert not hasattr(head, "huber_delta")
 
 
+def test_rgb_dinov2_full_regression_has_separate_shared_bounded_updater() -> None:
+    head = RGBDINOFullRegressionIterativeScaleHead(
+        geometry_channels=7,
+        rgb_base_channels=4,
+        fusion_channels=8,
+        dinov2_channels=6,
+        attention_heads=2,
+        min_support=8,
+        token_dropout_probability=0.0,
+        iterative_updates=3,
+        iterative_hidden_channels=5,
+        delta_hidden_channels=7,
+        iterative_max_log_update=0.15,
+    ).eval()
+    rgb = torch.randn(2, 3, 32, 32)
+    geometry = torch.randn(2, 7, 32, 32)
+    log_ratio = torch.full((2, 1, 32, 32), torch.log(torch.tensor(2.0)))
+    valid = torch.ones_like(log_ratio)
+    valid[1] = 0
+    dino = torch.randn(2, 6, 3, 3)
+    final = head.shared_delta_head[-1]
+    assert isinstance(final, torch.nn.Linear)
+    with torch.no_grad():
+        final.weight.zero_()
+        final.bias.fill_(100.0)
+
+    output = head(rgb, geometry, log_ratio, valid, dino)
+
+    assert torch.allclose(
+        output["iteration_log_scales"][0, :, 0, 0],
+        torch.tensor([0.15, 0.30, 0.45]),
+        atol=1e-6,
+    )
+    assert torch.equal(output["scale"][1], torch.ones_like(output["scale"][1]))
+    assert not any(
+        term in name
+        for name, _ in head.named_parameters()
+        for term in ("huber", "damping", "gate", "da3_feature", "backbone")
+    )
+    assert not any("round" in name for name, _ in head.named_parameters())
+
+
+def test_rgb_dinov2_scale_path_ignores_confidence_and_da3_latent_features() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_full_regression_rgb_dinov2_scale_3round_3epoch_full_depth_metric_da3.yaml"
+    )
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.rgb_base_channels = 4
+    cfg.model.attention_scale.fusion_channels = 8
+    cfg.model.attention_scale.iterative_hidden_channels = 5
+    cfg.model.attention_scale.delta_hidden_channels = 7
+    cfg.model.attention_scale.token_dropout_probability = 0.0
+    cfg.model.attention_scale.equivariance_probability = 0.0
+    cfg.model.dinov2_feature_fusion.channels = 6
+    model = BIMPriorDA3(cfg).eval()
+    assert isinstance(model.attention_scale, RGBDINOFullRegressionIterativeScaleHead)
+    assert model.da3_feature_fusion_enabled
+    assert not model.da3_feature_scale_enabled
+    assert model.da3_feature_refiner_enabled
+
+    batch = _candidate_batch(size=32)
+    batch["dinov2_feature"] = torch.randn(2, 6, 3, 3)
+    reference = model._estimate_attention_scale(batch, batch["base_depth"])
+    changed = dict(batch)
+    changed["base_confidence"] = torch.rand_like(batch["base_confidence"]) * 100
+    changed["da3_feature_mid"] = torch.randn(2, 13, 4, 4)
+    changed["da3_feature_deep"] = torch.randn(2, 17, 2, 2)
+    changed.pop("scaled_depth")
+    changed.pop("anchor_depth")
+    changed.pop("base_confidence")
+    candidate = model._estimate_attention_scale(changed, changed["base_depth"])
+    assert torch.equal(
+        reference["iteration_log_scales"],
+        candidate["iteration_log_scales"],
+    )
+
+    model.train()
+    model.zero_grad(set_to_none=True)
+    output = model._estimate_attention_scale(changed, changed["base_depth"])
+    output["log_scale"].sum().backward()
+    assert model.attention_scale is not None
+    rgb_grads = [
+        parameter.grad
+        for parameter in model.attention_scale.rgb_encoder.parameters()
+        if parameter.requires_grad
+    ]
+    assert rgb_grads and all(gradient is not None for gradient in rgb_grads)
+    assert any(torch.count_nonzero(gradient) > 0 for gradient in rgb_grads if gradient is not None)
+    dino_projection_grads = [
+        parameter.grad
+        for parameter in model.attention_scale.dinov2_projection.parameters()
+        if parameter.requires_grad
+    ]
+    assert dino_projection_grads and all(
+        gradient is not None for gradient in dino_projection_grads
+    )
+    parameter_names = {name for name, _ in model.named_parameters()}
+    assert not any("dinov2_backbone" in name for name in parameter_names)
+    assert cfg.train.epochs == 3
+    assert cfg.train.scale_only_experiment is True
+
+
 def test_full_regression_config_is_three_epoch_scale_only_and_gt_supervised() -> None:
     cfg = load_config(
         "configs/stanford_area1_full_regression_scale_3round_3epoch_full_depth_metric_da3.yaml"
@@ -246,6 +351,41 @@ def test_full_regression_config_is_three_epoch_scale_only_and_gt_supervised() ->
         restored_batch["anchor_depth"] = batch["anchor_depth"] * 23.0
         with_legacy_fields = model(restored_batch)["attention_iteration_log_scales"]
     assert torch.equal(reference, with_legacy_fields)
+
+
+def test_full_regression_no_da3_feature_ablation_changes_only_scale_feature_fusion() -> None:
+    baseline_cfg = load_config(
+        "configs/stanford_area1_full_regression_scale_3round_3epoch_full_depth_metric_da3.yaml"
+    )
+    ablation_cfg = load_config(
+        "configs/stanford_area1_full_regression_scale_no_da3_features_3round_3epoch_full_depth_metric_da3.yaml"
+    )
+    baseline_cfg.model.base_channels = 4
+    ablation_cfg.model.base_channels = 4
+    baseline_cfg.model.attention_scale.hidden_channels = 4
+    ablation_cfg.model.attention_scale.hidden_channels = 4
+    baseline_cfg.model.attention_scale.iterative_hidden_channels = 5
+    ablation_cfg.model.attention_scale.iterative_hidden_channels = 5
+    baseline_cfg.model.attention_scale.delta_hidden_channels = 7
+    ablation_cfg.model.attention_scale.delta_hidden_channels = 7
+    baseline_cfg.model.da3_feature_fusion.channels = 6
+    ablation_cfg.model.da3_feature_fusion.channels = 6
+
+    baseline = BIMPriorDA3(baseline_cfg)
+    ablation = BIMPriorDA3(ablation_cfg)
+    assert isinstance(baseline.attention_scale, FullRegressionIterativeScaleHead)
+    assert isinstance(ablation.attention_scale, FullRegressionIterativeScaleHead)
+    assert baseline.da3_feature_scale_enabled
+    assert not ablation.da3_feature_scale_enabled
+    assert baseline.da3_feature_refiner_enabled
+    assert ablation.da3_feature_refiner_enabled
+    assert baseline.attention_scale.da3_feature_channels == 6
+    assert ablation.attention_scale.da3_feature_channels == 0
+    assert baseline.attention_scale.encoder[0][0].in_channels == 13
+    assert ablation.attention_scale.encoder[0][0].in_channels == 13
+    assert baseline_cfg.model.attention_scale == ablation_cfg.model.attention_scale
+    assert baseline_cfg.loss == ablation_cfg.loss
+    assert baseline_cfg.train == ablation_cfg.train
 
 
 def test_static_zero_control_freezes_attention_and_disables_fallback_gate() -> None:

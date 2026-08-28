@@ -1,0 +1,39 @@
+extends: stanford_area1_full_regression_scale_3round_3epoch_full_depth_metric_da3.yaml
+
+# Controlled 3-epoch scale-only challenger.  Relative to the pure full-
+# regression baseline, only the visual input design changes: cached DA3 latent
+# features/confidence are removed and separate trainable RGB plus frozen
+# DINOv2-B/14 appearance paths are introduced.
+
+experiment:
+  name: stanford_area1_full_regression_rgb_dinov2_scale_3round_3epoch
+  output_dir: outputs/stanford_area1_full_regression_rgb_dinov2_scale_3round_3epoch
+
+data:
+  dinov2_feature_cache_root: data/processed/stanford_area1_hit_only_504/dinov2_vitb14_last_504
+  dinov2_model: dinov2_vitb14
+  dinov2_repository: facebookresearch/dinov2
+  dinov2_revision: 7764ea0f912e53c92e82eb78a2a1631e92725fc8
+  dinov2_weights_sha256: 0b8b82f85de91b424aded121c7e1dcc2b7bc6d0adeea651bf73a13307fad8c73
+  dinov2_process_res: 504
+
+model:
+  # Remove cached DA3 latent features only from the scale estimator.  Keep the
+  # frozen refiner's inherited inputs unchanged so the controlled experiment
+  # changes neither its forward response nor the gradient path back to scale.
+  da3_feature_fusion:
+    enabled: true
+    scale_enabled: false
+    refiner_enabled: true
+  dinov2_feature_fusion:
+    enabled: true
+    channels: 768
+  attention_scale:
+    estimator: full_regression_rgb_dinov2_iterative_v1
+    geometry_channels: 7
+    rgb_base_channels: 24
+    fusion_channels: 96
+    iterative_updates: 3
+    iterative_hidden_channels: 32
+    delta_hidden_channels: 64
+    iterative_max_log_update: 0.15

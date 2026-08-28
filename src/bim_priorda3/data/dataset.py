@@ -19,6 +19,10 @@ from bim_priorda3.baselines import (
 from bim_priorda3.config import Config, resolve_project_path, resolve_slabim_root
 
 from .da3_features import load_cached_features, load_feature_cache_manifest, sha256_file
+from .dinov2_features import (
+    load_cached_dinov2_feature,
+    load_dinov2_feature_cache_manifest,
+)
 from .splits import (
     ACTIVE_SPLITS,
     manifest_preparation_identity,
@@ -337,6 +341,69 @@ class BIMDepthDataset(Dataset):
                         "Cached DA3 feature fusion currently requires full-image training "
                         "crops so feature/image geometry stays exact"
                     )
+        dinov2_config = Config(cfg.model.get("dinov2_feature_fusion", {}))
+        self.dinov2_feature_fusion_enabled = bool(
+            dinov2_config.get("enabled", False)
+        )
+        self.dinov2_feature_cache_root: Path | None = None
+        self.dinov2_feature_channels = int(dinov2_config.get("channels", 768))
+        self.dinov2_feature_grid_shape: tuple[int, int] = (0, 0)
+        if self.dinov2_feature_fusion_enabled:
+            cache_value = cfg.data.get("dinov2_feature_cache_root")
+            if not cache_value:
+                raise ValueError(
+                    "data.dinov2_feature_cache_root is required when "
+                    "model.dinov2_feature_fusion.enabled is true"
+                )
+            self.dinov2_feature_cache_root = resolve_project_path(cfg, cache_value)
+            process_res = int(cfg.data.dinov2_process_res)
+            if process_res != self.height or process_res != self.width:
+                raise ValueError(
+                    "Cached DINOv2 features require process_res to match the "
+                    "prepared RGB target dimensions"
+                )
+            grid_shape = (process_res // 14, process_res // 14)
+            dinov2_manifest = load_dinov2_feature_cache_manifest(
+                self.dinov2_feature_cache_root,
+                source_manifest=source_manifest,
+                expected_record_ids=all_record_ids,
+                model_name=str(cfg.data.dinov2_model),
+                repository=str(cfg.data.dinov2_repository),
+                repository_revision=str(cfg.data.dinov2_revision),
+                weights_sha256=str(cfg.data.dinov2_weights_sha256),
+                process_res=process_res,
+                channels=self.dinov2_feature_channels,
+                grid_shape=grid_shape,
+            )
+            self.dinov2_feature_grid_shape = tuple(
+                int(value) for value in dinov2_manifest["grid_shape"]
+            )
+            self.split_provenance["dinov2_feature_cache"] = {
+                "manifest_sha256": sha256_file(
+                    self.dinov2_feature_cache_root / "manifest.json"
+                ),
+                "source_manifest_sha256": dinov2_manifest["source_manifest_sha256"],
+                "model_name": dinov2_manifest["model_name"],
+                "repository": dinov2_manifest["repository"],
+                "repository_revision": dinov2_manifest["repository_revision"],
+                "weights_sha256": dinov2_manifest["weights_sha256"],
+                "process_res": dinov2_manifest["process_res"],
+                "channels": dinov2_manifest["channels"],
+                "grid_shape": dinov2_manifest["grid_shape"],
+                "feature_key": dinov2_manifest["feature_key"],
+                "dtype": dinov2_manifest["dtype"],
+            }
+            if self.augment:
+                aug = cfg.train.augment
+                crop_shape = (
+                    int(aug.get("crop_height", self.height)),
+                    int(aug.get("crop_width", self.width)),
+                )
+                if crop_shape != (self.height, self.width):
+                    raise ValueError(
+                        "Cached DINOv2 feature fusion currently requires full-image "
+                        "training crops so feature/image geometry stays exact"
+                    )
 
     def __len__(self) -> int:
         return len(self.records)
@@ -583,6 +650,17 @@ class BIMDepthDataset(Dataset):
                 feature_deep = feature_deep[..., ::-1].copy()
             output["da3_feature_mid"] = torch.from_numpy(feature_mid.copy())
             output["da3_feature_deep"] = torch.from_numpy(feature_deep.copy())
+        if self.dinov2_feature_fusion_enabled:
+            assert self.dinov2_feature_cache_root is not None
+            dinov2_feature = load_cached_dinov2_feature(
+                self.dinov2_feature_cache_root,
+                str(record["id"]),
+                channels=self.dinov2_feature_channels,
+                grid_shape=self.dinov2_feature_grid_shape,
+            )
+            if feature_horizontal_flip:
+                dinov2_feature = dinov2_feature[..., ::-1].copy()
+            output["dinov2_feature"] = torch.from_numpy(dinov2_feature.copy())
         if has_ground_truth:
             base = arrays["scaled_depth"]
             bim = arrays["bim_depth"]
