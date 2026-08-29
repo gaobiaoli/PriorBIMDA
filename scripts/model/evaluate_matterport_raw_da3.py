@@ -215,11 +215,11 @@ def _read_rows(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
-def _successful_keys(rows: Iterable[dict[str, str]]) -> set[str]:
+def _completed_keys(rows: Iterable[dict[str, str]]) -> set[str]:
     return {
         _frame_key(row["scene_id"], row["frame_id"])
         for row in rows
-        if row.get("status") == "ok"
+        if row.get("status") in {"ok", "skipped_bad_gt"}
     }
 
 
@@ -234,12 +234,16 @@ def _coerce_row(row: dict[str, str]) -> dict[str, Any]:
     return result
 
 
-def _latest_successful_rows(csv_path: Path) -> list[dict[str, Any]]:
+def _latest_completed_rows(csv_path: Path) -> list[dict[str, Any]]:
     latest: dict[str, dict[str, str]] = {}
     for row in _read_rows(csv_path):
-        if row.get("status") == "ok":
+        if row.get("status") in {"ok", "skipped_bad_gt"}:
             latest[_frame_key(row["scene_id"], row["frame_id"])] = row
     return [_coerce_row(latest[key]) for key in sorted(latest)]
+
+
+def _metric_rows(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [row for row in rows if row.get("status") == "ok"]
 
 
 def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -303,6 +307,7 @@ def build_summary(
         "frame_inference": "each perspective RGB is inferred independently",
         "requested_scenes": scene_ids,
         "completed_scenes": sorted(grouped),
+        "evaluated_frames": len(rows),
         "overall": aggregate_rows(rows),
         "by_scene": {scene: aggregate_rows(grouped[scene]) for scene in sorted(grouped)},
     }
@@ -414,6 +419,23 @@ def evaluate_frame(model: Any, frame: Any, process_res: int) -> dict[str, Any]:
     )
     gt = np.asarray(frame.depth, dtype=np.float32)
     valid = np.isfinite(gt) & (gt > 0)
+    if not np.any(valid):
+        return {
+            **_base_row(frame),
+            "height": height,
+            "width": width,
+            "process_height": process_height,
+            "process_width": process_width,
+            "fx_process_px": float(processed_k[0, 0]),
+            "fy_process_px": float(processed_k[1, 1]),
+            "focal_scale": focal_scale,
+            "valid_pixels": 0,
+            "total_pixels": int(valid.size),
+            "valid_fraction": 0.0,
+            "inference_seconds": 0.0,
+            "status": "skipped_bad_gt",
+            "error": "Matterport depth contains no finite positive GT pixels",
+        }
     start = time.perf_counter()
     with torch.inference_mode():
         result = model.inference(
@@ -499,7 +521,7 @@ def main() -> None:
         frames = frames[: args.max_frames]
 
     prior_rows = _read_rows(csv_path)
-    completed = _successful_keys(prior_rows)
+    completed = _completed_keys(prior_rows)
     pending = [
         frame for frame in frames if _frame_key(frame.scene_id, frame.frame_id) not in completed
     ]
@@ -532,6 +554,7 @@ def main() -> None:
     write_header = not csv_path.exists() or csv_path.stat().st_size == 0
     scene_progress: dict[str, int] = defaultdict(int)
     errors = 0
+    skipped_bad_gt = 0
     run_start = time.perf_counter()
     with csv_path.open("a", encoding="utf-8", newline="", buffering=1) as handle:
         writer = csv.DictWriter(handle, fieldnames=CSV_COLUMNS, extrasaction="ignore")
@@ -542,6 +565,12 @@ def main() -> None:
             try:
                 row = evaluate_frame(model, frame, args.process_res)
                 scene_progress[frame.scene_id] += 1
+                if row["status"] == "skipped_bad_gt":
+                    skipped_bad_gt += 1
+                    print(
+                        f"SKIP_BAD_GT {_frame_key(frame.scene_id, frame.frame_id)}",
+                        flush=True,
+                    )
             except Exception as error:  # keep a long benchmark alive and make failures visible
                 errors += 1
                 row = {
@@ -561,37 +590,49 @@ def main() -> None:
                 print(
                     f"progress={index}/{len(pending)} total_done={len(frames)-len(pending)+index}/"
                     f"{len(frames)} scene={frame.scene_id} frame={frame.frame_id}{metric_text} "
-                    f"rate={rate:.3f}fps eta_hours={remaining/3600:.2f} errors={errors}",
+                    f"rate={rate:.3f}fps eta_hours={remaining/3600:.2f} "
+                    f"skipped_bad_gt={skipped_bad_gt} errors={errors}",
                     flush=True,
                 )
 
             current_scene_done = index == len(pending) or pending[index].scene_id != frame.scene_id
             scenes_finished = sum(1 for value in scene_progress.values() if value > 0)
             if current_scene_done and scenes_finished % args.excel_every_scenes == 0:
-                rows = _latest_successful_rows(csv_path)
+                completed_rows = _latest_completed_rows(csv_path)
+                rows = _metric_rows(completed_rows)
                 summary = build_summary(
                     rows, args=args, scene_ids=scene_ids, started_at=started_at
                 )
+                summary["skipped_bad_gt_frames"] = sum(
+                    row["status"] == "skipped_bad_gt" for row in completed_rows
+                )
                 _atomic_json(summary_path, summary)
-                export_excel(excel_path, rows, summary)
+                export_excel(excel_path, completed_rows, summary)
                 print(
-                    f"checkpoint_export rows={len(rows)} summary={summary_path} excel={excel_path}",
+                    f"checkpoint_export evaluated={len(rows)} "
+                    f"skipped_bad_gt={summary['skipped_bad_gt_frames']} "
+                    f"summary={summary_path} excel={excel_path}",
                     flush=True,
                 )
 
-    rows = _latest_successful_rows(csv_path)
+    completed_rows = _latest_completed_rows(csv_path)
+    rows = _metric_rows(completed_rows)
     summary = build_summary(rows, args=args, scene_ids=scene_ids, started_at=started_at)
+    summary["skipped_bad_gt_frames"] = sum(
+        row["status"] == "skipped_bad_gt" for row in completed_rows
+    )
     summary["artifacts"] = {
         "per_frame_csv": str(csv_path),
         "per_frame_csv_sha256": _sha256(csv_path),
         "excel": str(excel_path),
     }
     _atomic_json(summary_path, summary)
-    export_excel(excel_path, rows, summary)
+    export_excel(excel_path, completed_rows, summary)
     summary["artifacts"]["excel_sha256"] = _sha256(excel_path)
     _atomic_json(summary_path, summary)
     print(
-        f"COMPLETE frames={len(rows)}/{len(frames)} errors={errors} "
+        f"COMPLETE evaluated={len(rows)} skipped_bad_gt={summary['skipped_bad_gt_frames']} "
+        f"completed={len(completed_rows)}/{len(frames)} errors={errors} "
         f"abs_rel={summary['overall'].get('pixel_micro', {}).get('abs_rel')} "
         f"summary={summary_path} excel={excel_path}",
         flush=True,

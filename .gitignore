@@ -18,3 +18,7 @@ wandb/
 # dataset terms instead of redistributing RGB/GT/derived dense arrays.
 docs/assets/paper_evaluation/qualitative/
 docs/assets/pano_evaluation/qualitative/
+
+
+results/matterport3d/raw_da3_metric_504/matterport3d_raw_da3_per_frame.xlsx
+results/matterport3d/raw_da3_metric_504/per_frame.csv

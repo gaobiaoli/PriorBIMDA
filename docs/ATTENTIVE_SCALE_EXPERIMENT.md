@@ -1939,3 +1939,77 @@ and `167b4149fa200344cd89841bb065f4312cfc673460466eb410e873c5a0ba1116`.
 The paired validation comparison is
 `results/stanford_area1/full_regression_no_bim_geometry_vs_with_bim_geometry_round3_val.json`
 (SHA256 `d2bc6f7fd6a033b6202305ec399c81816512478237b4ce74ed9339c82936dad2`).
+
+## Matched fixed-Huber / iterative-Huber / full-regression comparison
+
+Three scale-only estimators were retrained from scratch for exactly three
+epochs under one input and evaluation contract. All receive the same eight
+spatial channels: RGB (3), log raw focal-corrected DA3 depth (1), masked log BIM
+depth (1), BIM hit mask (1), signed BIM/raw-DA3 log-ratio (1), and its absolute
+value (1). Cached DA3 latent features, DA3 confidence, BIM normals, BIM edge,
+the deterministic robust BIM scale, fallback gating and the low/detail refiner
+are absent from the learned prediction. GT supplies training losses only and
+is not a forward input. All variants start at `c0=0`, run three rounds, use the
+same train/validation/test rooms, optimizer, seed, scale augmentation and
+official-all-valid support.
+
+The compared update rules are:
+
+1. **Fixed-attention pseudo-Huber:** the learned reliability attention is
+   computed once at `c0` and reused for three damped robust center updates.
+2. **Iterative-attention pseudo-Huber:** the shared reliability network
+   recomputes attention from the current ratio residual before every damped
+   robust center update.
+3. **Full regression:** the shared neural head directly regresses a bounded
+   residual log-scale update each round; no pseudo-Huber weighted mean or
+   damping is used.
+
+All 2,628 optimizer steps across the two new Huber runs completed without a
+skip. Formal pixel-micro results are:
+
+| Split / estimator | Round 1 AbsRel | Round 2 AbsRel | Round 3 AbsRel | Round 3 RMSE | Round 3 MAE | Round 3 delta1 |
+|---|---:|---:|---:|---:|---:|---:|
+| Validation fixed Huber | 0.076845 | 0.071707 | 0.070815 | **0.652431** | 0.219338 | 0.937295 |
+| Validation iterative Huber | 0.076778 | 0.071627 | 0.070766 | 0.652930 | 0.219373 | 0.936592 |
+| Validation full regression | 0.080077 | 0.072259 | **0.069230** | 0.653162 | **0.218655** | **0.937842** |
+| Test fixed Huber | 0.073757 | 0.069118 | 0.068114 | 0.420189 | 0.140419 | **0.944419** |
+| Test iterative Huber | 0.073734 | 0.069099 | 0.068092 | 0.420279 | **0.140331** | 0.944280 |
+| Test full regression | 0.077186 | 0.070724 | **0.067578** | **0.419013** | 0.140437 | 0.943483 |
+
+Refreshing Huber attention changes round-3 AbsRel by only `-0.000048` on
+validation (0.068%) and `-0.000023` on test (0.033%). Its paired-room 95% CIs
+are `[-0.000207,0.000853]` and `[-0.000291,0.000182]`, respectively. The
+dynamic and fixed Huber models are therefore empirically equivalent in this
+three-epoch, eight-channel setting; recomputing attention is not supported as
+a meaningful gain.
+
+Full regression improves validation AbsRel over iterative Huber by `0.001536`
+(2.17%), is better in six of seven rooms, and has a paired-room 95% CI of
+`[-0.004071,-0.000883]`. Against fixed Huber it improves all seven rooms, with
+CI `[-0.003287,-0.001015]`. This is stable validation evidence that directly
+regressing residual scale updates is better than the constrained pseudo-Huber
+aggregation for the matched inputs.
+
+On frozen test, full regression improves AbsRel over iterative/fixed Huber by
+`0.000514/0.000536` (0.75%/0.79%), but both room-bootstrap CIs cross zero. It
+also has the best RMSE, furniture AbsRel and non-structural AbsRel, while
+iterative Huber has the best MAE and BIM-consistent AbsRel and fixed Huber has
+the best delta1. Consequently the test result supports a small overall
+full-regression advantage, not uniform metric/subset dominance. Area_1 test
+was already revealed in earlier work, so these test comparisons remain
+post-hoc and must not be presented as blind model selection.
+
+The fixed and iterative config/checkpoint SHA256 pairs are
+`7b6e57ad088ddbe07719b53f55412ab3ee547a41da234c8f2206020e9fe6b73e` /
+`2536b74db62b28c89eb6f30729d52ae5078202561de7c7f991e1abd3cbaee19c`
+and
+`03426b9cb4a9f51a1bc14edd1b74821e82466830bcb82496cc752bd3501a3eb6` /
+`f2ab611ab3bef37aae0aa24774dc689b93fdff3a43e8e8c7f3ffb19fd74254fc`.
+Their validation summary hashes are
+`f49ac617082961f5ba623f23fe6ac1c32276c6dc536e3fafc7e039f848f35faa`
+and `a13582c1d1faeeec7a23dec123a3681ef9e6066cf7e19de68d522aa5469e09f0`;
+their test summary hashes are
+`3043d4d24230c5e2d40a12be10158dd79c2e3cfe1acbd275ccc6de5a48b90cc1`
+and `8ef4e3c92ac2c49adfb145a55781da7369b57f603dc193c64c46b45704e6036d`.
+The six pairwise bootstrap artifacts use the prefix
+`results/stanford_area1/three_scale_estimators_`.

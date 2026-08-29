@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-29",
+  "scene": "HxpKQynjfin",
+  "bimnet_scene": "train/hxp",
+  "protocol": "frozen Area_1 scale heads; raw focal-corrected DA3; registered BIMNet; full depth; 504 process resolution; no Matterport training or tuning",
+  "paired_frame_check": {
+    "dataset_frames": 792,
+    "scored_frames": 777,
+    "zero_gt_frames": 15,
+    "common_frame_ids": 792,
+    "inference_errors_per_model": 0
+  },
+  "sources": {
+    "full_regression": {
+      "summary": "results/matterport3d/hxp_full_regression_scale_zero_shot/summary.json",
+      "summary_sha256": "9df3bdba7a59ffaf1a76138695ce42f3373da600ebb03c7b8f2f3669ca8189b1"
+    },
+    "fixed_huber": {
+      "summary": "results/matterport3d/hxp_fixed_attention_huber_zero_shot/summary.json",
+      "summary_sha256": "fa67adf68ab73132b4efd35ec7c21ae159149ed8457478dea9fd01f2b8d5823e"
+    },
+    "iterative_huber": {
+      "summary": "results/matterport3d/hxp_iterative_attention_huber_zero_shot/summary.json",
+      "summary_sha256": "0ea24962d2db8b7cf72de5c6ca4b97c1fd2c0566f1f5b1f5167d7922b8cfa78a"
+    }
+  },
+  "subsets": {
+    "all_gt_valid": {
+      "frames": 777,
+      "raw_da3_abs_rel": 0.16408909,
+      "full_regression_abs_rel": 0.11377271,
+      "fixed_huber_abs_rel": 0.10653640,
+      "iterative_huber_abs_rel": 0.10550157,
+      "iterative_vs_fixed_relative_improvement": 0.00971347
+    },
+    "gt_quality_primary": {
+      "frames": 740,
+      "raw_da3_abs_rel": 0.16402732,
+      "oracle_frame_scale_abs_rel": 0.06630460,
+      "full_regression_abs_rel": 0.11359649,
+      "fixed_huber_abs_rel": 0.10635468,
+      "iterative_huber_abs_rel": 0.10531691,
+      "iterative_vs_fixed_relative_improvement": 0.00975766,
+      "iterative_vs_full_regression_relative_improvement": 0.07288589
+    },
+    "operational_no_gt": {
+      "frames": 620,
+      "raw_da3_abs_rel": 0.16664227,
+      "oracle_frame_scale_abs_rel": 0.06513975,
+      "full_regression_abs_rel": 0.11132765,
+      "fixed_huber_abs_rel": 0.10323462,
+      "iterative_huber_abs_rel": 0.10221668,
+      "iterative_vs_fixed_relative_improvement": 0.00986043
+    },
+    "gt_verified_diagnostic": {
+      "frames": 550,
+      "raw_da3_abs_rel": 0.16505395,
+      "oracle_frame_scale_abs_rel": 0.06226153,
+      "full_regression_abs_rel": 0.10492211,
+      "fixed_huber_abs_rel": 0.09745432,
+      "iterative_huber_abs_rel": 0.09691770,
+      "iterative_vs_fixed_relative_improvement": 0.00550635
+    }
+  },
+  "gt_quality_iteration_diagnostics": {
+    "fixed_huber_mean_abs_oracle_log_scale_error_c1_c2_c3": [
+      0.10335908,
+      0.08732332,
+      0.08084587
+    ],
+    "iterative_huber_mean_abs_oracle_log_scale_error_c1_c2_c3": [
+      0.10282556,
+      0.08629343,
+      0.07956972
+    ],
+    "fixed_huber_round_improvement_fractions": [
+      0.77432432,
+      0.71756757,
+      0.65405405
+    ],
+    "iterative_huber_round_improvement_fractions": [
+      0.77702703,
+      0.72432432,
+      0.65540541
+    ],
+    "fixed_huber_any_update_sign_flip_fraction": 0.0,
+    "iterative_huber_any_update_sign_flip_fraction": 0.0
+  },
+  "paired_gt_quality_iterative_vs_fixed": {
+    "frame_win_fraction": 0.57702703,
+    "panorama_win_fraction": 0.79545455,
+    "panorama_clusters": 44,
+    "pixel_micro_abs_rel_difference": -0.00103777,
+    "panorama_cluster_bootstrap_repetitions": 10000,
+    "panorama_cluster_bootstrap_seed": 42,
+    "difference_95_ci": [
+      -0.00209490,
+      -0.00040714
+    ],
+    "difference_definition": "iterative_huber - fixed_huber; negative is better"
+  },
+  "interpretation": "Both pseudo-Huber estimators transfer better than full regression on this scene. Refreshing attention each round gives a small but consistent paired improvement over fixed attention. GT-verified results are diagnostic only and are not the primary headline."
+}

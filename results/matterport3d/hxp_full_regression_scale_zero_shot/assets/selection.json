@@ -1,0 +1,26 @@
+{
+  "effective": {
+    "frame_id": "67945a1da94b412f9cc7c8646f547044_i2_2",
+    "effective": true,
+    "filter_reasons": "",
+    "bim_hit_fraction": 1.0,
+    "bim_gt_agree_image_fraction": 0.5649923762608492,
+    "asset": "/home/bgao491/PriorBIMDA/results/matterport3d/hxp_full_regression_scale_zero_shot/assets/filter_example_effective.png"
+  },
+  "outside_bim": {
+    "frame_id": "5cd96a7c879547eda2a90077c79bc7f0_i2_4",
+    "effective": false,
+    "filter_reasons": "camera_outside_bim_aabb;low_bim_gt_agreement",
+    "bim_hit_fraction": 0.875053757135038,
+    "bim_gt_agree_image_fraction": 0.017891351943076082,
+    "asset": "/home/bgao491/PriorBIMDA/results/matterport3d/hxp_full_regression_scale_zero_shot/assets/filter_example_outside_bim.png"
+  },
+  "inside_aabb_mismatch": {
+    "frame_id": "230e4c07641f478d871ec08cb0192cb5_i1_0",
+    "effective": false,
+    "filter_reasons": "low_bim_gt_agreement;insufficient_bim_da3_ratio_support",
+    "bim_hit_fraction": 1.0,
+    "bim_gt_agree_image_fraction": 0.0,
+    "asset": "/home/bgao491/PriorBIMDA/results/matterport3d/hxp_full_regression_scale_zero_shot/assets/filter_example_inside_aabb_mismatch.png"
+  }
+}

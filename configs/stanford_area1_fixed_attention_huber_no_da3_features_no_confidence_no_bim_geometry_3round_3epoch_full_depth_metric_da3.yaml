@@ -1,0 +1,19 @@
+extends: stanford_area1_full_regression_scale_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch_full_depth_metric_da3.yaml
+
+# Matched scale-only pseudo-Huber control. The reliability attention is
+# computed at c0=0 once and held fixed across all three robust center updates.
+# It uses the same eight spatial inputs as the full-regression challenger and
+# receives no cached deterministic BIM scale through a fallback or feature.
+
+experiment:
+  name: stanford_area1_fixed_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch
+  output_dir: outputs/stanford_area1_fixed_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch
+
+model:
+  attention_scale:
+    estimator: pseudo_huber_attention_v1
+    iterative_refresh_attention: false
+    iterative_initial_log_scale: 0.0
+    use_fallback_gate: false
+    use_deterministic_fallback_input: false
+

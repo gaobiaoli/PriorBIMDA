@@ -591,6 +591,8 @@ Area_1 主 claim 应同时检查 `all`、`furniture` 和 `bim_foreground_conflic
 | `model/evaluate.py` | SLABIM 固定支持集 2D 深度评测 |
 | `model/evaluate_stanford_area1.py` | Area_1 全体/家具/冲突子集及 room-bootstrap 评测 |
 | `model/evaluate_stanford_pano.py` | Area_1 regular-to-pano 融合；可选 nested14 Route P/pano-only/regular+pano 评测 |
+| `model/evaluate_matterport_raw_da3.py` | Matterport3D 独立逐帧 DA3 metric/focal-corrected 基线 |
+| `model/evaluate_matterport_bimnet_full_regression.py` | Matterport3D+BIMNet 注册 BIM 的 learned-scale 零样本评测；兼容 full-regression 与 fixed/iterative pseudo-Huber，并区分无 GT operational 与 GT-assisted 筛选 |
 | `model/evaluate_reconstruction.py` | 反投影、融合并评测 3D 重建 |
 | `model/infer.py` | 无 GT 新区域推理与输出保存 |
 
@@ -608,6 +610,7 @@ Area_1 主 claim 应同时检查 `all`、`furniture` 和 `bim_foreground_conflic
 | `analysis/paired_bootstrap.py` | 从 SLABIM 逐帧 CSV 做配对 bootstrap |
 | `analysis/visualize_sample.py` | 检查一个已制备 SLABIM 样本 |
 | `analysis/visualize_prediction_sample.py` | 可视化指定 SLABIM 帧的多方法预测 |
+| `analysis/visualize_matterport_bimnet_filter_examples.py` | 自动选择并绘制 Matterport/BIMNet 有效、BIM 范围外和室内错配三类筛帧样例 |
 | `analysis/visualize_stanford_sample.py` | 可视化 Area_1 帧、家具/冲突 mask 与预测 |
 | `analysis/generate_paper_assets.py` | 从冻结结果生成量化图、敏感性图和三套过程图素材 |
 | `analysis/export_stanford_qualitative_panels.py` | 按固定 validation 规则导出三套独立定性 panel 与统一色条 |

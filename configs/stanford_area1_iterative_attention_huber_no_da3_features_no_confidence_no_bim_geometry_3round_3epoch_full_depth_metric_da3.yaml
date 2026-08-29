@@ -1,0 +1,14 @@
+extends: stanford_area1_fixed_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch_full_depth_metric_da3.yaml
+
+# Matched dynamic counterpart. The shared reliability updater recomputes
+# attention from the current ratio residual before each pseudo-Huber update;
+# every data, input, loss and optimization setting matches the fixed control.
+
+experiment:
+  name: stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch
+  output_dir: outputs/stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch
+
+model:
+  attention_scale:
+    iterative_refresh_attention: true
+

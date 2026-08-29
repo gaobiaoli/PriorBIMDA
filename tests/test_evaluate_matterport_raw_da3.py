@@ -1,5 +1,6 @@
 import importlib.util
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -51,3 +52,29 @@ def test_aggregate_rows_reconstructs_pixel_micro_rmse():
     np.testing.assert_allclose(result["pixel_micro"]["rmse_log"], np.sqrt(0.07))
     assert result["frames"] == 2
     assert result["valid_pixels"] == 4
+
+
+def test_all_zero_matterport_depth_is_skipped_before_da3_inference(tmp_path):
+    class ModelThatMustNotRun:
+        def inference(self, *args, **kwargs):
+            raise AssertionError("DA3 must not run for an all-zero GT frame")
+
+    frame = SimpleNamespace(
+        scene_id="scene",
+        panorama_id="pano",
+        frame_id="pano_i0_0",
+        camera_index=0,
+        yaw_index=0,
+        rgb_path=tmp_path / "rgb.jpg",
+        depth_path=tmp_path / "depth.png",
+        image_shape=(1024, 1280),
+        intrinsics=np.array(
+            [[1072.25, 0.0, 638.382], [0.0, 1072.15, 521.447], [0.0, 0.0, 1.0]],
+            dtype=np.float32,
+        ),
+        depth=np.zeros((1024, 1280), dtype=np.float32),
+    )
+    row = MODULE.evaluate_frame(ModelThatMustNotRun(), frame, 504)
+    assert row["status"] == "skipped_bad_gt"
+    assert row["valid_pixels"] == 0
+    assert row["inference_seconds"] == 0.0

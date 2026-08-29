@@ -553,6 +553,73 @@ def test_full_regression_no_bim_geometry_ablation_removes_only_four_channels() -
     assert torch.equal(valid_without, valid_corrupted)
 
 
+def test_fixed_and_iterative_huber_controls_share_the_eight_channel_contract() -> None:
+    config_paths = (
+        "configs/stanford_area1_fixed_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch_full_depth_metric_da3.yaml",
+        "configs/stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch_full_depth_metric_da3.yaml",
+    )
+    models = []
+    for path in config_paths:
+        cfg = load_config(path)
+        cfg.model.base_channels = 4
+        cfg.model.attention_scale.hidden_channels = 4
+        cfg.model.attention_scale.iterative_hidden_channels = 5
+        cfg.model.da3_feature_fusion.channels = 6
+        model = BIMPriorDA3(cfg).eval()
+        assert isinstance(model.attention_scale, AttentiveBIMScaleHead)
+        assert model.attention_scale.encoder[0][0].in_channels == 8
+        assert not model.da3_feature_scale_enabled
+        assert not model.attention_scale_use_base_confidence
+        assert not model.attention_scale_use_bim_normals
+        assert not model.attention_scale_use_bim_edge
+        assert not model.attention_scale_use_deterministic_fallback_input
+        assert model.attention_scale.iterative_updates == 3
+        assert model.attention_scale.fallback_gate is None
+        models.append(model)
+
+    assert not models[0].attention_scale.iterative_refresh_attention
+    assert models[1].attention_scale.iterative_refresh_attention
+
+    batch = _candidate_batch(size=32)
+    minimal = dict(batch)
+    minimal.pop("base_confidence")
+    minimal.pop("bim_normals")
+    minimal.pop("bim_edge")
+    for model in models:
+        reference_inputs = model._attention_scale_inputs(
+            minimal,
+            minimal["base_depth"],
+            minimal["scaled_depth"],
+        )
+        corrupted = dict(batch)
+        corrupted["base_confidence"] = torch.rand_like(batch["base_confidence"])
+        corrupted["bim_normals"] = torch.randn_like(batch["bim_normals"]) * 100.0
+        corrupted["bim_edge"] = torch.rand_like(batch["bim_edge"])
+        corrupted["scaled_depth"] = batch["scaled_depth"] * 19.0
+        candidate_inputs = model._attention_scale_inputs(
+            corrupted,
+            corrupted["base_depth"],
+            corrupted["scaled_depth"],
+        )
+        assert reference_inputs[0].shape[1] == 8
+        for reference, candidate in zip(reference_inputs, candidate_inputs):
+            assert torch.equal(reference, candidate)
+
+        with torch.no_grad():
+            reference_output = model._estimate_attention_scale(
+                minimal,
+                minimal["base_depth"],
+            )
+            candidate_output = model._estimate_attention_scale(
+                corrupted,
+                corrupted["base_depth"],
+            )
+        assert torch.equal(
+            reference_output["iteration_log_scales"],
+            candidate_output["iteration_log_scales"],
+        )
+
+
 def test_static_zero_control_freezes_attention_and_disables_fallback_gate() -> None:
     head = AttentiveBIMScaleHead(
         in_channels=5,

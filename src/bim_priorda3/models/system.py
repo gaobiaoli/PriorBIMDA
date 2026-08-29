@@ -186,9 +186,18 @@ class BIMPriorDA3(nn.Module):
         self.da3_scale_min_samples = int(self.scale_estimator_config["min_samples"])
         self.attention_scale_config = Config(model.get("attention_scale", {}))
         self.attention_scale_enabled = bool(self.attention_scale_config.get("enabled", False))
-        self.attention_scale_use_base_confidence = True
-        self.attention_scale_use_bim_normals = True
-        self.attention_scale_use_bim_edge = True
+        self.attention_scale_use_base_confidence = bool(
+            self.attention_scale_config.get("use_base_confidence", True)
+        )
+        self.attention_scale_use_bim_normals = bool(
+            self.attention_scale_config.get("use_bim_normals", True)
+        )
+        self.attention_scale_use_bim_edge = bool(
+            self.attention_scale_config.get("use_bim_edge", True)
+        )
+        self.attention_scale_use_deterministic_fallback_input = bool(
+            self.attention_scale_config.get("use_deterministic_fallback_input", True)
+        )
         self.full_regression_input_mode = self.FULL_REGRESSION_INPUT_JOINT
         self.attention_scale_input_channels = self.ATTENTION_SCALE_CHANNELS
         if self.attention_scale_enabled and self.e2e_da3_enabled:
@@ -206,6 +215,16 @@ class BIMPriorDA3(nn.Module):
             attention_estimator = str(
                 self.attention_scale_config.get("estimator", "pseudo_huber_attention_v1")
             )
+            if (
+                attention_estimator
+                != RGBDINOFullRegressionIterativeScaleHead.ESTIMATOR_NAME
+            ):
+                if not self.attention_scale_use_base_confidence:
+                    self.attention_scale_input_channels -= 1
+                if not self.attention_scale_use_bim_normals:
+                    self.attention_scale_input_channels -= 3
+                if not self.attention_scale_use_bim_edge:
+                    self.attention_scale_input_channels -= 1
             if attention_estimator == FullRegressionIterativeScaleHead.ESTIMATOR_NAME:
                 self.full_regression_input_mode = str(
                     self.attention_scale_config.get(
@@ -222,15 +241,6 @@ class BIMPriorDA3(nn.Module):
                         "model.attention_scale.input_mode must be one of "
                         f"{sorted(supported_input_modes)}"
                     )
-                self.attention_scale_use_base_confidence = bool(
-                    self.attention_scale_config.get("use_base_confidence", True)
-                )
-                self.attention_scale_use_bim_normals = bool(
-                    self.attention_scale_config.get("use_bim_normals", True)
-                )
-                self.attention_scale_use_bim_edge = bool(
-                    self.attention_scale_config.get("use_bim_edge", True)
-                )
                 if (
                     self.full_regression_input_mode
                     == self.FULL_REGRESSION_INPUT_RGB_DA3_UNIT_BIM
@@ -246,16 +256,6 @@ class BIMPriorDA3(nn.Module):
                             "features in the scale estimator"
                         )
                     self.attention_scale_input_channels = 4
-                elif not self.attention_scale_use_base_confidence:
-                    self.attention_scale_input_channels -= 1
-                if (
-                    self.full_regression_input_mode
-                    == self.FULL_REGRESSION_INPUT_JOINT
-                ):
-                    if not self.attention_scale_use_bim_normals:
-                        self.attention_scale_input_channels -= 3
-                    if not self.attention_scale_use_bim_edge:
-                        self.attention_scale_input_channels -= 1
             shared_arguments = {
                 "in_channels": self.attention_scale_input_channels,
                 "hidden_channels": int(
@@ -947,20 +947,30 @@ class BIMPriorDA3(nn.Module):
         valid = batch["bim_valid"].clamp(0.0, 1.0)
         bim = batch["bim_depth"]
         log_base = safe_log(base)
-        fallback_log_scale_map = safe_log(deterministic_scaled) - log_base
-        fallback_valid = (
-            torch.isfinite(base)
-            & torch.isfinite(deterministic_scaled)
-            & (base > 0)
-            & (deterministic_scaled > 0)
-        )
-        fallback_numerator = torch.where(
-            fallback_valid,
-            fallback_log_scale_map,
-            torch.zeros_like(fallback_log_scale_map),
-        ).sum(dim=(-2, -1), keepdim=True)
-        fallback_denominator = fallback_valid.sum(dim=(-2, -1), keepdim=True).clamp_min(1)
-        fallback_log_scale = fallback_numerator / fallback_denominator
+        if self.attention_scale_use_deterministic_fallback_input:
+            fallback_log_scale_map = safe_log(deterministic_scaled) - log_base
+            fallback_valid = (
+                torch.isfinite(base)
+                & torch.isfinite(deterministic_scaled)
+                & (base > 0)
+                & (deterministic_scaled > 0)
+            )
+            fallback_numerator = torch.where(
+                fallback_valid,
+                fallback_log_scale_map,
+                torch.zeros_like(fallback_log_scale_map),
+            ).sum(dim=(-2, -1), keepdim=True)
+            fallback_denominator = fallback_valid.sum(
+                dim=(-2, -1), keepdim=True
+            ).clamp_min(1)
+            fallback_log_scale = fallback_numerator / fallback_denominator
+            disagreement_reference = deterministic_scaled
+        else:
+            # Matched no-deterministic-prior experiments start at raw DA3 and
+            # must not receive the cached robust BIM scale through either the
+            # fallback scalar or the spatial disagreement channels.
+            fallback_log_scale = base.new_zeros((base.shape[0], 1, 1, 1))
+            disagreement_reference = base
 
         ratio = bim / base.clamp_min(1e-6)
         ratio_valid = (
@@ -978,29 +988,30 @@ class BIMPriorDA3(nn.Module):
             ratio.clamp_min(1e-6).log(),
             torch.zeros_like(ratio),
         )
-        safe_bim = torch.where(valid > 0, bim, deterministic_scaled)
+        safe_bim = torch.where(valid > 0, bim, disagreement_reference)
         log_bim = safe_log(safe_bim)
-        log_deterministic_scaled = safe_log(deterministic_scaled)
-        signed_disagreement = (log_bim - log_deterministic_scaled) * valid
+        log_disagreement_reference = safe_log(disagreement_reference)
+        signed_disagreement = (log_bim - log_disagreement_reference) * valid
         rgb = batch["rgb"] if self.use_rgb_condition else torch.zeros_like(batch["rgb"])
-        features = torch.cat(
+        feature_parts = [rgb, log_base / 3.0]
+        if self.attention_scale_use_base_confidence:
+            feature_parts.append(batch["base_confidence"].clamp(0.0, 1.0))
+        feature_parts.extend(((log_bim / 3.0) * valid, valid))
+        if self.attention_scale_use_bim_normals:
+            feature_parts.append(batch["bim_normals"])
+        if self.attention_scale_use_bim_edge:
+            feature_parts.append(batch["bim_edge"].clamp(0.0, 1.0))
+        feature_parts.extend(
             (
-                rgb,
-                log_base / 3.0,
-                batch["base_confidence"].clamp(0.0, 1.0),
-                (log_bim / 3.0) * valid,
-                valid,
-                batch["bim_normals"],
-                batch["bim_edge"].clamp(0.0, 1.0),
                 signed_disagreement.clamp(-1.0, 1.0),
                 signed_disagreement.abs().clamp(0.0, 1.0),
-            ),
-            dim=1,
+            )
         )
-        if features.shape[1] != self.ATTENTION_SCALE_CHANNELS:
+        features = torch.cat(feature_parts, dim=1)
+        if features.shape[1] != self.attention_scale_input_channels:
             raise RuntimeError(
                 "Attentive scale feature contract changed: "
-                f"expected {self.ATTENTION_SCALE_CHANNELS}, got {features.shape[1]}"
+                f"expected {self.attention_scale_input_channels}, got {features.shape[1]}"
             )
         return features, log_ratio, ratio_valid.float(), fallback_log_scale
 
