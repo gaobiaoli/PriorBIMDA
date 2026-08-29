@@ -1,0 +1,27 @@
+{
+  "alignment": "none",
+  "best_epoch": 9,
+  "bim_early_fusion_dense": {
+    "abs_rel": 0.060663533075768036,
+    "count": 404367334,
+    "delta1": 0.9450899290495112,
+    "delta2": 0.9781709197113335,
+    "mae": 0.10756285630603023,
+    "rmse": 0.2722022001147978,
+    "rmse_log": 0.1475371552630133
+  },
+  "frames": 1641,
+  "inference_seconds": 38.51091396762058,
+  "raw_da3_focal_corrected": {
+    "abs_rel": 0.08443322046568229,
+    "count": 404367334,
+    "delta1": 0.9406480964656755,
+    "delta2": 0.977480099814393,
+    "mae": 0.16107039270190684,
+    "rmse": 0.336195973970507,
+    "rmse_log": 0.1673409596153938
+  },
+  "relative_abs_rel_improvement": 0.2815205586002182,
+  "selected_checkpoint": "best.pt",
+  "support": "fixed GT support 0.2-5 m"
+}

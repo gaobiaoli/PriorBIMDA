@@ -1,0 +1,92 @@
+extends: stanford_area1_attentive_scale_da3_features_hit_only.yaml
+
+# Independent dense metric-depth experiment. This config intentionally does
+# not instantiate BIMPriorDA3, a scale head, or a residual refiner.
+experiment:
+  name: stanford_area1_bim_early_fusion_dense
+  seed: 42
+  output_dir: outputs/stanford_area1_bim_early_fusion_dense
+  results_dir: results/stanford_area1/bim_early_fusion_dense
+
+data:
+  # The prepared GT support remains the established 0.2--5.0 m benchmark.
+  ground_truth_support: prepared
+  min_depth: 0.2
+  max_depth: 5.0
+  # The cached DA3METRIC prediction is converted from its canonical 300 px
+  # focal to camera-specific metric z-depth before constructing disagreement.
+  apply_da3_metric_focal_scaling: true
+  recompute_cached_baselines: true
+
+model:
+  dav2:
+    model_id: depth-anything/Depth-Anything-V2-Metric-Indoor-Base-hf
+    revision: 9560f57a2f07803ba353bb918d6a6e5e005b9277
+    checkpoint_sha256: 8b902f5d9a8c8a9520f3a8c6a00afe442b464eff5aaf0cb405d1da721cd9f79f
+    local_files_only: true
+    encoder: vitb
+    patch_size: 14
+    hidden_size: 768
+    max_depth_m: 20.0
+  bim_condition:
+    channels:
+      - normalized_bim_log_depth
+      - bim_hit_mask
+      - clipped_bim_da3_log_disagreement
+    disagreement_clip: 1.5
+    fusion: additive_before_dinov2_transformer
+    projection_initialization: zeros
+  # These inherited feature branches are forbidden in this experiment.
+  da3_feature_fusion:
+    enabled: false
+    scale_enabled: false
+    refiner_enabled: false
+  dinov2_feature_fusion:
+    enabled: false
+  bim_normalization:
+    # Frozen once from all 1,780,781,853 valid BIM pixels in the immutable
+    # 7,013-frame train split. Validation/test never recompute these moments.
+    mean: 0.4236631010536673
+    std: 0.7573384621476941
+    valid_pixels: 1780781853
+
+loss:
+  depth: 1.0
+  gradient: 0.5
+
+train:
+  epochs: 10
+  # Physical batch 2 fits the 16 GB training GPU with activation checkpointing.
+  # This preserves the original effective batch of two without accumulation.
+  batch_size: 2
+  val_batch_size: 2
+  gradient_accumulation: 1
+  num_workers: 8
+  region_balanced_sampling: false
+  samples_per_epoch: null
+  optimizer: AdamW
+  encoder_learning_rate: 0.000005
+  decoder_learning_rate: 0.00005
+  bim_condition_learning_rate: 0.00005
+  weight_decay: 0.01
+  scheduler: cosine
+  amp: true
+  # The fp16 DPT head overflows with GradScaler's 65536 default before its
+  # automatic backoff; 1024 gives effective optimizer updates from batch one.
+  amp_initial_scale: 1024.0
+  gradient_checkpointing: true
+  log_every: 200
+  augment:
+    horizontal_flip_probability: 0.5
+    color_jitter: 0.10
+    bim_shift_probability: 0.0
+    bim_shift_pixels: 0
+    bim_dropout_probability: 0.0
+    bim_dropout_fraction: 0.0
+    bim_full_dropout_probability: 0.0
+    bim_depth_noise_probability: 0.0
+    bim_depth_noise_log_std: 0.0
+    bim_edge_dilation_probability: 0.0
+    bim_edge_dilation_pixels: 0
+    crop_height: 504
+    crop_width: 504

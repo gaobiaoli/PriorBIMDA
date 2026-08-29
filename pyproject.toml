@@ -29,6 +29,7 @@ da3 = ["depth-anything-3"]
 slabim = ["rosbags>=0.10"]
 stanford = ["ifcopenshell>=0.8.5; python_version >= '3.10'"]
 matterport = ["openpyxl>=3.1"]
+dav2 = ["transformers==4.53.2", "safetensors>=0.4.3"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

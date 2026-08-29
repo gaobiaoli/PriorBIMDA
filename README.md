@@ -388,6 +388,7 @@ E2E 权重应放 GitHub Release 或 Hugging Face，不应直接提交 Git 历史
 - [统一尺度估计与模型锚点协议](docs/UNIVERSAL_SCALE_PROTOCOL.md)
 - [Area_1 + BIMSyn 技术与结果](docs/STANFORD_BIMSYNC_EVALUATION.md)
 - [可学习 attention scale 与冻结 DA3 feature 实验](docs/ATTENTIVE_SCALE_EXPERIMENT.md)
+- [BIM early-fusion DAv2 dense metric-depth 实验](docs/BIM_EARLY_FUSION_DENSE_EXPERIMENT.md)
 - [Area_1 全景深度联合估计与 BIM 增强评测](docs/PANO_DEPTH_EVALUATION.md)
 - [Matterport3D + BIMNet 零样本尺度评测](docs/MATTERPORT_BIMNET_ZERO_SHOT.md)
 - [Area_1 全景论文/PPT 图件与三组定性备选](docs/assets/pano_evaluation/README.md)

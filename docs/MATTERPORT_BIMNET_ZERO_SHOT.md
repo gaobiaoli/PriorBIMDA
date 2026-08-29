@@ -216,3 +216,70 @@ GT-quality 上的三轮 frame-oracle log-scale MAE 为：
 - `results/matterport3d/hxp_fixed_attention_huber_zero_shot/`；
 - `results/matterport3d/hxp_iterative_attention_huber_zero_shot/`；
 - `results/matterport3d/hxp_three_scale_estimators_zero_shot_comparison.json`。
+
+## 8. BIM Early-Fusion Dense 模型的 zero-shot 结果
+
+在 Area_1 上训练 10 epochs 的 `BIMEarlyFusionDepthAnythingV2` epoch-9 best checkpoint
+也按同一场景、同一 504 process resolution、同一焦距修正 DA3 和同一 wall-filled BIMNet
+mesh 进行 zero-shot。网络在 Matterport 上没有训练、微调、选模或 scale alignment，直接输出
+dense absolute metric depth。评测使用旧 full-regression `per_frame.csv` 作为不可变筛选
+receipt；792 帧筛选重算 mismatch 为 0，Raw DA3 汇总也与旧评测逐值一致。
+
+运行命令：
+
+```bash
+.venv/bin/python scripts/model/evaluate_matterport_bimnet_early_fusion.py \
+  --matterport-root /path/to/Matterport3D \
+  --bimnet-root /path/to/BIMNet_release \
+  --toolkit-root /path/to/S3-SAM3D-ToolKit \
+  --bimnet-scene hxp \
+  --config configs/stanford_area1_bim_early_fusion_dense.yaml \
+  --checkpoint outputs/stanford_area1_bim_early_fusion_dense/best.pt \
+  --benchmark-reference-csv \
+    results/matterport3d/hxp_full_regression_scale_zero_shot/per_frame.csv \
+  --output-dir results/matterport3d/hxp_bim_early_fusion_dense_zero_shot \
+  --process-res 504 \
+  --device cuda
+```
+
+全深度 pixel-micro AbsRel 如下：
+
+| 子集 | 帧数 | Raw DA3 | Dense early fusion | 相对 Raw 变化 | 逐帧胜率 |
+|---|---:|---:|---:|---:|---:|
+| all GT-valid | 777 | 0.16409 | 0.18070 | **退化 10.12%** | 56.37% |
+| GT quality（主结果） | 740 | 0.16403 | 0.18021 | **退化 9.87%** | 57.57% |
+| operational no-GT | 620 | 0.16664 | 0.15876 | 改善 4.73% | 66.45% |
+| GT-verified（诊断） | 550 | 0.16505 | 0.10934 | 改善 33.76% | 73.45% |
+| rejected from effective | 227 | 0.15907 | 0.55188 | **退化 246.94%** | 14.98% |
+
+GT-quality 主结果的完整指标为：
+
+| 方法 | AbsRel | RMSE | MAE | delta1 | delta2 | RMSE_log |
+|---|---:|---:|---:|---:|---:|---:|
+| Raw DA3 | **0.16403** | **0.33540** | 0.23333 | 0.81351 | **0.96662** | **0.20536** |
+| Dense early fusion | 0.18021 | 0.44238 | **0.23181** | **0.83023** | 0.92171 | 0.26183 |
+
+这不是“模型完全不能迁移”：在已确认 BIM 覆盖且与真实可见结构一致的 550 帧上，AbsRel 从
+`0.16505` 降到 `0.10934`，RMSE 从 `0.33214 m` 降到 `0.26861 m`，说明模型确实能利用
+跨域有效 BIM。但是它在 BIM 未覆盖、错配或命中错误围护结构的 227 帧上没有可靠回退，AbsRel
+升至 `0.55188`，最终使不按 BIM/GT 一致性挑帧的正式 GT-quality 主结果差于 Raw DA3。
+
+与三种只修改一帧全局尺度的结构比较：
+
+| 方法 | GT-quality AbsRel | operational no-GT | GT-verified | rejected |
+|---|---:|---:|---:|---:|
+| Full regression scale | 0.11360 | 0.11133 | 0.10492 | 0.15981 |
+| Fixed Huber scale | 0.10635 | 0.10323 | 0.09745 | 0.15378 |
+| **Iterative Huber scale** | **0.10532** | **0.10222** | **0.09692** | **0.15015** |
+| Dense early fusion | 0.18021 | 0.15876 | 0.10934 | 0.55188 |
+
+因此在该单场景 zero-shot benchmark 上，dense early fusion 的主结果明显不如三个 scale-only
+模型。最直接的诊断是 domain shift 下的 BIM reliability / fallback 失败：全网络 fine-tuning
+允许错误 BIM 改写 dense token 与深度，而 scale-only 模型的输出空间受一个标量约束，错误先验
+造成的破坏更有限。GT-verified 只能作为“BIM 正确时的条件性能”诊断，不能用其 `0.10934`
+替代主 benchmark 的 `0.18021`。
+
+机器可读结果位于：
+
+- `results/matterport3d/hxp_bim_early_fusion_dense_zero_shot/per_frame.csv`；
+- `results/matterport3d/hxp_bim_early_fusion_dense_zero_shot/summary.json`。

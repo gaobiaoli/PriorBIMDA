@@ -1,0 +1,86 @@
+{
+  "best_epoch": 9,
+  "best_validation_abs_rel": 0.05413293181065094,
+  "bim_condition_lr": 5e-05,
+  "bim_condition_projection_bias_norm": 0.016460364684462547,
+  "bim_condition_projection_weight_norm": 1.1322071552276611,
+  "bim_normalization": {
+    "definition": "configured train-only BIM log-depth moments",
+    "mean": 0.4236631010536673,
+    "std": 0.7573384621476941,
+    "train_records": 7013,
+    "valid_pixels": 1780781853
+  },
+  "da3_condition_source": {
+    "model": "depth-anything/da3metric-large",
+    "quantity": "cached canonical depth * mean(processed fx,fy)/300",
+    "revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+    "uses_confidence": false,
+    "uses_latent_features": false
+  },
+  "dataset_split": {
+    "annotation": "/home/bgao491/PriorBIMDA/data/annotations/stanford_area1_room_v1.jsonl",
+    "annotation_sha256": "18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59",
+    "fingerprint_sha256": "98df6610a13d97d61edac37d8191512fc129e2a521993cbfc1110e699be19b0e",
+    "test_frames": 1641,
+    "train_frames": 7013,
+    "val_frames": 1673
+  },
+  "dav2": {
+    "checkpoint_sha256": "8b902f5d9a8c8a9520f3a8c6a00afe442b464eff5aaf0cb405d1da721cd9f79f",
+    "decoder": "official DAv2 Metric Indoor DPT",
+    "encoder": "DINOv2 ViT-B/14",
+    "max_depth_m": 20.0,
+    "model_id": "depth-anything/Depth-Anything-V2-Metric-Indoor-Base-hf",
+    "revision": "9560f57a2f07803ba353bb918d6a6e5e005b9277"
+  },
+  "decoder_lr": 5e-05,
+  "encoder_lr": 5e-06,
+  "epoch_count": 10,
+  "final_epoch_validation_abs_rel": 0.054159495546280606,
+  "git": {
+    "commit": "581a396f4138b6759676f890b289647c5d563031",
+    "dirty": true
+  },
+  "initialization_verification": {
+    "all_pass": true,
+    "bim_invariance": {
+      "atol": 1e-06,
+      "max_abs_diff": 0.0,
+      "mean_abs_diff": 0.0,
+      "pass": true,
+      "rtol": 1e-05
+    },
+    "bim_projection_zero_init": {
+      "max_abs_output": 0.0,
+      "pass": true
+    },
+    "dpt_pretrained_loading": {
+      "max_abs_diff": 0.0,
+      "mean_abs_diff": 0.0,
+      "parameter_values": 10890305,
+      "pass": true
+    },
+    "early_equals_pretrained_dav2": {
+      "atol": 1e-06,
+      "max_abs_diff": 0.0,
+      "mean_abs_diff": 0.0,
+      "pass": true,
+      "rtol": 1e-05
+    }
+  },
+  "input_resolution": [
+    504,
+    504
+  ],
+  "optimizer": "AdamW",
+  "optimizer_steps": 35057,
+  "random_seed": 42,
+  "scheduler": "cosine decay",
+  "schema_version": 1,
+  "skipped_steps": 13,
+  "total_parameters": 97923137,
+  "trainable_parameters": 97923137,
+  "training_seconds": 7834.716856922954,
+  "weight_decay": 0.01
+}
