@@ -42,6 +42,12 @@ GT/BIM 可见表面规则，并同时报告未筛选全集和拒绝集。
 
 ## 4. GT-assisted benchmark 筛选
 
+> **当前正式有效帧定义（后续澄清）**：只使用三条、与模型预测无关的规则：GT 正深度
+> 比例 `>10%`、BIM ray-hit 比例 `>20%`、相机中心位于**严格 BIM AABB** 内。AABB margin
+> 固定为 0，不再使用 BIM/GT agreement 或 BIM/DA3 ratio support。按该定义得到 624 帧；
+> 本节以下旧子集只保留为历史诊断，不能再把旧 `gt_quality` 或 `gt_verified` 称作当前正式结果。
+> 四种已完成的 zero-shot 预测按新规则的统一汇总见[第 9 节](#9-三规则正式有效帧汇总)。
+
 GT/BIM 一致性诊断子集 `gt_verified`（兼容旧名 `effective`）同时满足：
 
 1. GT 正深度像素占整图至少 10%；
@@ -283,3 +289,146 @@ GT-quality 主结果的完整指标为：
 
 - `results/matterport3d/hxp_bim_early_fusion_dense_zero_shot/per_frame.csv`；
 - `results/matterport3d/hxp_bim_early_fusion_dense_zero_shot/summary.json`。
+
+## 9. 三规则正式有效帧汇总
+
+正式帧集合只由以下条件的交集确定：
+
+1. `gt_valid_fraction > 0.10`；
+2. `bim_hit_fraction > 0.20`；
+3. `AABB_min <= camera_center <= AABB_max`，不使用 margin。
+
+明确排除的筛选因素包括 BIM/GT agreement、BIM/DA3 ratio support、模型 confidence、预测
+误差和任何模型特定条件。四份逐帧 CSV 均选出相同的 624 个 frame ID，集合 SHA256 为
+`e6639e7bd16eb7b666a6f22f41ee17ec50a2ce8d8b841427ad489126013bd18b`。所有指标使用完整
+Matterport 正深度 GT、pixel-micro 聚合，预测不做 scale/affine alignment。
+
+| 方法 | AbsRel | RMSE (m) | MAE (m) | delta1 | delta2 | RMSE_log | 相对 Raw AbsRel | 逐帧胜率 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Raw DA3 | 0.165732 | 0.331608 | 0.233062 | 0.812649 | 0.969444 | 0.202418 | - | - |
+| Full regression scale | 0.111086 | 0.266687 | 0.154178 | 0.907183 | **0.973256** | 0.170223 | 32.97% | 80.77% |
+| Fixed-attention Huber scale | 0.103019 | 0.262662 | 0.145563 | 0.914014 | 0.971836 | 0.166771 | 37.84% | 83.81% |
+| **Iterative-attention Huber scale** | **0.102018** | **0.261359** | **0.144137** | **0.915987** | 0.971799 | **0.166042** | **38.44%** | **84.13%** |
+| BIM early-fusion dense | 0.170670 | 0.418547 | 0.213292 | 0.855974 | 0.933837 | 0.250093 | **-2.98%** | 65.87% |
+| Area_1 iterative scale+refiner SOTA（final） | 0.105769 | 0.257265 | 0.149570 | 0.911615 | **0.978996** | 0.160549 | 36.18% | 73.88% |
+
+新定义没有改变结构排序：iterative Huber 仍是三种 scale estimator 和全部当前候选中的最优
+AbsRel/RMSE/MAE/delta1/RMSE-log 方法。Dense early fusion 在 65.87% 的帧上逐帧 AbsRel
+优于 Raw，且 MAE、delta1 也优于 Raw，但少数严重错误使总体 AbsRel 退化 2.98%、RMSE
+显著增大；这仍支持“跨域错误 BIM 缺乏安全回退”的诊断。
+
+作为边界敏感性检查，若仅把 AABB 放宽为旧协议的 0.25 m margin，会选出 633 帧；对应
+AbsRel 为 Raw `0.166886`、full regression `0.112633`、fixed Huber `0.104598`、iterative
+Huber `0.103599`、dense early fusion `0.172560`。方法排序和结论均不变。正式数字仍固定使用
+margin 0 的 624 帧，不依据性能选择边界。
+
+复现：
+
+```bash
+.venv/bin/python \
+  scripts/analysis/reaggregate_matterport_zero_shot_three_rule.py
+```
+
+机器可读汇总为
+`results/matterport3d/hxp_three_rule_zero_shot_comparison.json`。
+
+## 10. Area_1 scale+refiner SOTA 的 zero-shot 结果
+
+Area_1 全深度协议下的 scale+refiner 发布版 SOTA 为：
+
+- config：`configs/stanford_area1_iterative_scale_3round_full_depth_metric_da3.yaml`；
+- checkpoint：`outputs/stanford_area1_iterative_scale_3round_full_depth_metric_da3/accepted.pt`；
+- checkpoint SHA256：`74f2797dc42a4e7e8359440ea9d305a073e7ec0d2fe0850fb1ab79877bb7ae6d`；
+- Area_1 validation/test final AbsRel：`0.06421 / 0.06305`。
+
+该模型使用三轮 iterative scale-conditioned attention、`r_low+r_detail` refiner，以及冻结的
+DA3 layer 11/23 features；`r_frame` 关闭。下表是在 HxpKQynjfin 上不训练、不调参的严格
+zero-shot 结果。有效帧仍为同一三规则选出的 624 帧，集合 SHA256 仍为
+`e6639e7bd16eb7b666a6f22f41ee17ec50a2ce8d8b841427ad489126013bd18b`。
+
+| 本 checkpoint 的推理阶段 | AbsRel | RMSE (m) | MAE (m) | delta1 | delta2 | RMSE_log | 相对 Raw AbsRel | 逐帧胜率 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Raw DA3 | 0.165732 | 0.331608 | 0.233062 | 0.812649 | 0.969444 | 0.202418 | - | - |
+| learned scale | 0.120093 | 0.277114 | 0.168279 | 0.898258 | 0.973548 | 0.174682 | 27.54% | 77.40% |
+| scale + `r_low` | **0.103467** | **0.255510** | **0.146866** | **0.913863** | 0.978921 | **0.159488** | **37.57%** | **75.00%** |
+| scale + `r_low+r_detail`（final） | 0.105769 | 0.257265 | 0.149570 | 0.911615 | **0.978996** | 0.160549 | 36.18% | 73.88% |
+| GT oracle frame scale（诊断） | 0.063964 | 0.236421 | 0.096782 | 0.944613 | 0.975823 | 0.142802 | 61.40% | - |
+
+结论需要区分“Area_1 SOTA”和“MP3D zero-shot SOTA”：该完整模型的 final 相对 Raw DA3
+改善 36.18%，说明它能迁移；但 `r_detail` 使 AbsRel 相对 `scale+r_low` 从 `0.103467`
+退化到 `0.105769`（约 2.22%）。此前单独训练的 iterative-attention Huber scale-only
+在同一 624 帧 benchmark 上为 `0.102018`，仍略优于本模型的最佳中间阶段和 final。因此，
+Area_1 上最优的 dense refiner 并未在该跨域场景成为 zero-shot SOTA，主要负迁移来自细节残差，
+其次该完整 checkpoint 自身的 scale head（`0.120093`）也弱于专门的跨结构 scale-only 对照。
+
+复现命令：
+
+```bash
+.venv/bin/python scripts/model/evaluate_matterport_bimnet_scale_refiner.py \
+  --matterport-root /path/to/Matterport3D \
+  --bimnet-root /path/to/BIMNet_release \
+  --toolkit-root /path/to/S3-SAM3D-ToolKit \
+  --bimnet-scene hxp \
+  --config configs/stanford_area1_iterative_scale_3round_full_depth_metric_da3.yaml \
+  --checkpoint outputs/stanford_area1_iterative_scale_3round_full_depth_metric_da3/accepted.pt \
+  --output-dir results/matterport3d/hxp_iterative_scale_refiner_sota_zero_shot \
+  --process-res 504 \
+  --device cuda \
+  --progress-every 100
+```
+
+逐帧与机器可读结果位于：
+
+- `results/matterport3d/hxp_iterative_scale_refiner_sota_zero_shot/per_frame.csv`；
+- `results/matterport3d/hxp_iterative_scale_refiner_sota_zero_shot/summary.json`。
+
+## 11. Reduced-input Huber + refiner continuation
+
+为与三种 scale estimator 的八通道对照保持一致，Fixed-attention Huber 与
+Iterative-attention Huber 的三轮 scale-only checkpoint 又分别续训了 refiner。续训时不重复
+前三个 scale-only epoch：先加载已训练的 `attention_scale.*` 及其命名 Adam 状态，训练 9 个
+refiner-only epoch，再训练 3 个 joint epoch；正式评测使用 validation AbsRel 最优的 `best.pt`。
+两个最佳 checkpoint 都出现在第 5 个 continuation epoch（refiner-only），而不是 joint 阶段。
+
+scale head 仍使用相同八通道输入：RGB、focal-corrected DA3 depth、BIM depth、BIM hit mask、
+有符号及绝对 BIM/DA3 log-ratio。Reduced refiner 使用 RGB、raw/scaled DA3 geometry、learned
+scale channel、BIM depth/hit/disagreement；不使用 DA3 confidence、DA3 layer features、BIM
+normal、BIM edge 或 deterministic-scale feature。
+
+Area_1 official-all-valid test（1,641 帧，pixel-micro）结果为：
+
+| 模型 | Raw | Round 1 | Round 2 | Round 3 scale | +`r_low` | Final | Final RMSE | Final delta1 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Fixed Huber + reduced refiner | 0.085453 | 0.073757 | 0.069118 | 0.068114 | **0.063705** | **0.063595** | **0.414976** | **0.947431** |
+| Iterative Huber + reduced refiner | 0.085453 | 0.073734 | 0.069099 | **0.068092** | 0.064061 | 0.063988 | 0.415054 | 0.946991 |
+
+在 Area_1 test 上，Fixed final 相对 raw 改善 25.58%，相对其 Round-3 scale 改善 6.64%；
+Iterative 对应改善 25.12% 和 6.03%。Fixed final AbsRel 比 Iterative 低 `0.000394`，但该 test
+此前已经揭盲，因此不能据此声称盲测选模优势。
+
+两者随后在 HxpKQynjfin 上冻结权重进行 zero-shot。仍严格使用 624 帧三规则集合，frame-ID
+SHA256 为 `e6639e7bd16eb7b666a6f22f41ee17ec50a2ce8d8b841427ad489126013bd18b`；
+两个运行均为 792 个源帧、777 个正常 GT、15 个坏 GT、0 error，且未执行 test-time alignment。
+
+| 模型/阶段 | AbsRel | RMSE (m) | MAE (m) | delta1 | Frame-macro AbsRel |
+|---|---:|---:|---:|---:|---:|
+| Raw DA3 | 0.165732 | 0.331608 | 0.233062 | 0.812649 | 0.173679 |
+| Fixed Round-3 scale | 0.103039 | 0.262681 | 0.145594 | 0.914000 | 0.109813 |
+| Fixed + `r_low` | 0.104254 | 0.267771 | 0.148898 | 0.910786 | 0.111511 |
+| Fixed final | 0.103608 | 0.267383 | 0.148071 | 0.911300 | 0.110873 |
+| **Iterative Round-3 scale** | 0.102020 | **0.261352** | **0.144135** | **0.915967** | **0.108860** |
+| Iterative + `r_low` | 0.102158 | 0.266590 | 0.146615 | 0.913081 | 0.109387 |
+| **Iterative final** | **0.101781** | 0.266364 | 0.146135 | 0.913364 | 0.109016 |
+
+Iterative final 相对 raw 改善 38.59%，并比 Fixed final 低 `0.001826` AbsRel；同帧比较中，
+Iterative 的 scale/final 分别在 60.10%/60.58% 帧上优于 Fixed。其 final 相对自身 scale 仅改善
+0.234%，而 Fixed final 相对自身 scale 退化 0.551%。因此这次实验支持两点：reduced Huber
+scale 具有稳定的跨域泛化；Area_1 上的 refiner 增益大多不能迁移到 Hxp，动态 attention 主要
+保住并小幅改善 scale，而不是带来同等幅度的跨域 dense refinement 收益。
+
+Artifacts：
+
+- `results/stanford_area1/fixed_attention_huber_reduced_refiner_continuation_test/summary.json`；
+- `results/stanford_area1/iterative_attention_huber_reduced_refiner_continuation_test/summary.json`；
+- `results/matterport3d/hxp_fixed_attention_huber_reduced_refiner_continuation_zero_shot/summary.json`；
+- `results/matterport3d/hxp_iterative_attention_huber_reduced_refiner_continuation_zero_shot/summary.json`。

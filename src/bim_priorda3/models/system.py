@@ -154,6 +154,22 @@ class BIMPriorDA3(nn.Module):
         )
         if not 0.0 <= self.detail_reliability_gate_floor < 1.0:
             raise ValueError("model.detail_reliability_gate.floor must be in [0, 1)")
+        self.refiner_input_config = Config(model.get("refiner_inputs", {}))
+        self.refiner_use_base_confidence = bool(
+            self.refiner_input_config.get("use_base_confidence", True)
+        )
+        self.refiner_use_bim_normals = bool(
+            self.refiner_input_config.get("use_bim_normals", True)
+        )
+        self.refiner_use_bim_edge = bool(
+            self.refiner_input_config.get("use_bim_edge", True)
+        )
+        self.refiner_geometry_channels = 3 + int(self.refiner_use_base_confidence)
+        self.refiner_bim_channels = (
+            4
+            + 3 * int(self.refiner_use_bim_normals)
+            + int(self.refiner_use_bim_edge)
+        )
         self.da3: nn.Module | None = None
         self._da3_trainable_module_names: tuple[str, ...] = ()
         configured_scale = model.get("scale_estimator")
@@ -459,8 +475,8 @@ class BIMPriorDA3(nn.Module):
         )
         self.refiner = ScaleAnchoredDepthRefiner(
             rgb_channels=3,
-            geometry_channels=self.GEOMETRY_CHANNELS,
-            bim_channels=self.BIM_CHANNELS,
+            geometry_channels=self.refiner_geometry_channels,
+            bim_channels=self.refiner_bim_channels,
             base_channels=int(model.base_channels),
             max_frame_log_residual=float(model.get("max_frame_log_residual", 0.20)),
             max_low_log_residual=float(model.get("max_low_log_residual", 0.25)),
@@ -1215,26 +1231,34 @@ class BIMPriorDA3(nn.Module):
         signed_disagreement = (log_bim - log_scaled) * valid
 
         rgb = batch["rgb"] if self.use_rgb_condition else torch.zeros_like(batch["rgb"])
-        geometry = torch.cat(
+        geometry_parts = [log_base / 3.0, log_scaled / 3.0]
+        if self.refiner_use_base_confidence:
+            geometry_parts.append(batch["base_confidence"].clamp(0.0, 1.0))
+        geometry_parts.append(geometry_scale_channel)
+        geometry = torch.cat(geometry_parts, dim=1)
+        if geometry.shape[1] != self.refiner_geometry_channels:
+            raise RuntimeError(
+                "Refiner geometry feature contract changed: "
+                f"expected {self.refiner_geometry_channels}, got {geometry.shape[1]}"
+            )
+
+        bim_feature_parts = [(log_bim / 3.0) * valid, valid]
+        if self.refiner_use_bim_normals:
+            bim_feature_parts.append(batch["bim_normals"])
+        if self.refiner_use_bim_edge:
+            bim_feature_parts.append(batch["bim_edge"].clamp(0.0, 1.0))
+        bim_feature_parts.extend(
             [
-                log_base / 3.0,
-                log_scaled / 3.0,
-                batch["base_confidence"].clamp(0.0, 1.0),
-                geometry_scale_channel,
-            ],
-            dim=1,
-        )
-        bim_features = torch.cat(
-            [
-                (log_bim / 3.0) * valid,
-                valid,
-                batch["bim_normals"],
-                batch["bim_edge"].clamp(0.0, 1.0),
                 signed_disagreement.clamp(-1.0, 1.0),
                 signed_disagreement.abs().clamp(0.0, 1.0),
-            ],
-            dim=1,
+            ]
         )
+        bim_features = torch.cat(bim_feature_parts, dim=1)
+        if bim_features.shape[1] != self.refiner_bim_channels:
+            raise RuntimeError(
+                "Refiner BIM feature contract changed: "
+                f"expected {self.refiner_bim_channels}, got {bim_features.shape[1]}"
+            )
         if not self.use_bim_condition:
             bim_features = torch.zeros_like(bim_features)
 

@@ -1054,7 +1054,64 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "selection receipt; recorded as ineligible for the formal protocol"
         ),
     )
+    parser.add_argument(
+        "--extra-fixed-attention-huber-rounds",
+        type=_nonnegative_int_arg,
+        default=0,
+        help=(
+            "Evaluation-only extrapolation for a trained fixed-attention pseudo-Huber "
+            "head. Repeats its last learned step size for this many additional robust "
+            "center updates; no weights are trained or overwritten."
+        ),
+    )
     return parser.parse_args(argv)
+
+
+def _extend_fixed_attention_huber_rounds(
+    model: BIMPriorDA3,
+    extra_rounds: int,
+) -> dict[str, Any] | None:
+    """Unroll extra fixed-attention robust updates without changing learned weights."""
+
+    if extra_rounds == 0:
+        return None
+    head = model.attention_scale
+    estimator = str(
+        model.attention_scale_config.get("estimator", "pseudo_huber_attention_v1")
+    )
+    if head is None or estimator != "pseudo_huber_attention_v1":
+        raise ValueError(
+            "--extra-fixed-attention-huber-rounds requires a pseudo-Huber attention head"
+        )
+    if bool(head.iterative_refresh_attention):
+        raise ValueError(
+            "--extra-fixed-attention-huber-rounds is restricted to fixed attention"
+        )
+    step_logits = head.iterative_step_logits
+    original_rounds = int(head.iterative_updates)
+    if step_logits is None or original_rounds < 1 or step_logits.numel() != original_rounds:
+        raise RuntimeError("Fixed-attention Huber head has an invalid learned step-size vector")
+    original_step_sizes = torch.sigmoid(step_logits.detach().float())
+    extended_logits = torch.cat(
+        (step_logits.detach(), step_logits.detach()[-1:].repeat(extra_rounds)),
+        dim=0,
+    )
+    head.iterative_step_logits = torch.nn.Parameter(
+        extended_logits,
+        requires_grad=False,
+    )
+    head.iterative_updates = original_rounds + int(extra_rounds)
+    return {
+        "enabled": True,
+        "training_rounds": original_rounds,
+        "extra_inference_rounds": int(extra_rounds),
+        "total_inference_rounds": int(head.iterative_updates),
+        "attention_policy": "compute once at c0=0 and freeze across every round",
+        "extra_step_size_policy": "repeat the trained final-round step size",
+        "trained_step_sizes": original_step_sizes.tolist(),
+        "inference_step_sizes": torch.sigmoid(extended_logits.float()).tolist(),
+        "weights_trained_for_extra_rounds": False,
+    }
 
 
 def main() -> None:
@@ -1103,6 +1160,10 @@ def main() -> None:
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     model = BIMPriorDA3(cfg)
     model.load_state_dict(state["model"], strict=True)
+    extra_huber_rounds = _extend_fixed_attention_huber_rounds(
+        model,
+        int(args.extra_fixed_attention_huber_rounds),
+    )
     model.to(device).eval()
     model_output_max_depth = float(
         getattr(
@@ -1126,7 +1187,7 @@ def main() -> None:
         and not getattr(model, "use_frame_residual", True)
     )
     iterative_scale_count = int(
-        cfg.model.get("attention_scale", {}).get("iterative_updates", 0)
+        model.attention_scale.iterative_updates if model.attention_scale is not None else 0
     )
     model_scale_estimator = resolve_scale_estimator_config(cfg.model.get("scale_estimator"))
     model_robust_enabled = model_scale_estimator["name"] == ROBUST_LOG_CAP_SCALE_ESTIMATOR
@@ -1776,6 +1837,7 @@ def main() -> None:
             "inference_seed": inference_seed,
             "deterministic_algorithms": torch.are_deterministic_algorithms_enabled(),
             "unverified_robust_comparator_opt_out": bool(args.allow_unverified_robust_comparator),
+            "fixed_attention_huber_inference_extrapolation": extra_huber_rounds,
         },
         "dataset": {
             "split_provenance": dataset.split_provenance,

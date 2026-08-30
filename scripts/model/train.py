@@ -216,6 +216,116 @@ def load_initial_model_weights(
     }
 
 
+def load_scale_continuation_weights(
+    model: BIMPriorDA3,
+    checkpoint_model: Mapping[str, torch.Tensor],
+) -> dict[str, object]:
+    """Restore only a trained scale head into a freshly initialized refiner."""
+
+    if model.attention_scale is None:
+        raise RuntimeError("Scale-checkpoint continuation requires an attention-scale head")
+    prefix = "attention_scale."
+    source = {
+        name[len(prefix) :]: value
+        for name, value in checkpoint_model.items()
+        if name.startswith(prefix)
+    }
+    target = model.attention_scale.state_dict()
+    if set(source) != set(target):
+        raise ValueError(
+            "Scale-checkpoint continuation requires an identical scale-head state: "
+            f"missing={sorted(set(target) - set(source))}, "
+            f"unexpected={sorted(set(source) - set(target))}"
+        )
+    shape_mismatches = {
+        name: {"checkpoint": list(source[name].shape), "runtime": list(target[name].shape)}
+        for name in target
+        if source[name].shape != target[name].shape
+    }
+    if shape_mismatches:
+        raise ValueError(
+            "Scale-checkpoint continuation found scale-head shape mismatches: "
+            f"{shape_mismatches}"
+        )
+    model.attention_scale.load_state_dict(source, strict=True)
+    return {
+        "strict": True,
+        "scope": "attention_scale_only",
+        "loaded_tensors": len(source),
+        "loaded_parameters": sum(value.numel() for value in source.values()),
+        "fresh_refiner": True,
+    }
+
+
+def restore_optimizer_group_state(
+    optimizer: torch.optim.Optimizer,
+    checkpoint_optimizer: Mapping[str, Any],
+    *,
+    group_name: str,
+) -> dict[str, object]:
+    """Restore Adam moments for one named group without restoring its old LR."""
+
+    current = optimizer.state_dict()
+    source_groups = list(checkpoint_optimizer.get("param_groups", []))
+    source_state = checkpoint_optimizer.get("state", {})
+    if not isinstance(source_state, Mapping):
+        raise TypeError("Checkpoint optimizer state must be a mapping")
+
+    def unique_group(groups: list[dict[str, Any]], name: str) -> dict[str, Any]:
+        matches = [group for group in groups if group.get("name") == name]
+        if len(matches) != 1:
+            raise ValueError(
+                f"Expected exactly one optimizer group {name!r}; found {len(matches)}"
+            )
+        return matches[0]
+
+    source_group = unique_group(source_groups, group_name)
+    target_group = unique_group(current["param_groups"], group_name)
+    runtime_group = unique_group(optimizer.param_groups, group_name)
+    source_ids = list(source_group["params"])
+    target_ids = list(target_group["params"])
+    target_parameters = list(runtime_group["params"])
+    if not (len(source_ids) == len(target_ids) == len(target_parameters)):
+        raise ValueError(
+            f"Optimizer group {group_name!r} tensor count changed: "
+            f"checkpoint={len(source_ids)}, runtime={len(target_ids)}"
+        )
+
+    restored_state: dict[int, Any] = {}
+    for source_id, target_id, target_parameter in zip(
+        source_ids,
+        target_ids,
+        target_parameters,
+    ):
+        if source_id not in source_state:
+            continue
+        parameter_state = source_state[source_id]
+        for state_name, value in parameter_state.items():
+            if (
+                isinstance(value, torch.Tensor)
+                and value.ndim > 0
+                and value.shape != target_parameter.shape
+            ):
+                raise ValueError(
+                    f"Optimizer state {state_name!r} shape mismatch in group "
+                    f"{group_name!r}: checkpoint={tuple(value.shape)}, "
+                    f"runtime={tuple(target_parameter.shape)}"
+                )
+        restored_state[target_id] = parameter_state
+    if not restored_state:
+        raise ValueError(f"Checkpoint has no optimizer state for group {group_name!r}")
+    current["state"] = restored_state
+    optimizer.load_state_dict(current)
+    return {
+        "schema_version": 1,
+        "group": group_name,
+        "restored_parameter_tensors": len(restored_state),
+        "total_parameter_tensors": len(target_ids),
+        "restored_group_hyperparameters": False,
+        "learning_rate_policy": "new continuation schedule",
+    }
+
+
 def resolve_init_checkpoint_policy(cfg: Mapping[str, Any]) -> str:
     train_cfg = cfg.get("train", {})
     if not isinstance(train_cfg, Mapping):
@@ -352,30 +462,53 @@ def resolve_scratch_stage_epochs(
             )
         return {"scale_only": total_epochs}
 
-    raw = train_cfg.get("scratch_stage_epochs")
+    continuation_raw = train_cfg.get("continuation_stage_epochs")
+    raw = (
+        continuation_raw
+        if continuation_raw is not None
+        else train_cfg.get("scratch_stage_epochs")
+    )
     if raw is None:
         return None
     if not isinstance(raw, Mapping):
-        raise TypeError("train.scratch_stage_epochs must be a mapping")
+        key = (
+            "train.continuation_stage_epochs"
+            if continuation_raw is not None
+            else "train.scratch_stage_epochs"
+        )
+        raise TypeError(f"{key} must be a mapping")
     if e2e_enabled:
         raise ValueError("train.scratch_stage_epochs requires frozen/cached DA3")
     if not attention_scale_enabled:
         raise ValueError("train.scratch_stage_epochs requires model.attention_scale.enabled=true")
     expected = {"scale_only", "refiner_only", "joint"}
+    continuation_expected = {"refiner_only", "joint"}
     ordered_names = ("scale_only", "refiner_only", "joint")
     if additive_residual_enabled:
         expected.add("additive_only")
         ordered_names = ("scale_only", "refiner_only", "additive_only", "joint")
-    if set(raw) != expected:
+    elif continuation_raw is not None and set(raw) == continuation_expected:
+        ordered_names = ("refiner_only", "joint")
+    allowed = (continuation_expected,) if continuation_raw is not None else (expected,)
+    if set(raw) not in allowed:
         raise ValueError(
-            "train.scratch_stage_epochs has the wrong stages; expected "
-            f"{sorted(expected)}"
+            "Staged training config has the wrong stages; expected "
+            + (
+                f"scale-checkpoint continuation stages {sorted(continuation_expected)}"
+                if continuation_raw is not None
+                else str(sorted(expected))
+            )
         )
     stages: dict[str, int] = {}
     for name in ordered_names:
         value = raw[name]
         if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-            raise ValueError(f"train.scratch_stage_epochs.{name} must be a positive integer")
+            stage_key = (
+                "continuation_stage_epochs"
+                if continuation_raw is not None
+                else "scratch_stage_epochs"
+            )
+            raise ValueError(f"train.{stage_key}.{name} must be a positive integer")
         stages[name] = value
     total_epochs = train_cfg.get("epochs")
     if isinstance(total_epochs, bool) or not isinstance(total_epochs, int):
@@ -418,8 +551,8 @@ def build_scratch_stage_schedule(
         raise RuntimeError(
             "Scratch staged training requires trainable scale and refiner parameters"
         )
-    scale_end = int(stage_epochs["scale_only"])
     if set(stage_epochs) == {"scale_only"}:
+        scale_end = int(stage_epochs["scale_only"])
         phases = ((SCRATCH_SCALE_STAGE, 0, scale_end, scale),)
         schedule_kind = "scratch_scale_only"
         joint_end = scale_end
@@ -447,6 +580,39 @@ def build_scratch_stage_schedule(
                 list(originally_trainable)
             ),
         }
+    if set(stage_epochs) == {"refiner_only", "joint"}:
+        refiner_end = int(stage_epochs["refiner_only"])
+        joint_end = refiner_end + int(stage_epochs["joint"])
+        phases = (
+            (SCRATCH_REFINER_STAGE, 0, refiner_end, refiner),
+            (SCRATCH_JOINT_STAGE, refiner_end, joint_end, non_da3),
+        )
+        return {
+            "schema_version": 2,
+            "kind": "scale_checkpoint_refiner_joint",
+            "initialization": "trained_scale_checkpoint_with_fresh_refiner",
+            "phases": [
+                {
+                    "name": name,
+                    "start_epoch_inclusive": start,
+                    "end_epoch_exclusive": end,
+                    "trainable_non_da3_parameter_names": list(names),
+                }
+                for name, start, end, names in phases
+            ],
+            "total_epochs": joint_end,
+            "da3_policy": "frozen_cached",
+            "optimizer_parameter_policy": (
+                "one optimizer contains all originally trainable tensors; trained "
+                "attention-scale moments are restored by group while the changed "
+                "refiner starts with empty optimizer state"
+            ),
+            "optimizer_parameter_tensors": len(originally_trainable),
+            "optimizer_parameter_names_sha256": _canonical_sha256(
+                list(originally_trainable)
+            ),
+        }
+    scale_end = int(stage_epochs["scale_only"])
     refiner_end = scale_end + int(stage_epochs["refiner_only"])
     if "additive_only" in stage_epochs:
         if not additive:
@@ -1084,7 +1250,31 @@ def main() -> None:
             cfg.model.get("additive_residual", {}).get("enabled", False)
         ),
     )
-    if scratch_stage_epochs is not None and args.init_checkpoint is not None:
+    scale_checkpoint_continuation = (
+        scratch_stage_epochs is not None
+        and set(scratch_stage_epochs) == {"refiner_only", "joint"}
+    )
+    continuation_epoch_offset = int(cfg.train.get("continuation_epoch_offset", 0))
+    if scale_checkpoint_continuation:
+        if args.init_checkpoint is None:
+            raise ValueError(
+                "Refiner/joint continuation stages require --init-checkpoint from the "
+                "completed scale-only run"
+            )
+        if continuation_epoch_offset < 1:
+            raise ValueError(
+                "Refiner/joint continuation requires a positive "
+                "train.continuation_epoch_offset"
+            )
+    elif continuation_epoch_offset != 0:
+        raise ValueError(
+            "train.continuation_epoch_offset is only valid for refiner/joint continuation"
+        )
+    if (
+        scratch_stage_epochs is not None
+        and not scale_checkpoint_continuation
+        and args.init_checkpoint is not None
+    ):
         raise ValueError(
             "Scratch staged training forbids --init-checkpoint; initialize the task network "
             "from the configured deterministic defaults"
@@ -1178,6 +1368,7 @@ def main() -> None:
         "universal_scale_protocol": universal_scale_protocol,
         "configured_init_checkpoint_policy": init_checkpoint_policy,
     }
+    init_checkpoint_state: dict[str, Any] | None = None
     if args.init_checkpoint:
         # Initialization only needs model weights.  Keep optimizer/scheduler state
         # from large E2E checkpoints on CPU to avoid a needless GPU-memory spike.
@@ -1189,11 +1380,23 @@ def main() -> None:
             dataset_provenance,
             allow_cross_dataset=(args.allow_cross_dataset_initialization),
         )
-        initialization_receipt = load_initial_model_weights(
-            model,
-            state["model"],
-            initialized_model_cfg,
+        initialization_receipt = (
+            load_scale_continuation_weights(model, state["model"])
+            if scale_checkpoint_continuation
+            else load_initial_model_weights(
+                model,
+                state["model"],
+                initialized_model_cfg,
+            )
         )
+        if scale_checkpoint_continuation:
+            completed_scale_epochs = int(state.get("epoch", -1)) + 1
+            if continuation_epoch_offset != completed_scale_epochs:
+                raise ValueError(
+                    "train.continuation_epoch_offset must equal the completed scale "
+                    f"checkpoint epochs: configured={continuation_epoch_offset}, "
+                    f"checkpoint={completed_scale_epochs}"
+                )
         init_policy_receipt = apply_init_checkpoint_policy(
             model,
             init_checkpoint_policy,
@@ -1222,7 +1425,7 @@ def main() -> None:
             }
         )
         print(f"Initialized model weights from {args.init_checkpoint}")
-        del state
+        init_checkpoint_state = state
     else:
         provenance["initialization_policy"] = apply_init_checkpoint_policy(
             model,
@@ -1269,6 +1472,14 @@ def main() -> None:
         raise RuntimeError(
             "Optimizer must contain every and only originally trainable "
             "parameter before refiner head warmup staging"
+        )
+    if scale_checkpoint_continuation:
+        if init_checkpoint_state is None or "optimizer" not in init_checkpoint_state:
+            raise ValueError("Scale continuation checkpoint lacks optimizer state")
+        provenance["continued_optimizer_state"] = restore_optimizer_group_state(
+            optimizer,
+            init_checkpoint_state["optimizer"],
+            group_name="attention_scale",
         )
     provenance["optimizer_parameter_groups"] = optimizer_group_receipt
     total_epochs = args.epochs or int(cfg.train.epochs)
@@ -1319,6 +1530,7 @@ def main() -> None:
         "max_train_samples": args.max_train_samples,
         "max_val_samples": args.max_val_samples,
         "epoch_seed_schedule": "experiment_seed + epoch * 1000003 (mod 2^32)",
+        "continuation_epoch_offset": continuation_epoch_offset,
         "validation_inference_seed": validation_inference_seed,
         "validation_loader_generator_seed": validation_loader_generator_seed,
         "validation_rng_policy": (
@@ -1465,6 +1677,12 @@ def main() -> None:
         enabled=use_amp,
         init_scale=float(cfg.train.get("amp_init_scale", 65536.0)),
     )
+    if scale_checkpoint_continuation:
+        if init_checkpoint_state is None or "scaler" not in init_checkpoint_state:
+            raise ValueError("Scale continuation checkpoint lacks GradScaler state")
+        scaler.load_state_dict(init_checkpoint_state["scaler"])
+        provenance["continued_grad_scaler_state"] = True
+    init_checkpoint_state = None
     if resume_state is not None:
         if "scaler" not in resume_state:
             raise ValueError(
@@ -1581,7 +1799,8 @@ def main() -> None:
                 json.dumps(run_state, indent=2, ensure_ascii=False) + "\n",
                 encoding="utf-8",
             )
-            epoch_seed = (experiment_seed + epoch * 1_000_003) % 2**32
+            logical_epoch = epoch + continuation_epoch_offset
+            epoch_seed = (experiment_seed + logical_epoch * 1_000_003) % 2**32
             seed_everything(epoch_seed)
             train_generator.manual_seed(epoch_seed)
             model.train()
@@ -1590,7 +1809,7 @@ def main() -> None:
                     model,
                     str(active_refiner_training_stage["name"]),
                 )
-            criterion.set_epoch(epoch)
+            criterion.set_epoch(logical_epoch)
             epoch_learning_rate = float(optimizer.param_groups[0]["lr"])
             epoch_learning_rates = {
                 str(group.get("name", index)): float(group["lr"])
@@ -1646,6 +1865,7 @@ def main() -> None:
             validation = validate(model, val_loader, criterion, device, use_amp)
             row = {
                 "epoch": epoch,
+                "logical_epoch": logical_epoch,
                 "validation_inference_seed": validation_inference_seed,
                 "validation_loader_generator_seed": (applied_validation_loader_seed),
                 "refiner_training_stage": active_refiner_training_stage,

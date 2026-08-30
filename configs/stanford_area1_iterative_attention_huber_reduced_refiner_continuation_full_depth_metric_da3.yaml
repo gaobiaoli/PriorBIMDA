@@ -1,0 +1,31 @@
+extends: stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch_full_depth_metric_da3.yaml
+
+# Dynamic-attention counterpart of the fixed continuation config. Only the
+# attention refresh policy differs; the reduced refiner, losses, data and
+# 9+3 continuation schedule are otherwise identical.
+
+experiment:
+  name: stanford_area1_iterative_attention_huber_reduced_refiner_continuation
+  output_dir: outputs/stanford_area1_iterative_attention_huber_reduced_refiner_continuation
+
+model:
+  da3_feature_fusion:
+    enabled: false
+    scale_enabled: false
+    refiner_enabled: false
+  refiner_inputs:
+    use_base_confidence: false
+    use_bim_normals: false
+    use_bim_edge: false
+
+train:
+  epochs: 12
+  scale_only_experiment: false
+  continuation_stage_epochs:
+    refiner_only: 9
+    joint: 3
+  continuation_epoch_offset: 3
+  early_stopping_patience: 12
+  acceptance:
+    enabled: false
+    require_learned_scale_better_than_universal: false

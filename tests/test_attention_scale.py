@@ -27,7 +27,10 @@ from scripts.model.train import (
     apply_scratch_training_stage,
     build_refiner_head_warmup_schedule,
     build_scratch_stage_schedule,
+    build_optimizer,
     load_initial_model_weights,
+    load_scale_continuation_weights,
+    restore_optimizer_group_state,
     resolve_scratch_stage_epochs,
     snapshot_parameter_trainability,
 )
@@ -1217,6 +1220,85 @@ def test_scratch_scale_refiner_joint_schedule_uses_fresh_task_network() -> None:
     joint_names = {name for name, parameter in model.named_parameters() if parameter.requires_grad}
     assert joint_stage["name"] == SCRATCH_JOINT_STAGE
     assert joint_names == {name for name, trainable in original.items() if trainable}
+
+
+def test_reduced_refiner_continuation_restores_only_trained_scale_state() -> None:
+    source_cfg = load_config(
+        "configs/stanford_area1_fixed_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch_full_depth_metric_da3.yaml"
+    )
+    target_cfg = load_config(
+        "configs/stanford_area1_fixed_attention_huber_reduced_refiner_continuation_full_depth_metric_da3.yaml"
+    )
+    for cfg in (source_cfg, target_cfg):
+        cfg.model.base_channels = 4
+        cfg.model.attention_scale.hidden_channels = 4
+        cfg.model.attention_scale.iterative_hidden_channels = 5
+        cfg.model.attention_scale.token_dropout_probability = 0.0
+        cfg.model.attention_scale.equivariance_probability = 0.0
+    source_cfg.model.da3_feature_fusion.enabled = False
+    source_cfg.model.da3_feature_fusion.refiner_enabled = False
+    source = BIMPriorDA3(source_cfg)
+    target = BIMPriorDA3(target_cfg)
+
+    assert target.refiner_geometry_channels == 3
+    assert target.refiner_bim_channels == 4
+    assert not target.da3_feature_fusion_enabled
+    with torch.no_grad():
+        for parameter in source.attention_scale.parameters():
+            parameter.fill_(0.125)
+    receipt = load_scale_continuation_weights(target, source.state_dict())
+    assert receipt["scope"] == "attention_scale_only"
+    assert receipt["fresh_refiner"] is True
+    assert all(
+        torch.equal(target.state_dict()[name], value)
+        for name, value in source.state_dict().items()
+        if name.startswith("attention_scale.")
+    )
+
+    stages = resolve_scratch_stage_epochs(
+        target_cfg,
+        e2e_enabled=target.e2e_da3_enabled,
+        attention_scale_enabled=target.attention_scale_enabled,
+    )
+    assert stages == {"refiner_only": 9, "joint": 3}
+    original = snapshot_parameter_trainability(target)
+    schedule = build_scratch_stage_schedule(target, stages, original)
+    assert schedule["kind"] == "scale_checkpoint_refiner_joint"
+    assert apply_scratch_training_stage(
+        target,
+        epoch=0,
+        schedule=schedule,
+        original_trainability=original,
+    )["name"] == SCRATCH_REFINER_STAGE
+    assert apply_scratch_training_stage(
+        target,
+        epoch=9,
+        schedule=schedule,
+        original_trainability=original,
+    )["name"] == SCRATCH_JOINT_STAGE
+
+    source_optimizer, _ = build_optimizer(
+        source,
+        source_cfg,
+        float(source_cfg.train.learning_rate),
+    )
+    source_optimizer.zero_grad(set_to_none=True)
+    sum(parameter.sum() for parameter in source.attention_scale.parameters()).backward()
+    source_optimizer.step()
+    target_optimizer, _ = build_optimizer(
+        target,
+        target_cfg,
+        float(target_cfg.train.learning_rate),
+    )
+    optimizer_receipt = restore_optimizer_group_state(
+        target_optimizer,
+        source_optimizer.state_dict(),
+        group_name="attention_scale",
+    )
+    assert optimizer_receipt["restored_parameter_tensors"] > 0
+    assert target_optimizer.param_groups[1]["lr"] == float(
+        target_cfg.train.attention_scale_learning_rate
+    )
 
 
 def test_hybrid_scratch_schedule_has_dedicated_additive_stage() -> None:

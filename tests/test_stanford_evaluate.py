@@ -186,6 +186,44 @@ def test_cli_accepts_all_valid_depth_support() -> None:
     assert args.depth_support == "all-valid"
 
 
+def test_cli_accepts_extra_fixed_attention_huber_rounds() -> None:
+    args = stanford_evaluator.parse_args(
+        [
+            "--config",
+            "config.yaml",
+            "--checkpoint",
+            "model.pt",
+            "--extra-fixed-attention-huber-rounds",
+            "3",
+        ]
+    )
+    assert args.extra_fixed_attention_huber_rounds == 3
+
+
+def test_extra_fixed_attention_huber_rounds_repeat_last_step_without_mutating_prefix() -> None:
+    original_logits = torch.nn.Parameter(torch.tensor([-0.2, 0.1, 0.4]))
+    head = SimpleNamespace(
+        iterative_refresh_attention=False,
+        iterative_step_logits=original_logits,
+        iterative_updates=3,
+    )
+    model = SimpleNamespace(
+        attention_scale=head,
+        attention_scale_config={"estimator": "pseudo_huber_attention_v1"},
+    )
+
+    receipt = stanford_evaluator._extend_fixed_attention_huber_rounds(model, 3)
+
+    assert receipt is not None
+    assert head.iterative_updates == 6
+    assert torch.equal(head.iterative_step_logits[:3], original_logits.detach())
+    assert torch.equal(
+        head.iterative_step_logits[3:],
+        original_logits.detach()[-1:].repeat(3),
+    )
+    assert receipt["weights_trained_for_extra_rounds"] is False
+
+
 def test_all_valid_depth_loader_excludes_zero_and_sentinel_without_range_cutoff(
     tmp_path,
 ) -> None:
@@ -750,6 +788,7 @@ def test_batch_two_preserves_per_frame_and_aggregate_results(
 
     class FakeModel(torch.nn.Module):
         e2e_da3_enabled = True
+        attention_scale = None
 
         def __init__(self, _cfg):
             super().__init__()
@@ -858,6 +897,7 @@ def test_batch_two_preserves_per_frame_and_aggregate_results(
         "inference_seed": 73,
         "deterministic_algorithms": True,
         "unverified_robust_comparator_opt_out": True,
+        "fixed_attention_huber_inference_extrapolation": None,
     }
     assert summaries[1]["runtime"] == {
         "batch_size": 2,
@@ -865,6 +905,7 @@ def test_batch_two_preserves_per_frame_and_aggregate_results(
         "inference_seed": 73,
         "deterministic_algorithms": True,
         "unverified_robust_comparator_opt_out": True,
+        "fixed_attention_huber_inference_extrapolation": None,
     }
     scale_receipt = summaries[0]["scale_estimators"]
     assert scale_receipt["model_input"]["name"] == "legacy_q45"

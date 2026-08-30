@@ -2013,3 +2013,85 @@ their test summary hashes are
 and `8ef4e3c92ac2c49adfb145a55781da7369b57f603dc193c64c46b45704e6036d`.
 The six pairwise bootstrap artifacts use the prefix
 `results/stanford_area1/three_scale_estimators_`.
+
+## Fixed-attention Huber inference-depth extrapolation
+
+The three trained Huber stages are three unrolled robust-center updates, not
+three independent Huber networks. The learned attention is computed once at
+`c0=0` and frozen; every round recomputes the analytic pseudo-Huber weight from
+the current center. The trained step sizes are
+`[0.498680, 0.497376, 0.496509]`.
+
+To test numerical convergence without retraining, the test evaluator was
+extended with `--extra-fixed-attention-huber-rounds 3`. Rounds 4--6 reuse the
+third trained step size (`0.496509`) and the same frozen attention, Huber delta
+and bounded center update. The checkpoint is loaded strictly before the
+evaluation-only extension and is never overwritten. The original Round 1--3
+summary is reproduced exactly.
+
+Area_1 official-all-valid test results over all 1,641 frames are:
+
+| Output | AbsRel | RMSE | MAE | delta1 | Relative change from previous round |
+|---|---:|---:|---:|---:|---:|
+| Raw focal-corrected DA3 | 0.085453 | 0.435242 | 0.177124 | 0.938046 | - |
+| Round 1 | 0.073757 | 0.423738 | 0.152270 | 0.945512 | -13.69% |
+| Round 2 | 0.069118 | 0.420305 | 0.142529 | **0.946158** | -6.29% |
+| **Round 3 (trained stopping point)** | **0.068114** | **0.420189** | **0.140419** | 0.944419 | **-1.45%** |
+| Round 4, no training | 0.068425 | 0.421272 | 0.141026 | 0.942557 | +0.46% |
+| Round 5, no training | 0.069080 | 0.422725 | 0.142304 | 0.941732 | +0.96% |
+| Round 6, no training | 0.069676 | 0.424256 | 0.143474 | 0.941362 | +0.86% |
+
+Round 4/5/6 are respectively `0.46%/1.42%/2.29%` worse in AbsRel than Round 3.
+The fraction of frames improved by each next update is `70.93%` (1→2),
+`59.72%` (2→3), `49.24%` (3→4), `43.51%` (4→5), and `40.22%` (5→6).
+Only `office_20` and `office_22` improve at Round 4; the other five test rooms
+are already optimal at Round 2 or 3. This shows that further convergence to the
+fixed-attention pseudo-Huber center is not convergence to the GT oracle scale.
+The trained three-round stopping point acts as useful early stopping against
+BIM/DA3 ratio bias and foreground/misalignment outliers.
+
+Reproduction:
+
+```bash
+.venv/bin/python scripts/model/evaluate_stanford_area1.py \
+  --config configs/stanford_area1_fixed_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch_full_depth_metric_da3.yaml \
+  --checkpoint outputs/stanford_area1_fixed_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch/accepted.pt \
+  --split test \
+  --depth-support all-valid \
+  --batch-size 8 \
+  --allow-unverified-robust-comparator \
+  --extra-fixed-attention-huber-rounds 3 \
+  --output results/stanford_area1/fixed_attention_huber_6round_inference_test
+```
+
+Artifacts are
+`results/stanford_area1/fixed_attention_huber_6round_inference_test/summary.json`
+and `per_frame.csv` in the same directory.
+
+## Reduced-input Huber refiner continuation
+
+The matched eight-channel fixed- and iterative-attention Huber scale-only
+checkpoints were continued without repeating epochs 1--3. The continuation
+loaded only the trained `attention_scale.*` parameters and their named Adam
+moments, then ran nine refiner-only epochs followed by three joint epochs.
+Both validation-best checkpoints occurred at continuation epoch 5 during the
+refiner-only phase; later joint optimization did not improve validation
+AbsRel. The refiner excludes DA3 latent features, DA3 confidence, BIM normals,
+BIM edges and deterministic-scale features.
+
+On the 1,641-frame Area_1 official-all-valid test, Fixed Huber progresses from
+Round-3 scale `0.068114` to low `0.063705` and final `0.063595` AbsRel;
+Iterative Huber progresses from `0.068092` to `0.064061` and `0.063988`.
+Their shared focal-corrected raw DA3 reference is `0.085453`. Fixed therefore
+has the lower Area_1 final AbsRel by `0.000394`, although this previously
+revealed test split must not be used as a blind selection claim.
+
+Frozen HxpKQynjfin zero-shot evaluation uses the exact 624-frame three-rule
+set (`e6639e7bd16eb7b666a6f22f41ee17ec50a2ce8d8b841427ad489126013bd18b`).
+Fixed scale/low/final AbsRel is `0.103039/0.104254/0.103608`; Iterative is
+`0.102020/0.102158/0.101781`, versus raw DA3 `0.165732`. Iterative final is
+better than Fixed final on 60.58% of paired frames and by `0.001826`
+pixel-micro AbsRel. The refiner changes its own scale by only `-0.234%` for
+Iterative and `+0.551%` for Fixed, showing that most Area_1 dense-refinement
+gain does not transfer, while the reduced iterative scale estimator remains
+the stronger cross-domain component.
