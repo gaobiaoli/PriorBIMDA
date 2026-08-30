@@ -2095,3 +2095,119 @@ pixel-micro AbsRel. The refiner changes its own scale by only `-0.234%` for
 Iterative and `+0.551%` for Fixed, showing that most Area_1 dense-refinement
 gain does not transfer, while the reduced iterative scale estimator remains
 the stronger cross-domain component.
+
+## Two-layer attention with converged inner Huber IRLS
+
+To combine the fixed- and iterative-attention controls, a nested estimator was
+trained as an independent three-epoch scale-only experiment. It uses the same
+eight input channels and shared reliability network, starts from `c0=0`, and
+has no deterministic-scale input, fallback gate, DA3 latent features,
+confidence, BIM normals or BIM edges. The outer loop contains two attention
+layers. Within each layer, attention is frozen while pseudo-Huber IRLS runs for
+up to 20 bounded updates toward a `1e-4` log-scale fixed-point tolerance. The
+attention is refreshed only between layers; no fixed or learned damping is
+used. The two intermediate oracle-loss weights are `[0.5, 1.0]`.
+
+Area_1 official-all-valid validation results are:
+
+| Epoch | Train loss | AbsRel | RMSE | MAE | delta1 | Layer-1 scale MAE | Layer-2 scale MAE |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0.310685 | 0.075075 | 0.672572 | 0.226817 | 0.926359 | 0.0329075 | 0.0329075 |
+| 2 | 0.282811 | 0.073847 | 0.675636 | 0.227556 | 0.927142 | 0.0312702 | 0.0312706 |
+| 3 | 0.273736 | **0.073736** | 0.675230 | 0.226867 | 0.927273 | 0.0311068 | 0.0311074 |
+
+At epoch 3, matched Fixed Huber and Iterative Huber achieve `0.070814` and
+`0.070767` AbsRel. The nested converged estimator is therefore 4.13%/4.20%
+worse, and is also worse in RMSE, MAE and delta1. Layer 2 changes the predicted
+log scale by only `4.53e-6` on average; it improves 46.32% and regresses 53.56%
+of validation frames relative to Layer 1.
+
+A convergence audit on the first 64 validation frames confirms that the
+solver itself is not failing: Layer 1 needs 3.56 active IRLS updates on average
+(maximum 6), Layer 2 needs exactly one, and every head/layer is within the
+configured tolerance. The maximum final fixed-point errors are `2.01e-5` and
+`2.12e-6`. Thus the negative result is structural: exact convergence to the
+attention-weighted BIM/DA3 robust mode is not convergence to the GT-optimal
+scale. The learned three-step baselines benefit from bounded, damped early
+stopping, while the second attention refresh has almost no residual signal
+left after the first exact solve.
+
+The config, checkpoint and machine-readable comparison are:
+
+- `configs/stanford_area1_nested_attention_huber_2layer_converged_no_da3_features_no_confidence_no_bim_geometry_3epoch_full_depth_metric_da3.yaml`;
+- `outputs/stanford_area1_nested_attention_huber_2layer_converged_no_da3_features_no_confidence_no_bim_geometry_3epoch/best.pt`;
+- `results/stanford_area1/nested_attention_huber_2layer_converged_3epoch_val_comparison.json`.
+
+## PriorDA-style DAv2 encoder global-scale regression
+
+The next independent three-epoch scale-only screen replaces the small scale
+encoder and recurrent aggregation with the pretrained Depth Anything V2
+Metric Indoor Base DINOv2 ViT-B/14 encoder. It preserves the PriorDA-style
+early conditioning used by the earlier dense-depth experiment:
+
+\[
+T_0=E_{RGB}(I)+E_{BIM}(C_{BIM}),
+\qquad
+C_{BIM}=[\widetilde{\log D_{BIM}},M_{hit},
+\operatorname{clip}(\log(D_{BIM}/D_{DA3}))].
+\]
+
+`E_BIM` is zero initialized and is added before the DINOv2 transformer. The
+official DPT decoder is removed. Final-layer CLS and mean patch tokens are
+concatenated and a 256-hidden-unit MLP directly predicts one unbounded global
+log scale `c`; the only depth output is focal-corrected frozen DA3 multiplied
+by `exp(c)`. There is no Huber/M-estimator, recurrent update, deterministic
+scale, fallback gate, DA3 latent feature/confidence, BIM normal/edge, spatial
+refiner, or dense decoder. All 87,429,633 parameters participate in training,
+including the 86,580,480 pretrained encoder parameters at LR `5e-6`; BIM
+projection and scale-head LR are `5e-5`.
+
+The loss and data follow the matched Area_1 full-depth scale-only protocol:
+official-all-valid GT, train-only AbsRel-optimal frame-scale supervision,
+final scaled-depth supervision, DA3-scale equivariance, region-balanced
+sampling, seed 42, physical batch 2 and accumulation 8. The model trained for
+exactly three epochs; 1,317 optimizer updates completed with zero skipped
+steps. Encoder initialization was checked elementwise against the pinned
+official checkpoint and all 86,580,480 values matched exactly.
+
+Validation progression on the same 1,673 frames and 422,186,615 pixels is:
+
+| Epoch | Train loss | AbsRel | RMSE | MAE | delta1 | Oracle log-scale MAE |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0.147878 | 0.076907 | 0.678021 | 0.250532 | 0.934571 | 0.036437 |
+| 2 | 0.124442 | 0.071463 | 0.669975 | 0.234207 | 0.937723 | 0.027955 |
+| 3 | **0.116878** | **0.069632** | **0.664066** | **0.227015** | **0.937806** | **0.024342** |
+
+The registered validation comparison is:
+
+| Scale method | AbsRel | Change versus DAv2 early fusion |
+|---|---:|---:|
+| Raw focal-corrected DA3 | 0.090705 | DAv2 is 23.23% better |
+| Fixed-attention Huber, round 3 | 0.070815 | DAv2 is 1.67% better |
+| Iterative-attention Huber, round 3 | 0.070766 | DAv2 is 1.60% better |
+| **DAv2 early-fusion, one-shot scale** | **0.069632** | -- |
+| Reduced-input full regression, round 3 | **0.069230** | DAv2 is 0.58% worse |
+
+The experiment is therefore positive relative to both analytic-Huber scale
+heads: pretrained DINOv2 semantics plus BIM early conditioning can regress a
+competitive scale in one pass. It does not establish a new scale-only best;
+the smaller three-round full-regression estimator remains better by `0.000402`
+AbsRel. The new model also has worse RMSE than raw DA3 (`0.664066` versus
+`0.654622`) despite its large AbsRel gain, indicating that its single scalar
+improves typical relative error while worsening some long-range absolute
+outliers. This capacity/cost tradeoff must be considered before using it in
+the full refiner. Per request, validation is the stopping point and Area_1
+test was not evaluated.
+
+Reproduction:
+
+```bash
+.venv/bin/python scripts/model/train_bim_early_fusion_scale.py \
+  --config configs/stanford_area1_dav2_early_fusion_scale_3epoch_full_depth_metric_da3.yaml \
+  --device cuda --skip-test
+```
+
+The validation summary and compact comparison are stored in
+`results/stanford_area1/dav2_early_fusion_scale_3epoch_full_depth_metric_da3/val_summary.json`
+and `comparison.json`; the validation-selected checkpoint is
+`outputs/stanford_area1_dav2_early_fusion_scale_3epoch_full_depth_metric_da3/best.pt`.

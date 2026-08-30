@@ -1,0 +1,34 @@
+extends: stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch_full_depth_metric_da3.yaml
+
+# Hybrid of the fixed- and iterative-attention pseudo-Huber controls.
+# Each of two outer layers predicts one reliability attention distribution.
+# That attention is frozen while an inner pseudo-Huber IRLS loop approaches
+# its fixed point; the shared reliability head is refreshed only between the
+# two outer layers using the newly converged ratio residual.
+
+experiment:
+  name: stanford_area1_nested_attention_huber_2layer_converged_no_da3_features_no_confidence_no_bim_geometry_3epoch
+  output_dir: outputs/stanford_area1_nested_attention_huber_2layer_converged_no_da3_features_no_confidence_no_bim_geometry_3epoch
+
+model:
+  attention_scale:
+    estimator: nested_pseudo_huber_attention_v1
+    iterative_updates: 2
+    iterative_refresh_attention: true
+    iterative_initial_log_scale: 0.0
+    iterative_inner_updates: 20
+    iterative_convergence_tolerance: 0.0001
+    iterative_max_log_update: 0.15
+    use_fallback_gate: false
+    use_deterministic_fallback_input: false
+
+loss:
+  attention_scale_iteration_weights: [0.50, 1.00]
+
+train:
+  epochs: 3
+  scale_only_experiment: true
+  early_stopping_patience: 3
+  acceptance:
+    enabled: false
+    require_learned_scale_better_than_universal: false

@@ -1,0 +1,75 @@
+extends: stanford_area1_full_regression_scale_3round_3epoch_full_depth_metric_da3.yaml
+
+# Scale-only PriorDA-style challenger.  The DPT decoder, recurrent updater,
+# analytic BIM estimator, cached DA3 features and residual refiner are absent.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_3epoch_full_depth_metric_da3
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_3epoch_full_depth_metric_da3
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_3epoch_full_depth_metric_da3
+
+model:
+  dav2:
+    model_id: depth-anything/Depth-Anything-V2-Metric-Indoor-Base-hf
+    revision: 9560f57a2f07803ba353bb918d6a6e5e005b9277
+    checkpoint_sha256: 8b902f5d9a8c8a9520f3a8c6a00afe442b464eff5aaf0cb405d1da721cd9f79f
+    local_files_only: true
+    encoder: vitb
+    patch_size: 14
+    hidden_size: 768
+  bim_condition:
+    channels:
+      - normalized_bim_log_depth
+      - bim_hit_mask
+      - clipped_bim_da3_log_disagreement
+    disagreement_clip: 1.5
+    fusion: additive_before_dinov2_transformer
+    projection_initialization: zeros
+  bim_normalization:
+    mean: 0.4236631010536673
+    std: 0.7573384621476941
+    valid_pixels: 1780781853
+  dav2_scale:
+    pooling: concat_cls_mean_patch
+    regression_hidden_size: 256
+    head_dropout_probability: 0.0
+    output_weight_std: 0.001
+    equivariance_probability: 0.50
+    equivariance_log_range: 0.20
+  da3_feature_fusion:
+    enabled: false
+    scale_enabled: false
+    refiner_enabled: false
+  dinov2_feature_fusion:
+    enabled: false
+
+loss:
+  # Match the previous scale-only screen. Gradient and spatial/refiner terms
+  # are explicitly absent because the prediction is one global scalar.
+  depth: 1.0
+  coarse_depth: 0.5
+  attention_scale_oracle: 0.5
+  attention_scale_oracle_beta: 0.02
+  attention_scale_oracle_min_support: 100
+  attention_scale_equivariance: 0.10
+
+train:
+  epochs: 3
+  scale_only_experiment: true
+  batch_size: 2
+  val_batch_size: 2
+  gradient_accumulation: 8
+  region_balanced_sampling: true
+  region_balance_exponent: 0.5
+  samples_per_epoch: null
+  num_workers: 8
+  optimizer: AdamW
+  encoder_learning_rate: 0.000005
+  bim_condition_learning_rate: 0.00005
+  scale_head_learning_rate: 0.00005
+  weight_decay: 0.01
+  scheduler: cosine
+  amp: true
+  amp_initial_scale: 1024.0
+  gradient_checkpointing: true
+  gradient_clip_norm: 1.0
+  log_every: 200

@@ -1,0 +1,60 @@
+{
+  "architecture": {
+    "class": "BIMEarlyFusionDAv2ScaleRegressor",
+    "dense_decoder": null,
+    "encoder": "pretrained DAv2 DINOv2 ViT-B/14",
+    "fusion": "zero-initialized BIM projection added before transformer",
+    "output": "one unbounded global log-scale",
+    "pooling": "concatenated final CLS and mean patch tokens",
+    "refiner": null
+  },
+  "best_epoch": 3,
+  "best_validation_abs_rel": 0.0696319671129577,
+  "da3": {
+    "model": "depth-anything/da3metric-large",
+    "quantity": "cached canonical depth * mean(processed fx,fy)/300",
+    "revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+    "uses_confidence": false,
+    "uses_latent_features": false
+  },
+  "dav2": {
+    "checkpoint_sha256": "8b902f5d9a8c8a9520f3a8c6a00afe442b464eff5aaf0cb405d1da721cd9f79f",
+    "model_id": "depth-anything/Depth-Anything-V2-Metric-Indoor-Base-hf",
+    "revision": "9560f57a2f07803ba353bb918d6a6e5e005b9277"
+  },
+  "epoch_count": 3,
+  "git": {
+    "commit": "dbe24fba74f34f94ca67c96d92bfff5e889e3e36",
+    "dirty": true
+  },
+  "ground_truth_support": "official_all_valid",
+  "initialization_verification": {
+    "all_pass": true,
+    "bim_projection_zero_init": {
+      "max_abs_output": 0.0,
+      "pass": true
+    },
+    "dav2_encoder_pretrained_loading": {
+      "max_abs_diff": 0.0,
+      "parameter_values": 86580480,
+      "pass": true
+    },
+    "scale_head_output_initialization": {
+      "output_bias": 0.0,
+      "output_weight_std": 0.0010420822072774172,
+      "type": "near_zero_normal_weight_zero_bias"
+    }
+  },
+  "input_condition": [
+    "normalized_bim_log_depth",
+    "bim_hit_mask",
+    "clipped_bim_da3_log_disagreement"
+  ],
+  "optimizer_steps": 1317,
+  "random_seed": 42,
+  "schema_version": 1,
+  "skipped_steps": 0,
+  "total_parameters": 87429633,
+  "trainable_parameters": 87429633,
+  "training_seconds": 2874.734442735091
+}

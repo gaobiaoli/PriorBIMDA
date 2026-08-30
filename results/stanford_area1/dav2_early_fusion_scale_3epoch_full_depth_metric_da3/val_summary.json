@@ -1,0 +1,35 @@
+{
+  "alignment": "none",
+  "best_epoch": 3,
+  "dav2_early_fusion_scale": {
+    "abs_rel": 0.0696319671129577,
+    "count": 422186615,
+    "delta1": 0.9378057970880957,
+    "delta2": 0.9763591770904437,
+    "mae": 0.2270146417775004,
+    "rmse": 0.6640660073391663,
+    "rmse_log": 0.14908147179461745
+  },
+  "frames": 1673,
+  "inference_seconds": 27.87151226424612,
+  "raw_da3_focal_corrected": {
+    "abs_rel": 0.09070452423452083,
+    "count": 422186615,
+    "delta1": 0.9264027235917937,
+    "delta2": 0.9765475440286046,
+    "mae": 0.266044557365423,
+    "rmse": 0.6546223284125698,
+    "rmse_log": 0.1585523870627625
+  },
+  "relative_abs_rel_improvement": 0.23232090460095503,
+  "scale": {
+    "oracle_log_scale_bias": -0.002688064414298622,
+    "oracle_log_scale_mae": 0.024341993599749312,
+    "oracle_log_scale_mean": -0.025160006065635836,
+    "oracle_scale_relative_error": 0.024475522406145405,
+    "oracle_supported_frames": 1673,
+    "predicted_log_scale_mean": -0.027848070457319407
+  },
+  "selected_checkpoint": "best.pt",
+  "support": "official all positive non-sentinel GT depth"
+}

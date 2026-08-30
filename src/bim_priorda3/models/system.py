@@ -397,7 +397,10 @@ class BIMPriorDA3(nn.Module):
                         )
                     ),
                 )
-            elif attention_estimator == "pseudo_huber_attention_v1":
+            elif attention_estimator in {
+                "pseudo_huber_attention_v1",
+                "nested_pseudo_huber_attention_v1",
+            }:
                 self.attention_scale = AttentiveBIMScaleHead(
                     **shared_arguments,
                     huber_delta=float(
@@ -442,6 +445,18 @@ class BIMPriorDA3(nn.Module):
                         self.attention_scale_config.get(
                             "iterative_refresh_attention",
                             True,
+                        )
+                    ),
+                    iterative_inner_updates=int(
+                        self.attention_scale_config.get(
+                            "iterative_inner_updates",
+                            1,
+                        )
+                    ),
+                    iterative_convergence_tolerance=float(
+                        self.attention_scale_config.get(
+                            "iterative_convergence_tolerance",
+                            0.0,
                         )
                     ),
                     use_fallback_gate=bool(

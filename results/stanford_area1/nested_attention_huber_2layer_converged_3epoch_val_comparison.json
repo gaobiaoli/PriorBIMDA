@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "experiment": "nested_attention_huber_2layer_converged_3epoch",
+  "protocol": {
+    "split": "validation",
+    "frames": 1673,
+    "depth_support": "official_all_valid",
+    "aggregation": "pixel_micro",
+    "training_epochs": 3,
+    "input_channels": 8,
+    "outer_attention_layers": 2,
+    "shared_attention_weights": true,
+    "inner_huber_max_updates": 20,
+    "inner_huber_fixed_point_tolerance": 0.0001,
+    "learned_damping": false,
+    "initial_log_scale": 0.0,
+    "fallback_gate": false,
+    "deterministic_scale_input": false
+  },
+  "artifacts": {
+    "config": "configs/stanford_area1_nested_attention_huber_2layer_converged_no_da3_features_no_confidence_no_bim_geometry_3epoch_full_depth_metric_da3.yaml",
+    "config_sha256": "d771ef468924a7dee216c778d8fbe844112b379dc8be45cd4436a081086d0982",
+    "history": "outputs/stanford_area1_nested_attention_huber_2layer_converged_no_da3_features_no_confidence_no_bim_geometry_3epoch/history.json",
+    "best_checkpoint": "outputs/stanford_area1_nested_attention_huber_2layer_converged_no_da3_features_no_confidence_no_bim_geometry_3epoch/best.pt",
+    "best_checkpoint_sha256": "477b337767cca5947aafbc763698c1058e4168df1129c86d5324411732fd1612"
+  },
+  "epochs": [
+    {
+      "epoch": 1,
+      "train_loss": 0.31068456669648487,
+      "abs_rel": 0.07507522899768626,
+      "rmse_m": 0.6725721233001833,
+      "mae_m": 0.22681652222775367,
+      "delta1": 0.92635947494451,
+      "layer_1_log_scale_mae": 0.03290747106075287,
+      "layer_2_log_scale_mae": 0.03290754556655884
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.2828107466538475,
+      "abs_rel": 0.07384738666939483,
+      "rmse_m": 0.6756362160531739,
+      "mae_m": 0.22755605113418245,
+      "delta1": 0.9271422330620311,
+      "layer_1_log_scale_mae": 0.03127015382051468,
+      "layer_2_log_scale_mae": 0.03127060458064079
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.2737361150006998,
+      "abs_rel": 0.07373619443722125,
+      "rmse_m": 0.6752298171954124,
+      "mae_m": 0.2268671409978908,
+      "delta1": 0.9272729856677242,
+      "layer_1_log_scale_mae": 0.03110682964324951,
+      "layer_2_log_scale_mae": 0.031107421964406967,
+      "layer_2_update_abs_mean": 0.000004533462288236478,
+      "layer_2_improved_frame_fraction": 0.4632396996021271,
+      "layer_2_regressed_frame_fraction": 0.5355648398399353
+    }
+  ],
+  "epoch_3_baselines": {
+    "fixed_attention_huber": {
+      "abs_rel": 0.07081421278354204,
+      "rmse_m": 0.652426123438659,
+      "mae_m": 0.21933441865159923,
+      "delta1": 0.9372958005659019
+    },
+    "iterative_attention_huber": {
+      "abs_rel": 0.07076655605685836,
+      "rmse_m": 0.6529288742374924,
+      "mae_m": 0.21937257211174442,
+      "delta1": 0.9365911123667706
+    },
+    "nested_relative_abs_rel_regression_vs_fixed": 0.04126264402049967,
+    "nested_relative_abs_rel_regression_vs_iterative": 0.04196386747967351
+  },
+  "convergence_check_first_64_validation_frames": {
+    "heads": 4,
+    "layer_1_mean_active_updates": 3.5625,
+    "layer_1_max_active_updates": 6,
+    "layer_1_max_fixed_point_error": 0.000020056962966918945,
+    "layer_2_mean_active_updates": 1.0,
+    "layer_2_max_active_updates": 1,
+    "layer_2_max_fixed_point_error": 0.00000212155282497406,
+    "within_tolerance_fraction_both_layers": 1.0
+  },
+  "conclusion": "The inner pseudo-Huber solver converges, but converging to its BIM/DA3 robust fixed point is worse than the learned three-step early-stopped Huber baselines. The second attention refresh changes scale negligibly after the first converged solve."
+}

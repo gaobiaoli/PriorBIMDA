@@ -39,6 +39,8 @@ class AttentiveBIMScaleHead(nn.Module):
         iterative_damping: tuple[float, ...] | list[float] | None = None,
         iterative_max_log_update: float = 0.15,
         iterative_refresh_attention: bool = True,
+        iterative_inner_updates: int = 1,
+        iterative_convergence_tolerance: float = 0.0,
         use_fallback_gate: bool = True,
     ) -> None:
         super().__init__()
@@ -66,6 +68,10 @@ class AttentiveBIMScaleHead(nn.Module):
             raise ValueError("iterative_initial_log_scale must be finite")
         if iterative_max_log_update <= 0:
             raise ValueError("iterative_max_log_update must be positive")
+        if iterative_inner_updates < 1:
+            raise ValueError("iterative_inner_updates must be positive")
+        if iterative_convergence_tolerance < 0:
+            raise ValueError("iterative_convergence_tolerance must be non-negative")
 
         self.attention_heads = int(attention_heads)
         self.min_support = int(min_support)
@@ -79,18 +85,30 @@ class AttentiveBIMScaleHead(nn.Module):
         self.iterative_initial_log_scale = float(iterative_initial_log_scale)
         self.iterative_max_log_update = float(iterative_max_log_update)
         self.iterative_refresh_attention = bool(iterative_refresh_attention)
+        self.iterative_inner_updates = int(iterative_inner_updates)
+        self.iterative_convergence_tolerance = float(
+            iterative_convergence_tolerance
+        )
+        self.iterative_huber_to_convergence = self.iterative_inner_updates > 1
         self.use_fallback_gate = bool(use_fallback_gate)
         if self.da3_feature_channels < 0:
             raise ValueError("da3_feature_channels must be non-negative")
-        if iterative_damping is None:
-            iterative_damping = [0.5] * self.iterative_updates
-        damping = tuple(float(value) for value in iterative_damping)
-        if len(damping) != self.iterative_updates:
-            raise ValueError(
-                "iterative_damping must contain one value per iterative update"
-            )
-        if any(not 0.0 < value < 1.0 for value in damping):
-            raise ValueError("iterative damping values must lie strictly in (0, 1)")
+        if self.iterative_huber_to_convergence:
+            if iterative_damping:
+                raise ValueError(
+                    "converged inner Huber iterations do not use iterative_damping"
+                )
+            damping: tuple[float, ...] = ()
+        else:
+            if iterative_damping is None:
+                iterative_damping = [0.5] * self.iterative_updates
+            damping = tuple(float(value) for value in iterative_damping)
+            if len(damping) != self.iterative_updates:
+                raise ValueError(
+                    "iterative_damping must contain one value per iterative update"
+                )
+            if any(not 0.0 < value < 1.0 for value in damping):
+                raise ValueError("iterative damping values must lie strictly in (0, 1)")
 
         channels = int(hidden_channels)
         self.encoder = nn.Sequential(
@@ -148,8 +166,9 @@ class AttentiveBIMScaleHead(nn.Module):
                 nn.SiLU(inplace=True),
                 nn.Conv2d(int(iterative_hidden_channels), 1, kernel_size=1),
             )
-            damping_tensor = torch.tensor(damping, dtype=torch.float32)
-            self.iterative_step_logits = nn.Parameter(torch.logit(damping_tensor))
+            if not self.iterative_huber_to_convergence:
+                damping_tensor = torch.tensor(damping, dtype=torch.float32)
+                self.iterative_step_logits = nn.Parameter(torch.logit(damping_tensor))
         self.scale_residual_mlp: nn.Sequential | None = None
         if self.bounded_log_scale_residual > 0:
             self.scale_residual_mlp = nn.Sequential(
@@ -326,9 +345,10 @@ class AttentiveBIMScaleHead(nn.Module):
         iteration_head_log_scales: list[torch.Tensor] = []
         iteration_raw_log_scales: list[torch.Tensor] = []
         iteration_entropies: list[torch.Tensor] = []
+        iteration_inner_steps: list[torch.Tensor] = []
+        iteration_inner_fixed_point_errors: list[torch.Tensor] = []
         if self.iterative_updates:
             assert self.iterative_reliability is not None
-            assert self.iterative_step_logits is not None
             encoded_per_head = (
                 encoded[:, None, :, :, :]
                 .expand(-1, self.attention_heads, -1, -1, -1)
@@ -342,7 +362,15 @@ class AttentiveBIMScaleHead(nn.Module):
                 (batch_size, self.attention_heads),
                 self.iterative_initial_log_scale,
             )
-            step_sizes = torch.sigmoid(self.iterative_step_logits.float())
+            step_sizes = (
+                torch.ones(
+                    self.iterative_updates,
+                    device=token_values.device,
+                    dtype=token_values.dtype,
+                )
+                if self.iterative_huber_to_convergence
+                else torch.sigmoid(self.iterative_step_logits.float())
+            )
             frozen_attention: torch.Tensor | None = None
             for iteration_index in range(self.iterative_updates):
                 # Detaching the current center only on the reliability path
@@ -392,19 +420,51 @@ class AttentiveBIMScaleHead(nn.Module):
                 else:
                     attention = frozen_attention
 
+                inner_step_count = torch.zeros_like(center, dtype=torch.int64)
+                active = torch.ones_like(center, dtype=torch.bool)
+                fixed_point_error = torch.full_like(center, float("inf"))
+                inner_limit = (
+                    self.iterative_inner_updates
+                    if self.iterative_huber_to_convergence
+                    else 1
+                )
+                for _ in range(inner_limit):
+                    residual = expanded_values - center[:, :, None]
+                    robust_weight = torch.rsqrt(
+                        1.0 + (residual / self.huber_delta).square()
+                    )
+                    effective_weight = attention * robust_weight
+                    proposed_center = (
+                        (effective_weight * expanded_values).sum(dim=-1)
+                        / effective_weight.sum(dim=-1).clamp_min(1e-8)
+                    )
+                    fixed_point_error = (proposed_center - center).abs()
+                    center_delta = self.iterative_max_log_update * torch.tanh(
+                        (proposed_center - center) / self.iterative_max_log_update
+                    )
+                    candidate_center = (
+                        center + step_sizes[iteration_index] * center_delta
+                    )
+                    center = torch.where(active, candidate_center, center)
+                    inner_step_count = inner_step_count + active.to(torch.int64)
+                    if self.iterative_huber_to_convergence:
+                        active = active & (
+                            fixed_point_error > self.iterative_convergence_tolerance
+                        )
+
+                # Re-evaluate the fixed-point residual after the final update;
+                # the value used to stop an inner loop was measured before that
+                # update and would otherwise overstate the remaining error.
                 residual = expanded_values - center[:, :, None]
                 robust_weight = torch.rsqrt(
                     1.0 + (residual / self.huber_delta).square()
                 )
                 effective_weight = attention * robust_weight
-                proposed_center = (
+                final_proposed_center = (
                     (effective_weight * expanded_values).sum(dim=-1)
                     / effective_weight.sum(dim=-1).clamp_min(1e-8)
                 )
-                center_delta = self.iterative_max_log_update * torch.tanh(
-                    (proposed_center - center) / self.iterative_max_log_update
-                )
-                center = center + step_sizes[iteration_index] * center_delta
+                fixed_point_error = (final_proposed_center - center).abs()
                 iteration_head_log_scales.append(center)
                 iteration_raw_log_scales.append(
                     (head_mixture * center).sum(dim=-1, keepdim=True)
@@ -413,6 +473,8 @@ class AttentiveBIMScaleHead(nn.Module):
                 iteration_entropies.append(
                     -(attention * positive_iteration_attention.log()).sum(dim=-1)
                 )
+                iteration_inner_steps.append(inner_step_count)
+                iteration_inner_fixed_point_errors.append(fixed_point_error)
         else:
             attention = normalized_attention(static_logits)
             # Legacy fixed-attention path retained bit-for-bit for published
@@ -550,8 +612,14 @@ class AttentiveBIMScaleHead(nn.Module):
                         dim=1,
                     ),
                     "iteration_fallback_gates": iteration_fallback_gate.unsqueeze(-1),
-                    "iteration_step_sizes": torch.sigmoid(
-                        self.iterative_step_logits.float()
+                    "iteration_step_sizes": step_sizes,
+                    "iteration_inner_steps": torch.stack(
+                        iteration_inner_steps,
+                        dim=1,
+                    ),
+                    "iteration_inner_fixed_point_errors": torch.stack(
+                        iteration_inner_fixed_point_errors,
+                        dim=1,
                     ),
                     "iteration_normalized_attention_entropy": (
                         normalized_iteration_entropy.mean(dim=-1)

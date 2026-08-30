@@ -699,6 +699,81 @@ def test_refresh_control_recomputes_attention_every_round() -> None:
     assert calls == 3
 
 
+def test_nested_attention_runs_two_shared_attention_layers_with_converged_huber() -> None:
+    head = AttentiveBIMScaleHead(
+        in_channels=5,
+        hidden_channels=4,
+        attention_heads=2,
+        min_support=8,
+        token_dropout_probability=0.0,
+        iterative_updates=2,
+        iterative_hidden_channels=5,
+        iterative_initial_log_scale=0.0,
+        iterative_inner_updates=20,
+        iterative_convergence_tolerance=1e-4,
+        iterative_refresh_attention=True,
+        use_fallback_gate=False,
+    ).eval()
+    features = torch.randn(2, 5, 16, 16)
+    log_ratio = torch.linspace(-0.3, 0.3, 16).view(1, 1, 1, 16)
+    log_ratio = log_ratio.expand(2, 1, 16, 16).clone()
+    valid = torch.ones_like(log_ratio)
+    fallback = torch.log(torch.tensor([1.5, 1.5])).view(2, 1, 1, 1)
+
+    assert head.iterative_reliability is not None
+    assert head.iterative_step_logits is None
+    calls = 0
+
+    def count_calls(_module: torch.nn.Module, _inputs: object, _output: object) -> None:
+        nonlocal calls
+        calls += 1
+
+    hook = head.iterative_reliability.register_forward_hook(count_calls)
+    output = head(features, log_ratio, valid, fallback)
+    hook.remove()
+
+    assert calls == 2
+    assert output["iteration_log_scales"].shape == (2, 2, 1, 1)
+    assert output["iteration_inner_steps"].shape == (2, 2, 2)
+    assert output["iteration_inner_fixed_point_errors"].shape == (2, 2, 2)
+    assert torch.all(output["iteration_inner_steps"] <= 20)
+    assert torch.all(output["iteration_step_sizes"] == 1)
+    assert torch.max(output["iteration_inner_fixed_point_errors"]) < 2e-4
+
+
+def test_nested_attention_config_preserves_reduced_eight_channel_contract() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_nested_attention_huber_2layer_converged_no_da3_features_no_confidence_no_bim_geometry_3epoch_full_depth_metric_da3.yaml"
+    )
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.hidden_channels = 4
+    cfg.model.attention_scale.iterative_hidden_channels = 5
+    cfg.model.attention_scale.token_dropout_probability = 0.0
+    cfg.model.attention_scale.equivariance_probability = 0.0
+    cfg.model.da3_feature_fusion.channels = 6
+    model = BIMPriorDA3(cfg)
+
+    assert isinstance(model.attention_scale, AttentiveBIMScaleHead)
+    assert model.attention_scale.encoder[0][0].in_channels == 8
+    assert model.attention_scale.iterative_updates == 2
+    assert model.attention_scale.iterative_inner_updates == 20
+    assert model.attention_scale.iterative_step_logits is None
+    assert not model.da3_feature_scale_enabled
+    assert not model.attention_scale_use_base_confidence
+    assert not model.attention_scale_use_bim_normals
+    assert not model.attention_scale_use_bim_edge
+
+    batch = _candidate_batch(size=32)
+    batch["da3_feature_mid"] = torch.randn(2, 6, 5, 5)
+    batch["da3_feature_deep"] = torch.randn(2, 6, 5, 5)
+    output = model(batch)
+    criterion = BIMPriorLoss(cfg)
+    losses = criterion(output, batch)
+    assert output["attention_iteration_log_scales"].shape == (2, 2, 1, 1)
+    losses["total"].backward()
+    assert model.attention_scale.iterative_reliability[-1].weight.grad is not None
+
+
 def test_matched_static_and_dynamic_configs_only_change_attention_refresh() -> None:
     static_cfg = load_config(
         "configs/stanford_area1_static_scale_3round_zero_nogate_full_depth_metric_da3.yaml"
