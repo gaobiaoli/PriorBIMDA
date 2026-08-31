@@ -58,6 +58,10 @@ METHODS = {
         "label": "BIM early-fusion dense",
         "directory": "hxp_bim_early_fusion_dense_zero_shot",
     },
+    "dav2_early_fusion_scale": {
+        "label": "DAv2 early-fusion single scale",
+        "directory": "hxp_dav2_early_fusion_scale_zero_shot",
+    },
     "iterative_scale_refiner_sota": {
         "label": "Area_1 iterative scale+refiner SOTA (final)",
         "directory": "hxp_iterative_scale_refiner_sota_zero_shot",

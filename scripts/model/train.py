@@ -1809,6 +1809,7 @@ def main() -> None:
                     model,
                     str(active_refiner_training_stage["name"]),
                 )
+            criterion.set_training_stage(str(active_refiner_training_stage["name"]))
             criterion.set_epoch(logical_epoch)
             epoch_learning_rate = float(optimizer.param_groups[0]["lr"])
             epoch_learning_rates = {

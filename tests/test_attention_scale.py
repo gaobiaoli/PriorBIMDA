@@ -818,6 +818,35 @@ def test_three_round_config_applies_iteration_weighted_oracle_loss() -> None:
     assert model.attention_scale.iterative_step_logits.grad is not None
 
 
+def test_joint_final_depth_only_mode_excludes_auxiliary_losses_from_total() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_iterative_attention_huber_reduced_refiner_joint_final_depth_only_full_depth_metric_da3.yaml"
+    )
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.hidden_channels = 4
+    cfg.model.attention_scale.iterative_hidden_channels = 5
+    cfg.model.attention_scale.token_dropout_probability = 0.0
+    cfg.model.attention_scale.equivariance_probability = 0.0
+    model = BIMPriorDA3(cfg)
+    batch = _candidate_batch(size=32)
+    output = model(batch)
+    criterion = BIMPriorLoss(cfg)
+
+    criterion.set_training_stage(SCRATCH_REFINER_STAGE)
+    refiner_losses = criterion(output, batch)
+    assert refiner_losses["joint_final_depth_only_active"].item() == 0
+
+    criterion.set_training_stage(SCRATCH_JOINT_STAGE)
+    joint_losses = criterion(output, batch)
+    expected = (
+        float(cfg.loss.depth) * joint_losses["depth"]
+        + float(cfg.loss.gradient) * joint_losses["gradient"]
+    )
+    torch.testing.assert_close(joint_losses["total"], expected)
+    assert joint_losses["joint_final_depth_only_active"].item() == 1
+    assert not torch.isclose(refiner_losses["total"], joint_losses["total"])
+
+
 def test_direct_attention_target_supervises_spatial_scale_weights() -> None:
     head = AttentiveBIMScaleHead(
         in_channels=5,

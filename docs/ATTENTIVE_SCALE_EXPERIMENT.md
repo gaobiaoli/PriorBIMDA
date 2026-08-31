@@ -2096,6 +2096,82 @@ Iterative and `+0.551%` for Fixed, showing that most Area_1 dense-refinement
 gain does not transfer, while the reduced iterative scale estimator remains
 the stronger cross-domain component.
 
+## Final-depth-only joint optimization ablation
+
+The Iterative-attention Huber + reduced refiner continuation was retrained to
+test whether the scale head should lose all separate supervision in the final
+joint phase. The scale-only checkpoint, optimizer-state restoration, nine
+refiner-only epochs, data order, seed and learning-rate schedule are unchanged.
+Only continuation epochs 10--12 differ. In those three epochs, scale and
+refiner parameters remain trainable, but the optimization objective is reduced
+to final-depth log error plus final-depth log-gradient error:
+
+\[
+\mathcal L_{joint}=\mathcal L_{depth}(D_{final},D_{GT})
++0.2\mathcal L_{gradient}(D_{final},D_{GT}).
+\]
+
+Coarse scaled-depth, per-round oracle scale, equivariance, residual-teacher
+and all other auxiliary objectives are still computed for diagnostics but do
+not contribute gradients. This strict definition is necessary because merely
+setting `attention_scale_oracle=0` would leave direct scale supervision through
+the coarse-depth loss and indirect supervision through GT-derived residual
+teacher targets.
+
+The first nine validation rows reproduce the old continuation exactly. The
+joint-stage comparison is:
+
+| Continuation epoch | Baseline joint loss | Final-depth-only joint | Change |
+|---:|---:|---:|---:|
+| 10 | 0.067104 | **0.066830** | -0.41% |
+| 11 | 0.066102 | **0.066034** | -0.10% |
+| 12 | **0.066660** | 0.066690 | +0.04% |
+
+Neither joint objective beats the shared refiner-only validation optimum at
+epoch 5 (`0.065299`). Consequently, both validation-selected `best.pt` files
+come from epoch 5 and their model tensors are bitwise identical. The modified
+joint objective does not change the properly selected model.
+
+For a direct audit of the last training stage, both epoch-12 `last.pt`
+checkpoints were evaluated on the same revealed 1,641-frame Area_1 test set:
+
+| Epoch-12 checkpoint | Round-3 scale | +low | Final | RMSE | MAE | delta1 |
+|---|---:|---:|---:|---:|---:|---:|
+| Original joint objective | **0.068126** | **0.063447** | **0.063396** | **0.413988** | **0.128869** | 0.945748 |
+| Final-depth-only joint | 0.068319 | 0.063609 | 0.063552 | 0.414001 | 0.129185 | **0.945822** |
+
+Final-depth-only is worse by `0.000156` AbsRel (`0.246%`) and improves only
+38.57% of paired frames. It is worse in six of seven test rooms; hallway_8 is
+the sole room-level improvement. A paired room bootstrap gives a 95% interval
+of `[-0.000637, 0.000418]` for the new-minus-old room-mean AbsRel difference,
+which includes zero. The small validation improvement at the middle joint
+epoch is therefore neither selection-changing nor supported by the final
+paired test. The separate scale/refiner auxiliary objectives should be kept
+for the current model.
+
+Reproduction:
+
+```bash
+.venv/bin/python scripts/model/train.py \
+  --config configs/stanford_area1_iterative_attention_huber_reduced_refiner_joint_final_depth_only_full_depth_metric_da3.yaml \
+  --init-checkpoint outputs/stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch/accepted.pt \
+  --device cuda
+
+.venv/bin/python scripts/model/evaluate_stanford_area1.py \
+  --config configs/stanford_area1_iterative_attention_huber_reduced_refiner_joint_final_depth_only_full_depth_metric_da3.yaml \
+  --checkpoint outputs/stanford_area1_iterative_attention_huber_reduced_refiner_joint_final_depth_only/last.pt \
+  --split test --depth-support all-valid --batch-size 8 --device cuda \
+  --allow-unverified-robust-comparator \
+  --output results/stanford_area1/iterative_attention_huber_reduced_refiner_joint_final_depth_only_last_test
+```
+
+Artifacts are the new output directory
+`outputs/stanford_area1_iterative_attention_huber_reduced_refiner_joint_final_depth_only`,
+the test summary in
+`results/stanford_area1/iterative_attention_huber_reduced_refiner_joint_final_depth_only_last_test`,
+and the matched old-last test summary in
+`results/stanford_area1/iterative_attention_huber_reduced_refiner_baseline_last_test`.
+
 ## Two-layer attention with converged inner Huber IRLS
 
 To combine the fixed- and iterative-attention controls, a nested estimator was
@@ -2196,8 +2272,24 @@ AbsRel. The new model also has worse RMSE than raw DA3 (`0.664066` versus
 `0.654622`) despite its large AbsRel gain, indicating that its single scalar
 improves typical relative error while worsening some long-range absolute
 outliers. This capacity/cost tradeoff must be considered before using it in
-the full refiner. Per request, validation is the stopping point and Area_1
-test was not evaluated.
+the full refiner.
+
+The validation-selected epoch-3 checkpoint was subsequently evaluated once
+on the official Area_1 test split (1,641 frames, 413,756,559 pixels), without
+test-time scale alignment:
+
+| Test method | AbsRel | RMSE | MAE | RMSE_log | delta1 | delta2 |
+|---|---:|---:|---:|---:|---:|---:|
+| Raw focal-corrected DA3 | 0.085453 | 0.435242 | 0.177124 | 0.178235 | 0.938046 | 0.975318 |
+| Fixed-attention Huber, round 3 | 0.068114 | - | - | - | - | - |
+| Iterative-attention Huber, round 3 | **0.068092** | - | - | - | - | - |
+| **DAv2 early-fusion, one-shot scale** | 0.068110 | **0.419524** | **0.141061** | **0.169164** | **0.945682** | **0.975371** |
+
+DAv2 reduces test AbsRel by 20.30% relative to raw DA3. Its AbsRel is only
+`0.000004` below fixed Huber and `0.000018` above iterative Huber, so the three
+estimators are effectively tied on this revealed test set. The oracle
+log-scale MAE is `0.024773`, with bias `-0.001229`; the small bias indicates
+that the predicted mean scale is well calibrated in-domain.
 
 Reproduction:
 
@@ -2205,9 +2297,14 @@ Reproduction:
 .venv/bin/python scripts/model/train_bim_early_fusion_scale.py \
   --config configs/stanford_area1_dav2_early_fusion_scale_3epoch_full_depth_metric_da3.yaml \
   --device cuda --skip-test
+
+.venv/bin/python scripts/model/evaluate_bim_early_fusion_scale.py \
+  --config configs/stanford_area1_dav2_early_fusion_scale_3epoch_full_depth_metric_da3.yaml \
+  --checkpoint outputs/stanford_area1_dav2_early_fusion_scale_3epoch_full_depth_metric_da3/best.pt \
+  --split test --confirm-test --device cuda
 ```
 
-The validation summary and compact comparison are stored in
+The validation/test summaries and compact comparison are stored in
 `results/stanford_area1/dav2_early_fusion_scale_3epoch_full_depth_metric_da3/val_summary.json`
-and `comparison.json`; the validation-selected checkpoint is
+and `test_summary.json`, plus `comparison.json`; the validation-selected checkpoint is
 `outputs/stanford_area1_dav2_early_fusion_scale_3epoch_full_depth_metric_da3/best.pt`.

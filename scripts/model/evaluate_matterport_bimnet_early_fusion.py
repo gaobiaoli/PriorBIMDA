@@ -26,7 +26,11 @@ import numpy as np
 import torch
 
 from bim_priorda3.config import load_config
-from bim_priorda3.models import BIMEarlyFusionDepthAnythingV2, build_bim_condition
+from bim_priorda3.models import (
+    BIMEarlyFusionDAv2ScaleRegressor,
+    BIMEarlyFusionDepthAnythingV2,
+    build_bim_condition,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LEGACY_EVALUATOR = PROJECT_ROOT / "scripts/model/evaluate_matterport_bimnet_full_regression.py"
@@ -53,6 +57,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--scale-regression",
+        action="store_true",
+        help=(
+            "Evaluate the PriorDA-style DAv2 encoder global-scale regressor "
+            "instead of the dense DPT model"
+        ),
+    )
     parser.add_argument("--benchmark-reference-csv", type=Path)
     parser.add_argument("--da3-model", default=DEFAULT_DA3_MODEL)
     parser.add_argument("--da3-revision", default=DEFAULT_DA3_REVISION)
@@ -136,7 +148,7 @@ def evaluate_frame(
     *,
     frame: Any,
     da3_model: Any,
-    model: BIMEarlyFusionDepthAnythingV2,
+    model: BIMEarlyFusionDepthAnythingV2 | BIMEarlyFusionDAv2ScaleRegressor,
     raycaster: Any,
     bim_stats: Mapping[str, Any],
     reference_row: Mapping[str, Any] | None,
@@ -253,7 +265,19 @@ def evaluate_frame(
         dtype=torch.float16,
         enabled=next(model.parameters()).device.type == "cuda",
     ):
-        prediction = model(batch["rgb"], condition)
+        if args.scale_regression:
+            if not isinstance(model, BIMEarlyFusionDAv2ScaleRegressor):
+                raise TypeError("--scale-regression requires the DAv2 scale model")
+            model_output = model(batch["rgb"], condition, batch["base_depth"])
+            prediction = model_output["scaled_depth"]
+            learned_log_scale = float(model_output["log_scale"].detach().float().item())
+            learned_scale = float(model_output["scale"].detach().float().item())
+        else:
+            if not isinstance(model, BIMEarlyFusionDepthAnythingV2):
+                raise TypeError("Dense evaluation requires the DAv2 DPT model")
+            prediction = model(batch["rgb"], condition)
+            learned_log_scale = float("nan")
+            learned_scale = float("nan")
     if torch.cuda.is_available():
         torch.cuda.synchronize()
     dense_seconds = time.perf_counter() - dense_start
@@ -329,7 +353,19 @@ def evaluate_frame(
         **selected,
         "selection_matches_recomputation": selection_match,
         "ratio_support_pixels": ratio_support_pixels,
+        "learned_scale": learned_scale,
+        "learned_log_scale": learned_log_scale,
         "oracle_frame_scale": oracle_scale,
+        "scale_log_error": (
+            abs(learned_log_scale - math.log(oracle_scale))
+            if args.scale_regression
+            else ""
+        ),
+        "scale_signed_log_error": (
+            learned_log_scale - math.log(oracle_scale)
+            if args.scale_regression
+            else ""
+        ),
         **BENCHMARK._prefixed("raw", BENCHMARK.metric_values(base_full, gt, gt_valid)),
         **BENCHMARK._prefixed("learned", BENCHMARK.metric_values(learned_full, gt, gt_valid)),
         **BENCHMARK._prefixed(
@@ -450,9 +486,17 @@ def build_summary(
             "checkpoint_sha256": BENCHMARK._sha256(args.checkpoint),
             "checkpoint_epoch": int(checkpoint["epoch"]),
             "best_epoch": int(checkpoint["best_epoch"]),
-            "class": "BIMEarlyFusionDepthAnythingV2",
+            "class": (
+                "BIMEarlyFusionDAv2ScaleRegressor"
+                if args.scale_regression
+                else "BIMEarlyFusionDepthAnythingV2"
+            ),
             "dav2": "Depth-Anything-V2-Metric-Indoor-Base-hf ViT-B/14",
-            "prediction": "raw dense absolute metric depth; no alignment",
+            "prediction": (
+                "focal-corrected DA3 multiplied by one learned global scale; no alignment"
+                if args.scale_regression
+                else "raw dense absolute metric depth; no alignment"
+            ),
             "condition": [
                 "train-normalized BIM log depth",
                 "binary BIM hit mask",
@@ -529,6 +573,8 @@ def _csv_columns() -> list[str]:
         "bim_gt_median_ratio",
         "bim_gt_median_abs_log_error",
         "ratio_support_pixels",
+        "learned_scale",
+        "learned_log_scale",
         "gt_quality_pass",
         "model_support_pass",
         "bim_applicability_pass",
@@ -540,6 +586,8 @@ def _csv_columns() -> list[str]:
         "recomputed_effective_pass",
         "selection_matches_recomputation",
         "oracle_frame_scale",
+        "scale_log_error",
+        "scale_signed_log_error",
     ]
     metrics = [f"{prefix}_{metric}" for prefix in PREDICTION_NAMES for metric in METRICS]
     timing = [
@@ -574,11 +622,22 @@ def main() -> None:
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     if int(checkpoint["epoch"]) != int(checkpoint["best_epoch"]):
         raise RuntimeError("Zero-shot evaluation requires the selected best-epoch checkpoint")
-    model = BIMEarlyFusionDepthAnythingV2.from_pretrained(
-        str(cfg.model.dav2.model_id),
-        revision=str(cfg.model.dav2.revision),
-        local_files_only=bool(cfg.model.dav2.local_files_only),
-    )
+    if args.scale_regression:
+        scale_cfg = cfg.model.dav2_scale
+        model = BIMEarlyFusionDAv2ScaleRegressor.from_pretrained(
+            str(cfg.model.dav2.model_id),
+            revision=str(cfg.model.dav2.revision),
+            local_files_only=bool(cfg.model.dav2.local_files_only),
+            regression_hidden_size=int(scale_cfg.regression_hidden_size),
+            head_dropout_probability=float(scale_cfg.head_dropout_probability),
+            output_weight_std=float(scale_cfg.output_weight_std),
+        )
+    else:
+        model = BIMEarlyFusionDepthAnythingV2.from_pretrained(
+            str(cfg.model.dav2.model_id),
+            revision=str(cfg.model.dav2.revision),
+            local_files_only=bool(cfg.model.dav2.local_files_only),
+        )
     model.load_state_dict(checkpoint["model"], strict=True)
     model.to(device).eval()
     bim_stats = checkpoint["bim_log_statistics"]
@@ -675,7 +734,7 @@ def main() -> None:
                 rate = index / elapsed if elapsed else 0.0
                 eta = (len(pending) - index) / rate if rate else float("nan")
                 metrics = (
-                    f" raw={row['raw_abs_rel']:.5f} dense={row['learned_abs_rel']:.5f}"
+                    f" raw={row['raw_abs_rel']:.5f} learned={row['learned_abs_rel']:.5f}"
                     if row.get("status") == "ok"
                     else ""
                 )
@@ -708,7 +767,7 @@ def main() -> None:
     print(
         f"COMPLETE rows={len(rows)}/{len(frames)} gt_quality={headline['frames']} "
         f"raw_abs_rel={headline['predictions']['raw']['pixel_micro']['abs_rel']:.6f} "
-        f"dense_abs_rel={headline['predictions']['learned']['pixel_micro']['abs_rel']:.6f} "
+        f"learned_abs_rel={headline['predictions']['learned']['pixel_micro']['abs_rel']:.6f} "
         f"summary={summary_path}",
         flush=True,
     )

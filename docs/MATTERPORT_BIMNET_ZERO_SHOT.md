@@ -46,7 +46,7 @@ GT/BIM 可见表面规则，并同时报告未筛选全集和拒绝集。
 > 比例 `>10%`、BIM ray-hit 比例 `>20%`、相机中心位于**严格 BIM AABB** 内。AABB margin
 > 固定为 0，不再使用 BIM/GT agreement 或 BIM/DA3 ratio support。按该定义得到 624 帧；
 > 本节以下旧子集只保留为历史诊断，不能再把旧 `gt_quality` 或 `gt_verified` 称作当前正式结果。
-> 四种已完成的 zero-shot 预测按新规则的统一汇总见[第 9 节](#9-三规则正式有效帧汇总)。
+> 已完成的 zero-shot 预测按新规则的统一汇总见[第 9 节](#9-三规则正式有效帧汇总)。
 
 GT/BIM 一致性诊断子集 `gt_verified`（兼容旧名 `effective`）同时满足：
 
@@ -299,7 +299,7 @@ GT-quality 主结果的完整指标为：
 3. `AABB_min <= camera_center <= AABB_max`，不使用 margin。
 
 明确排除的筛选因素包括 BIM/GT agreement、BIM/DA3 ratio support、模型 confidence、预测
-误差和任何模型特定条件。四份逐帧 CSV 均选出相同的 624 个 frame ID，集合 SHA256 为
+误差和任何模型特定条件。各份逐帧 CSV 均选出相同的 624 个 frame ID，集合 SHA256 为
 `e6639e7bd16eb7b666a6f22f41ee17ec50a2ce8d8b841427ad489126013bd18b`。所有指标使用完整
 Matterport 正深度 GT、pixel-micro 聚合，预测不做 scale/affine alignment。
 
@@ -307,13 +307,16 @@ Matterport 正深度 GT、pixel-micro 聚合，预测不做 scale/affine alignme
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | Raw DA3 | 0.165732 | 0.331608 | 0.233062 | 0.812649 | 0.969444 | 0.202418 | - | - |
 | Full regression scale | 0.111086 | 0.266687 | 0.154178 | 0.907183 | **0.973256** | 0.170223 | 32.97% | 80.77% |
+| DAv2 early-fusion single scale | 0.105988 | 0.267595 | 0.150703 | 0.910895 | 0.973645 | 0.168334 | 36.05% | **84.29%** |
 | Fixed-attention Huber scale | 0.103019 | 0.262662 | 0.145563 | 0.914014 | 0.971836 | 0.166771 | 37.84% | 83.81% |
 | **Iterative-attention Huber scale** | **0.102018** | **0.261359** | **0.144137** | **0.915987** | 0.971799 | **0.166042** | **38.44%** | **84.13%** |
 | BIM early-fusion dense | 0.170670 | 0.418547 | 0.213292 | 0.855974 | 0.933837 | 0.250093 | **-2.98%** | 65.87% |
 | Area_1 iterative scale+refiner SOTA（final） | 0.105769 | 0.257265 | 0.149570 | 0.911615 | **0.978996** | 0.160549 | 36.18% | 73.88% |
 
-新定义没有改变结构排序：iterative Huber 仍是三种 scale estimator 和全部当前候选中的最优
-AbsRel/RMSE/MAE/delta1/RMSE-log 方法。Dense early fusion 在 65.87% 的帧上逐帧 AbsRel
+新定义没有改变 Huber 结构的排序：iterative Huber 仍是当前 scale-only estimator 中的最优
+AbsRel/RMSE/MAE/delta1/RMSE-log 方法。DAv2 early-fusion single scale 明显优于 full regression
+scale（AbsRel 相对降低 4.59%），但仍比 fixed/iterative Huber 高 2.88%/3.89%。Dense early
+fusion 在 65.87% 的帧上逐帧 AbsRel
 优于 Raw，且 MAE、delta1 也优于 Raw，但少数严重错误使总体 AbsRel 退化 2.98%、RMSE
 显著增大；这仍支持“跨域错误 BIM 缺乏安全回退”的诊断。
 
@@ -432,3 +435,45 @@ Artifacts：
 - `results/stanford_area1/iterative_attention_huber_reduced_refiner_continuation_test/summary.json`；
 - `results/matterport3d/hxp_fixed_attention_huber_reduced_refiner_continuation_zero_shot/summary.json`；
 - `results/matterport3d/hxp_iterative_attention_huber_reduced_refiner_continuation_zero_shot/summary.json`。
+
+## 12. DAv2 early-fusion single-scale zero-shot
+
+该模型是在 Area_1 训练三个 scale-only epoch 的 DAv2/DINOv2 early-fusion regressor：输入
+RGB、focal-corrected DA3 metric depth 和 BIM condition，一次回归每帧单个 log-scale；不使用
+dense refiner，也不在 Matterport3D 上训练或调参。HxpKQynjfin 上的 792 帧推理零错误，
+正式结果仍只在三规则的 624 帧上聚合。
+
+| 方法 | AbsRel | RMSE (m) | MAE (m) | RMSE_log | delta1 | delta2 | Frame-macro AbsRel |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Raw DA3 | 0.165732 | 0.331608 | 0.233062 | 0.202418 | 0.812649 | 0.969444 | 0.173679 |
+| DAv2 early-fusion single scale | **0.105988** | **0.267595** | **0.150703** | **0.168334** | **0.910895** | **0.973645** | **0.114022** |
+| GT oracle frame scale（诊断） | 0.063964 | 0.236421 | 0.096782 | 0.142802 | 0.944613 | 0.975823 | 0.068101 |
+
+相对 Raw DA3，该模型的 pixel-micro AbsRel 改善 36.05%，逐帧胜率 84.29%。预测 scale
+中位数为 `0.9430`，oracle frame scale 中位数为 `0.8867`；平均 absolute log-scale error
+为 `0.07748`，显示跨域下仍有偏向 scale 过大的系统误差。它与 Area_1 validation 上的排序
+不同：虽然预训练语义 encoder 能将结果提升到接近 Huber 的水平，但显式 BIM/DA3 robust
+aggregation 在该跨数据集场景中仍更稳定。
+
+复现：
+
+```bash
+.venv/bin/python scripts/model/evaluate_matterport_bimnet_early_fusion.py \
+  --matterport-root /path/to/Matterport3D \
+  --bimnet-root /path/to/BIMNet_release \
+  --toolkit-root /path/to/S3-SAM3D-ToolKit \
+  --bimnet-scene hxp \
+  --config configs/stanford_area1_dav2_early_fusion_scale_3epoch_full_depth_metric_da3.yaml \
+  --checkpoint outputs/stanford_area1_dav2_early_fusion_scale_3epoch_full_depth_metric_da3/best.pt \
+  --benchmark-reference-csv results/matterport3d/hxp_full_regression_scale_zero_shot/per_frame.csv \
+  --output-dir results/matterport3d/hxp_dav2_early_fusion_scale_zero_shot \
+  --process-res 504 --device cuda --scale-regression
+
+.venv/bin/python scripts/analysis/reaggregate_matterport_zero_shot_three_rule.py
+```
+
+Artifacts：
+
+- `results/matterport3d/hxp_dav2_early_fusion_scale_zero_shot/per_frame.csv`；
+- `results/matterport3d/hxp_dav2_early_fusion_scale_zero_shot/summary.json`；
+- `results/matterport3d/hxp_three_rule_zero_shot_comparison.json`。

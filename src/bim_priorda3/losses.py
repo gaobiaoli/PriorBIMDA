@@ -378,10 +378,19 @@ class BIMPriorLoss(nn.Module):
             resolve_scale_estimator_config(cfg.model.get("scale_estimator"))["name"]
             == ROBUST_LOG_CAP_SCALE_ESTIMATOR
         )
+        self.joint_loss_mode = str(cfg.train.get("joint_loss_mode", "default"))
+        if self.joint_loss_mode not in {"default", "final_depth_only"}:
+            raise ValueError(
+                "train.joint_loss_mode must be 'default' or 'final_depth_only'"
+            )
+        self.current_training_stage: str | None = None
         self.current_epoch = 0
 
     def set_epoch(self, epoch: int) -> None:
         self.current_epoch = int(epoch)
+
+    def set_training_stage(self, stage: str | None) -> None:
+        self.current_training_stage = None if stage is None else str(stage)
 
     def attention_entropy_factor(self) -> float:
         if self.attention_entropy_decay_epochs == 0:
@@ -823,7 +832,7 @@ class BIMPriorLoss(nn.Module):
         else:
             adapter_gate_loss = zero
 
-        total = (
+        default_total = (
             float(self.weights.depth) * depth_loss
             + float(self.weights.get("coarse_depth", 0.0)) * coarse_depth_loss
             + float(self.weights.gradient) * gradient_loss
@@ -851,8 +860,27 @@ class BIMPriorLoss(nn.Module):
             + self.attention_scale_oracle_weight * attention_scale_oracle
             + self.attention_weight_target_weight * attention_weight_target
         )
+        joint_final_depth_only_active = (
+            self.joint_loss_mode == "final_depth_only"
+            and self.current_training_stage == "scratch_low_lr_joint"
+        )
+        if joint_final_depth_only_active:
+            # In the final joint phase, both the scale estimator and refiner
+            # receive gradients only through the final prediction. In
+            # particular, coarse-depth, oracle-scale, equivariance and
+            # residual-teacher objectives remain available as diagnostics but
+            # do not contribute to optimization.
+            total = (
+                float(self.weights.depth) * depth_loss
+                + float(self.weights.gradient) * gradient_loss
+            )
+        else:
+            total = default_total
         return {
             "total": total,
+            "joint_final_depth_only_active": total.detach().new_tensor(
+                float(joint_final_depth_only_active)
+            ),
             "depth": depth_loss.detach(),
             "coarse_depth": coarse_depth_loss.detach(),
             "gradient": gradient_loss.detach(),

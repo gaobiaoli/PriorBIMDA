@@ -1,0 +1,15 @@
+extends: stanford_area1_iterative_attention_huber_reduced_refiner_continuation_full_depth_metric_da3.yaml
+
+# Controlled training-objective ablation. The scale-only checkpoint and the
+# nine refiner-only epochs retain the baseline objective. During the final
+# three joint epochs, scale and refiner parameters remain trainable, but the
+# optimizer receives gradients only from the final depth/log-gradient error
+# against GT. Intermediate scale, coarse-depth, equivariance and teacher
+# objectives are diagnostic-only in that phase.
+
+experiment:
+  name: stanford_area1_iterative_attention_huber_reduced_refiner_joint_final_depth_only
+  output_dir: outputs/stanford_area1_iterative_attention_huber_reduced_refiner_joint_final_depth_only
+
+train:
+  joint_loss_mode: final_depth_only
