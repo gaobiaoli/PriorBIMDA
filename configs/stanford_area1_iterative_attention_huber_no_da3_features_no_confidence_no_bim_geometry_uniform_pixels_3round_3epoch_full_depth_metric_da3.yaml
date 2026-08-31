@@ -1,0 +1,15 @@
+extends: stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch_full_depth_metric_da3.yaml
+
+# Pixel-uniform counterpart of the iterative-attention Huber scale baseline.
+# Area_1 gt_weight is the binary valid mask, so these values make every valid
+# GT pixel contribute equally while leaving sampling and all other settings
+# unchanged.
+
+experiment:
+  name: stanford_area1_iterative_attention_huber_uniform_pixels_3round_3epoch
+  output_dir: outputs/stanford_area1_iterative_attention_huber_uniform_pixels_3round_3epoch
+
+loss:
+  near_range_boost: 0.0
+  furniture_multiplier: 1.0
+  bim_foreground_conflict_multiplier: 1.0

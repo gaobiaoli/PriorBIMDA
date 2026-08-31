@@ -43,6 +43,8 @@ class BIMPriorDA3(nn.Module):
     RESIDUAL_ANCHOR_SCALED = "scaled_depth"
     RESIDUAL_ROUTING_FRAME_AND_LOW = "frame_and_low"
     RESIDUAL_ROUTING_FRAME_ONLY = "frame_only"
+    JOINT_SCALE_FINAL_ONLY_MODE = "scale_final_depth_only"
+    JOINT_TRAINING_STAGE = "scratch_low_lr_joint"
 
     def __init__(
         self,
@@ -170,6 +172,8 @@ class BIMPriorDA3(nn.Module):
             + 3 * int(self.refiner_use_bim_normals)
             + int(self.refiner_use_bim_edge)
         )
+        self.joint_loss_mode = str(cfg.train.get("joint_loss_mode", "default"))
+        self.current_training_stage: str | None = None
         self.da3: nn.Module | None = None
         self._da3_trainable_module_names: tuple[str, ...] = ()
         configured_scale = model.get("scale_estimator")
@@ -514,6 +518,16 @@ class BIMPriorDA3(nn.Module):
         if self.e2e_da3_enabled:
             self.da3 = self._load_da3_model(cfg, da3_model)
             self._configure_da3_trainable_scope()
+
+    def set_training_stage(self, stage: str | None) -> None:
+        self.current_training_stage = None if stage is None else str(stage)
+
+    def joint_scale_gradient_isolation_active(self) -> bool:
+        return (
+            self.training
+            and self.joint_loss_mode == self.JOINT_SCALE_FINAL_ONLY_MODE
+            and self.current_training_stage == self.JOINT_TRAINING_STAGE
+        )
 
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         self._validate_bim_depth_mask_contract(batch)
@@ -1237,11 +1251,18 @@ class BIMPriorDA3(nn.Module):
         valid = batch["bim_valid"].clamp(0.0, 1.0)
         residual_anchor = scaled
 
+        # In the scale-gradient-isolation ablation, the refiner observes the
+        # same numerical scaled depth but cannot send gradients to the scale
+        # estimator through its condition branch. The final multiplicative
+        # anchor below deliberately remains the original, attached `scaled`.
+        isolate_scale_gradient = self.joint_scale_gradient_isolation_active()
+        refiner_condition_scaled = scaled.detach() if isolate_scale_gradient else scaled
+
         log_base = safe_log(base)
-        log_scaled = safe_log(scaled)
+        log_scaled = safe_log(refiner_condition_scaled)
         geometry_scale_channel = ((log_scaled - log_base) / 0.5).clamp(-2.0, 2.0)
         geometry_scale_channel_semantics = "log(scaled/base)/0.5"
-        safe_bim = torch.where(valid > 0, bim, scaled)
+        safe_bim = torch.where(valid > 0, bim, refiner_condition_scaled)
         log_bim = safe_log(safe_bim)
         signed_disagreement = (log_bim - log_scaled) * valid
 
@@ -1294,7 +1315,7 @@ class BIMPriorDA3(nn.Module):
             raw_frame_residual = torch.zeros_like(raw_frame_residual)
         if not self.use_low_residual:
             raw_low_residual = torch.zeros_like(raw_low_residual)
-        residual_routing_depth = scaled
+        residual_routing_depth = refiner_condition_scaled
         if self.depth_aware_residual_routing:
             residual_routing_gate = torch.sigmoid(
                 (residual_routing_depth - self.residual_routing_depth)
@@ -1324,6 +1345,9 @@ class BIMPriorDA3(nn.Module):
             float(self.refiner.max_total_log_residual),
         )
         proportional_refined = residual_anchor * torch.exp(log_residual)
+        scale_detached_proportional_refined = (
+            refiner_condition_scaled * torch.exp(log_residual)
+        )
         additive_residual = torch.zeros_like(proportional_refined)
         if self.additive_residual_enabled:
             decoded = prediction.get("decoded_features_for_additive")
@@ -1331,11 +1355,14 @@ class BIMPriorDA3(nn.Module):
                 raise KeyError("Additive refiner did not return its decoded feature tensor")
             additive_residual = self.refiner.predict_additive_metric_residual(
                 decoded,
-                residual_anchor,
+                refiner_condition_scaled,
                 log_residual,
             )
         refined = proportional_refined + additive_residual
         refined = refined.clamp(1e-3, self.output_max_depth)
+        scale_detached_refined = (
+            scale_detached_proportional_refined + additive_residual
+        ).clamp(1e-3, self.output_max_depth)
         reliability_logits = prediction["bim_reliability_logits"]
         reliability = torch.sigmoid(reliability_logits) * valid
         local_scale = scaled / base.clamp_min(1e-3)
@@ -1347,6 +1374,9 @@ class BIMPriorDA3(nn.Module):
             "base_depth": base,
             "base_confidence": batch["base_confidence"],
             "scaled_depth": scaled,
+            "refiner_condition_scaled_depth": refiner_condition_scaled,
+            "scale_detached_depth": scale_detached_refined,
+            "joint_scale_gradient_isolation_active": isolate_scale_gradient,
             "coarse_depth": scaled,
             "refinement_anchor_depth": residual_anchor,
             "geometry_scale_channel": geometry_scale_channel,
@@ -1456,6 +1486,7 @@ class BIMPriorDA3(nn.Module):
                 self.training
                 and self.attention_scale_equivariance_probability > 0
                 and self.attention_scale_equivariance_log_range > 0
+                and not isolate_scale_gradient
             ):
                 selected = (
                     torch.rand(

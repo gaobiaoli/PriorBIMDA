@@ -2172,6 +2172,117 @@ the test summary in
 and the matched old-last test summary in
 `results/stanford_area1/iterative_attention_huber_reduced_refiner_baseline_last_test`.
 
+### Joint scale-gradient isolation (prepared, not trained)
+
+The stricter follow-up does **not** replace the complete joint objective with
+only final depth and gradient losses. Instead it routes gradients by parameter
+family during the final joint stage:
+
+- the scale head receives gradients only through
+  `final_depth + lambda_gradient * final_gradient`;
+- the refiner still receives its residual-teacher, smoothness, detail,
+  trust/uncertainty and other enabled auxiliary losses;
+- `scaled_depth` is detached both in the refiner condition and when constructing
+  the residual target;
+- the final multiplication `D_final = scaled_depth * exp(r)` keeps
+  `scaled_depth` attached, so the two final losses train scale and refiner
+  jointly;
+- `coarse_depth`, `attention_scale_oracle`,
+  `attention_scale_equivariance`, `attention_entropy` and
+  `attention_scale_residual` have effective weight zero in the joint stage.
+
+The uncertainty auxiliary is evaluated with a numerically identical
+scale-detached final prediction. This retains its refiner gradient without
+creating an unintended third route into the scale head. A unit test compares
+every scale-head parameter gradient against a pure final-depth-plus-gradient
+reference and verifies equality, while also verifying that refiner auxiliary
+gradients remain present.
+
+The independent config is
+`configs/stanford_area1_iterative_attention_huber_reduced_refiner_joint_scale_final_only_full_depth_metric_da3.yaml`.
+The pipeline below is dry-run by default and therefore safe to inspect:
+
+```bash
+.venv/bin/python scripts/pipelines/run_iterative_huber_joint_scale_final_only.py
+```
+
+After approval, the complete 9-epoch refiner-only + 3-epoch joint continuation,
+Area_1 all-valid test, and Hxp Matterport/BIMNet zero-shot evaluation can be
+started explicitly with:
+
+```bash
+.venv/bin/python scripts/pipelines/run_iterative_huber_joint_scale_final_only.py --execute
+```
+
+Individual stages can be selected with `--stages train`, `--stages area-test`,
+or `--stages zero-shot`. No training or benchmark result has been produced for
+this mode at the time of writing.
+
+### Uniform-pixel iterative-attention Huber + refiner
+
+To isolate the effect of semantic/range emphasis, the matched iterative-attention
+Huber experiment was retrained from scratch with `near_range_boost=0`,
+`furniture_multiplier=1`, and `bim_foreground_conflict_multiplier=1`. Area_1
+stores `gt_weight` as the binary valid mask, so every valid GT pixel consequently
+has equal loss weight. The scale head was independently retrained for three
+epochs, followed by the unchanged 9-epoch refiner-only and 3-epoch joint
+continuation. Both variants below use their validation-selected `best.pt` and
+the same 1,641-frame official-all-valid test protocol.
+
+| Test stage | Weighted baseline AbsRel | Uniform pixels AbsRel | Relative change |
+|---|---:|---:|---:|
+| Attention/Huber round 1 | 0.073734 | **0.073224** | -0.69% |
+| Attention/Huber round 2 | 0.069099 | **0.068352** | -1.08% |
+| Attention/Huber round 3 | 0.068092 | **0.067252** | -1.23% |
+| Scale + low residual | 0.064061 | **0.063711** | -0.55% |
+| Final | 0.063988 | **0.063220** | -1.20% |
+
+The final uniform model also reduces MAE from `0.130178` to `0.127889`, but
+RMSE changes from `0.415054` to `0.415258` and delta1 from `0.946991` to
+`0.945250`; it is therefore an AbsRel/MAE improvement rather than a uniform
+improvement across all metrics. Its final BIM-consistent AbsRel improves from
+`0.028086` to `0.026135` (-6.95%), while furniture worsens from `0.077405` to
+`0.078504` (+1.42%) and BIM-foreground conflict from `0.112071` to `0.114307`
+(+1.99%). This confirms that the old emphasis protects the emphasized
+foreground subsets but sacrifices aggregate structural accuracy.
+
+Validation and test disagree: the weighted baseline has the better best
+validation AbsRel (`0.065299` at refiner-only epoch 5), whereas uniform pixels
+selects `0.066501` at joint epoch 11. On test, uniform wins 57.5% of paired
+frames and five of seven rooms, but a seven-room paired bootstrap interval for
+the room-mean final AbsRel difference includes zero (`[-0.00205, 0.00305]`).
+Accordingly, this is a useful loss-weighting ablation, not evidence of a robust
+new SOTA.
+
+On the frozen Hxp Matterport/BIMNet zero-shot benchmark, the same checkpoint
+selects exactly the pinned 624/792 frames (frame-set SHA-256
+`e6639e7bd16eb7b666a6f22f41ee17ec50a2ce8d8b841427ad489126013bd18b`).
+GT is used only for the `>10%` valid-depth rule and scoring; the other selection
+rules are BIM hit fraction `>20%` and camera center inside the BIM AABB.
+
+| Hxp stage | Weighted baseline AbsRel | Uniform pixels AbsRel |
+|---|---:|---:|
+| Raw DA3 | 0.165732 | 0.165732 |
+| Attention/Huber scale | **0.102020** | 0.102965 |
+| Scale + low residual | **0.102158** | 0.104772 |
+| Final | **0.101781** | 0.104540 |
+
+The uniform scale still improves Raw DA3 by 37.87%, but its refiner increases
+AbsRel by 1.53% relative to its own scale-only output. Its final prediction is
+2.71% worse than the matched weighted model. Although uniform wins 51.9% of
+paired frames, the pixel-micro metric is worse, indicating that its negative
+transfer is concentrated in larger or higher-error frames. Thus the Area_1
+aggregate gain from removing foreground emphasis does not transfer to Hxp;
+the weighted checkpoint remains the preferred zero-shot model.
+
+Artifacts:
+
+- scale config: `configs/stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_uniform_pixels_3round_3epoch_full_depth_metric_da3.yaml`;
+- continuation config: `configs/stanford_area1_iterative_attention_huber_reduced_refiner_uniform_pixels_continuation_full_depth_metric_da3.yaml`;
+- validation-selected checkpoint: `outputs/stanford_area1_iterative_attention_huber_reduced_refiner_uniform_pixels_continuation/best.pt`;
+- test summary: `results/stanford_area1/iterative_attention_huber_reduced_refiner_uniform_pixels_best_test/summary.json`.
+- Hxp zero-shot summary: `results/matterport3d/hxp_iterative_attention_huber_refiner_uniform_pixels_zero_shot/summary.json`.
+
 ## Two-layer attention with converged inner Huber IRLS
 
 To combine the fixed- and iterative-attention controls, a nested estimator was

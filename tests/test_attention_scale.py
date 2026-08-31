@@ -25,13 +25,13 @@ from scripts.model.train import (
     apply_refiner_head_warmup_stage,
     apply_scratch_stage_module_modes,
     apply_scratch_training_stage,
+    build_optimizer,
     build_refiner_head_warmup_schedule,
     build_scratch_stage_schedule,
-    build_optimizer,
     load_initial_model_weights,
     load_scale_continuation_weights,
-    restore_optimizer_group_state,
     resolve_scratch_stage_epochs,
+    restore_optimizer_group_state,
     snapshot_parameter_trainability,
 )
 
@@ -845,6 +845,83 @@ def test_joint_final_depth_only_mode_excludes_auxiliary_losses_from_total() -> N
     torch.testing.assert_close(joint_losses["total"], expected)
     assert joint_losses["joint_final_depth_only_active"].item() == 1
     assert not torch.isclose(refiner_losses["total"], joint_losses["total"])
+
+
+def test_joint_scale_final_only_isolates_scale_gradient_but_keeps_refiner_auxiliary_loss() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_iterative_attention_huber_reduced_refiner_joint_scale_final_only_full_depth_metric_da3.yaml"
+    )
+    cfg.model.base_channels = 4
+    cfg.model.attention_scale.hidden_channels = 4
+    cfg.model.attention_scale.iterative_hidden_channels = 5
+    cfg.model.attention_scale.token_dropout_probability = 0.0
+    cfg.model.attention_scale.equivariance_probability = 0.0
+    model = BIMPriorDA3(cfg).train()
+    model.set_training_stage(SCRATCH_JOINT_STAGE)
+    batch = _candidate_batch(size=32)
+
+    criterion = BIMPriorLoss(cfg)
+    criterion.set_training_stage(SCRATCH_JOINT_STAGE)
+    output = model(batch)
+    assert output["joint_scale_gradient_isolation_active"] is True
+    assert output["scaled_depth"].requires_grad
+    assert not output["refiner_condition_scaled_depth"].requires_grad
+    torch.testing.assert_close(
+        output["refiner_condition_scaled_depth"],
+        output["scaled_depth"],
+    )
+    torch.testing.assert_close(
+        output["depth"],
+        output["scaled_depth"] * torch.exp(output["log_residual"]),
+    )
+    losses = criterion(output, batch)
+    assert losses["joint_scale_final_only_active"].item() == 1
+    assert losses["joint_final_depth_only_active"].item() == 0
+    losses["total"].backward()
+
+    def family_gradients(prefix: str) -> dict[str, torch.Tensor | None]:
+        return {
+            name: None if parameter.grad is None else parameter.grad.detach().clone()
+            for name, parameter in model.named_parameters()
+            if name.startswith(prefix)
+        }
+
+    isolated_scale_gradients = family_gradients("attention_scale.")
+    isolated_refiner_gradients = family_gradients("refiner.")
+    assert any(
+        gradient is not None and torch.count_nonzero(gradient) > 0
+        for gradient in isolated_scale_gradients.values()
+    )
+
+    model.zero_grad(set_to_none=True)
+    final_only = BIMPriorLoss(cfg)
+    final_only.joint_loss_mode = "final_depth_only"
+    final_only.set_training_stage(SCRATCH_JOINT_STAGE)
+    final_output = model(batch)
+    final_losses = final_only(final_output, batch)
+    final_losses["total"].backward()
+    final_scale_gradients = family_gradients("attention_scale.")
+    final_refiner_gradients = family_gradients("refiner.")
+
+    assert isolated_scale_gradients.keys() == final_scale_gradients.keys()
+    for name in isolated_scale_gradients:
+        isolated = isolated_scale_gradients[name]
+        expected = final_scale_gradients[name]
+        assert (isolated is None) == (expected is None), name
+        if isolated is not None and expected is not None:
+            torch.testing.assert_close(isolated, expected, rtol=2e-5, atol=2e-7)
+
+    refiner_difference = False
+    for name in isolated_refiner_gradients:
+        isolated = isolated_refiner_gradients[name]
+        final = final_refiner_gradients[name]
+        if isolated is None or final is None:
+            refiner_difference |= isolated is not final
+        elif not torch.allclose(isolated, final, rtol=2e-5, atol=2e-7):
+            refiner_difference = True
+            break
+    assert refiner_difference
+    assert not torch.isclose(losses["total"], final_losses["total"])
 
 
 def test_direct_attention_target_supervises_spatial_scale_weights() -> None:

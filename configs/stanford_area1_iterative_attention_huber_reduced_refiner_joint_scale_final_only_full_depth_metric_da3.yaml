@@ -1,0 +1,15 @@
+extends: stanford_area1_iterative_attention_huber_reduced_refiner_continuation_full_depth_metric_da3.yaml
+
+# Joint-gradient-isolation experiment requested after the stricter
+# final-depth-only ablation. During the final three joint epochs:
+# - scale receives gradients only from final depth + final depth-gradient;
+# - refiner retains its teacher and regularization losses;
+# - refiner condition and residual targets use detached scaled depth;
+# - the final D = scaled * exp(r) path keeps scaled attached.
+
+experiment:
+  name: stanford_area1_iterative_attention_huber_reduced_refiner_joint_scale_final_only
+  output_dir: outputs/stanford_area1_iterative_attention_huber_reduced_refiner_joint_scale_final_only
+
+train:
+  joint_loss_mode: scale_final_depth_only

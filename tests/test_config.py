@@ -96,3 +96,22 @@ def test_stanford_alignment_receipt_is_present_and_pinned() -> None:
     path = Path(cfg.project_root) / cfg.data.bim_alignment
     assert path.is_file()
     assert hashlib.sha256(path.read_bytes()).hexdigest() == cfg.data.bim_alignment_sha256
+
+
+def test_uniform_pixel_iterative_huber_configs_disable_all_pixel_emphasis() -> None:
+    scale = load_config(
+        "configs/stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_uniform_pixels_3round_3epoch_full_depth_metric_da3.yaml"
+    )
+    continuation = load_config(
+        "configs/stanford_area1_iterative_attention_huber_reduced_refiner_uniform_pixels_continuation_full_depth_metric_da3.yaml"
+    )
+
+    for cfg in (scale, continuation):
+        assert cfg.loss.near_range_boost == 0.0
+        assert cfg.loss.furniture_multiplier == 1.0
+        assert cfg.loss.bim_foreground_conflict_multiplier == 1.0
+    assert scale.train.scale_only_experiment is True
+    assert scale.train.epochs == 3
+    assert continuation.train.scale_only_experiment is False
+    assert continuation.train.continuation_stage_epochs.refiner_only == 9
+    assert continuation.train.continuation_stage_epochs.joint == 3

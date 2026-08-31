@@ -379,9 +379,14 @@ class BIMPriorLoss(nn.Module):
             == ROBUST_LOG_CAP_SCALE_ESTIMATOR
         )
         self.joint_loss_mode = str(cfg.train.get("joint_loss_mode", "default"))
-        if self.joint_loss_mode not in {"default", "final_depth_only"}:
+        if self.joint_loss_mode not in {
+            "default",
+            "final_depth_only",
+            "scale_final_depth_only",
+        }:
             raise ValueError(
-                "train.joint_loss_mode must be 'default' or 'final_depth_only'"
+                "train.joint_loss_mode must be 'default', 'final_depth_only' or "
+                "'scale_final_depth_only'"
             )
         self.current_training_stage: str | None = None
         self.current_epoch = 0
@@ -417,6 +422,10 @@ class BIMPriorLoss(nn.Module):
         log_prediction = torch.log(output["depth"].clamp_min(1e-3))
         uses_live_da3 = bool(output.get("uses_live_da3", False))
         scaled_depth = output["scaled_depth"]
+        joint_scale_final_only_active = (
+            self.joint_loss_mode == "scale_final_depth_only"
+            and self.current_training_stage == "scratch_low_lr_joint"
+        )
         degradation_enabled = not self.disable_degradation_anchor_access
         residual_anchor_depth = output.get(
             "refinement_anchor_depth",
@@ -428,6 +437,8 @@ class BIMPriorLoss(nn.Module):
                 f"{tuple(residual_anchor_depth.shape)} != "
                 f"{tuple(scaled_depth.shape)}"
             )
+        if joint_scale_final_only_active:
+            residual_anchor_depth = residual_anchor_depth.detach()
         log_residual_anchor = torch.log(residual_anchor_depth.clamp_min(1e-3))
         log_anchor: torch.Tensor | None = None
         if degradation_enabled:
@@ -448,6 +459,12 @@ class BIMPriorLoss(nn.Module):
             log_anchor = torch.log(degradation_anchor.clamp_min(1e-3))
         log_error = log_prediction - log_target
         prediction_error = log_error.abs()
+        auxiliary_log_prediction = (
+            torch.log(output["scale_detached_depth"].clamp_min(1e-3))
+            if joint_scale_final_only_active
+            else log_prediction
+        )
+        auxiliary_prediction_error = (auxiliary_log_prediction - log_target).abs()
 
         depth_loss = 0.5 * _masked_mean(
             prediction_error,
@@ -757,7 +774,8 @@ class BIMPriorLoss(nn.Module):
             trust_mask = batch["trust_mask"]
         if warm:
             uncertainty = (
-                torch.exp(-output["log_variance"]) * prediction_error + output["log_variance"]
+                torch.exp(-output["log_variance"]) * auxiliary_prediction_error
+                + output["log_variance"]
             )
             uncertainty_loss = _masked_mean(uncertainty, valid, pixel_weight)
 
@@ -778,7 +796,7 @@ class BIMPriorLoss(nn.Module):
             )
 
             prediction_frame_error = _per_sample_masked_mean_vector(
-                prediction_error,
+                auxiliary_prediction_error,
                 valid,
                 pixel_weight,
             )
@@ -832,9 +850,35 @@ class BIMPriorLoss(nn.Module):
         else:
             adapter_gate_loss = zero
 
+        coarse_depth_weight = (
+            0.0
+            if joint_scale_final_only_active
+            else float(self.weights.get("coarse_depth", 0.0))
+        )
+        attention_entropy_weight = (
+            0.0
+            if joint_scale_final_only_active
+            else float(self.weights.get("attention_entropy", 0.0))
+        )
+        attention_scale_equivariance_weight = (
+            0.0
+            if joint_scale_final_only_active
+            else float(self.weights.get("attention_scale_equivariance", 0.0))
+        )
+        attention_scale_residual_weight = (
+            0.0
+            if joint_scale_final_only_active
+            else float(self.weights.get("attention_scale_residual", 0.0))
+        )
+        attention_scale_oracle_weight = (
+            0.0 if joint_scale_final_only_active else self.attention_scale_oracle_weight
+        )
+        attention_weight_target_weight = (
+            0.0 if joint_scale_final_only_active else self.attention_weight_target_weight
+        )
         default_total = (
             float(self.weights.depth) * depth_loss
-            + float(self.weights.get("coarse_depth", 0.0)) * coarse_depth_loss
+            + coarse_depth_weight * coarse_depth_loss
             + float(self.weights.gradient) * gradient_loss
             + float(self.weights.get("residual_teacher", 0.0)) * residual_teacher
             + float(self.weights.get("frame_residual_teacher", 0.0)) * frame_residual_teacher
@@ -853,12 +897,11 @@ class BIMPriorLoss(nn.Module):
             + float(self.weights.get("degradation", 0.0)) * degradation_loss
             + float(self.weights.get("adapter_gate", 0.0)) * adapter_gate_loss
             + float(self.weights.get("spatial_mean", 0.0)) * spatial_mean_regularization
-            + float(self.weights.get("attention_entropy", 0.0)) * attention_entropy_regularization
-            + float(self.weights.get("attention_scale_equivariance", 0.0))
-            * attention_scale_equivariance
-            + float(self.weights.get("attention_scale_residual", 0.0)) * attention_scale_residual
-            + self.attention_scale_oracle_weight * attention_scale_oracle
-            + self.attention_weight_target_weight * attention_weight_target
+            + attention_entropy_weight * attention_entropy_regularization
+            + attention_scale_equivariance_weight * attention_scale_equivariance
+            + attention_scale_residual_weight * attention_scale_residual
+            + attention_scale_oracle_weight * attention_scale_oracle
+            + attention_weight_target_weight * attention_weight_target
         )
         joint_final_depth_only_active = (
             self.joint_loss_mode == "final_depth_only"
@@ -880,6 +923,9 @@ class BIMPriorLoss(nn.Module):
             "total": total,
             "joint_final_depth_only_active": total.detach().new_tensor(
                 float(joint_final_depth_only_active)
+            ),
+            "joint_scale_final_only_active": total.detach().new_tensor(
+                float(joint_scale_final_only_active)
             ),
             "depth": depth_loss.detach(),
             "coarse_depth": coarse_depth_loss.detach(),
