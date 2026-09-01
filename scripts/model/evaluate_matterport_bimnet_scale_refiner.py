@@ -28,11 +28,16 @@ import cv2
 import numpy as np
 import open3d as o3d
 import torch
+from huggingface_hub import hf_hub_download
 
 from bim_priorda3.checkpoints import validate_checkpoint_model_config
-from bim_priorda3.config import load_config
+from bim_priorda3.config import load_config, resolve_project_path
 from bim_priorda3.data.geometry import depth_edges
-from bim_priorda3.models import BIMPriorDA3
+from bim_priorda3.models import (
+    BIMPriorDA3,
+    FrozenHuberDAv2LowRefiner,
+    FrozenHuberPriorDAV11BIM,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LEGACY_EVALUATOR = PROJECT_ROOT / "scripts/model/evaluate_matterport_bimnet_full_regression.py"
@@ -135,7 +140,7 @@ def _tensor(value: np.ndarray, device: torch.device, *, channel: bool = False) -
 
 def build_batch(
     *,
-    model: BIMPriorDA3,
+    model: BIMPriorDA3 | FrozenHuberDAv2LowRefiner | FrozenHuberPriorDAV11BIM,
     rgb: np.ndarray,
     base_depth: np.ndarray,
     base_confidence: np.ndarray,
@@ -159,7 +164,12 @@ def build_batch(
         batch["da3_feature_mid"] = _tensor(da3_feature_mid, device)
     if da3_feature_deep is not None:
         batch["da3_feature_deep"] = _tensor(da3_feature_deep, device)
-    deterministic_scale, support, _, _ = model._robust_bim_scale(
+    scale_system = (
+        model.scale_system
+        if isinstance(model, (FrozenHuberDAv2LowRefiner, FrozenHuberPriorDAV11BIM))
+        else model
+    )
+    deterministic_scale, support, _, _ = scale_system._robust_bim_scale(
         batch["base_depth"], batch["bim_depth"], batch["bim_valid"]
     )
     batch["scaled_depth"] = batch["base_depth"] * deterministic_scale
@@ -170,7 +180,7 @@ def evaluate_frame(
     *,
     frame: Any,
     da3_model: Any,
-    model: BIMPriorDA3,
+    model: BIMPriorDA3 | FrozenHuberDAv2LowRefiner | FrozenHuberPriorDAV11BIM,
     raycaster: Any,
     args: argparse.Namespace,
     feature_layers: tuple[int, ...],
@@ -276,9 +286,18 @@ def evaluate_frame(
     model_seconds = time.perf_counter() - model_start
 
     scale_process = output["scaled_depth"].detach().float().squeeze().cpu().numpy()
-    scale_low_process = (
-        output["refinement_anchor_depth"] * torch.exp(output["low_log_residual"])
-    ).clamp(1e-3, model.output_max_depth).detach().float().squeeze().cpu().numpy()
+    if isinstance(model, FrozenHuberDAv2LowRefiner):
+        # This architecture deliberately has no r_detail; its final prediction
+        # is exactly the scale+r_low stage.
+        scale_low_process = output["depth"].detach().float().squeeze().cpu().numpy()
+    elif isinstance(model, FrozenHuberPriorDAV11BIM):
+        # For this adapter, scale_low denotes the non-learned local Huber
+        # condition. The final column is the official PriorDA v1.1 fine output.
+        scale_low_process = output["local_depth"].detach().float().squeeze().cpu().numpy()
+    else:
+        scale_low_process = (
+            output["refinement_anchor_depth"] * torch.exp(output["low_log_residual"])
+        ).clamp(1e-3, model.output_max_depth).detach().float().squeeze().cpu().numpy()
     final_process = output["depth"].detach().float().squeeze().cpu().numpy()
     learned_scale = float((scale_process / np.maximum(base_depth, 1e-6)).mean())
 
@@ -351,6 +370,8 @@ def evaluate_frame(
         "error": "",
     }
     iteration_scales = output.get("attention_iteration_log_scales")
+    if iteration_scales is None:
+        iteration_scales = output.get("scale_iteration_log_scales")
     if iteration_scales is not None:
         values = iteration_scales.detach().float().reshape(-1).cpu().numpy()
         for index, value in enumerate(values, start=1):
@@ -418,7 +439,7 @@ def build_summary(
     rows: list[dict[str, Any]],
     *,
     args: argparse.Namespace,
-    model: BIMPriorDA3,
+    model: BIMPriorDA3 | FrozenHuberDAv2LowRefiner | FrozenHuberPriorDAV11BIM,
     scene_id: str,
     bimnet_key: str,
     mesh_metadata: Mapping[str, Any],
@@ -458,13 +479,23 @@ def build_summary(
             "config": str(args.config.expanduser().resolve()),
             "checkpoint": str(args.checkpoint.expanduser().resolve()),
             "checkpoint_sha256": BENCHMARK._sha256(args.checkpoint),
-            "architecture": "3-round attention scale + r_low + r_detail",
+            "architecture": (
+                "frozen 3-round iterative-attention Huber + official PriorDA v1.1 BIM fine stage"
+                if isinstance(model, FrozenHuberPriorDAV11BIM)
+                else (
+                    "frozen 3-round iterative-attention Huber + pretrained DINOv2/DPT r_low"
+                    if isinstance(model, FrozenHuberDAv2LowRefiner)
+                    else "3-round attention scale + r_low + r_detail"
+                )
+            ),
             "da3_feature_layers": (
                 list(model.da3_feature_layers)
-                if model.da3_feature_fusion_enabled
+                if isinstance(model, BIMPriorDA3) and model.da3_feature_fusion_enabled
                 else []
             ),
-            "da3_feature_fusion_enabled": model.da3_feature_fusion_enabled,
+            "da3_feature_fusion_enabled": (
+                model.da3_feature_fusion_enabled if isinstance(model, BIMPriorDA3) else False
+            ),
             "da3_model": args.da3_model,
             "da3_revision": args.da3_revision,
             "focal_correction": "mean(processed fx, fy) / 300",
@@ -507,6 +538,98 @@ def _csv_columns() -> list[str]:
     return [*identifiers, *diagnostic, *metrics, *timing]
 
 
+def _load_frozen_huber_dpt_model(
+    cfg: Any,
+    checkpoint: Mapping[str, Any],
+) -> FrozenHuberDAv2LowRefiner:
+    if "trainable_model" not in checkpoint:
+        raise KeyError("DPT r_low checkpoint lacks trainable_model")
+    expected_scale_sha = str(cfg.model.frozen_scale.checkpoint_sha256)
+    if str(checkpoint.get("frozen_scale_checkpoint_sha256")) != expected_scale_sha:
+        raise RuntimeError("DPT checkpoint refers to a different frozen scale checkpoint")
+    expected_dav2_sha = str(cfg.model.dav2.checkpoint_sha256)
+    if str(checkpoint.get("official_dav2_checkpoint_sha256")) != expected_dav2_sha:
+        raise RuntimeError("DPT checkpoint refers to a different official DAv2 checkpoint")
+    scale_path = resolve_project_path(cfg, cfg.model.frozen_scale.checkpoint)
+    if BENCHMARK._sha256(scale_path) != expected_scale_sha:
+        raise RuntimeError("Local frozen scale checkpoint SHA256 differs from config")
+    scale_checkpoint = torch.load(scale_path, map_location="cpu", weights_only=False)
+    model = FrozenHuberDAv2LowRefiner.from_checkpoints(
+        cfg,
+        scale_checkpoint=scale_checkpoint,
+    )
+    prefixes = (
+        "refiner.dav2.backbone.",
+        "refiner.dav2.neck.",
+        "refiner.bim_condition_embed.",
+        "refiner.low_output.",
+    )
+    state = checkpoint["trainable_model"]
+    expected = {name for name in model.state_dict() if name.startswith(prefixes)}
+    if set(state) != expected:
+        raise RuntimeError(
+            "DPT trainable-state contract changed: "
+            f"missing={sorted(expected - set(state))[:5]}, "
+            f"unexpected={sorted(set(state) - expected)[:5]}"
+        )
+    merged = model.state_dict()
+    merged.update(state)
+    model.load_state_dict(merged, strict=True)
+    return model
+
+
+def _load_frozen_huber_priorda_model(
+    cfg: Any,
+    checkpoint: Mapping[str, Any],
+) -> FrozenHuberPriorDAV11BIM:
+    if checkpoint.get("architecture") != "official_priorda_v1_1_bim_global_local_condition":
+        raise RuntimeError("Checkpoint is not the PriorDA v1.1 BIM adapter")
+    if "trainable_model" not in checkpoint:
+        raise KeyError("PriorDA-BIM checkpoint lacks trainable_model")
+    expected_scale_sha = str(cfg.model.frozen_scale.checkpoint_sha256)
+    if str(checkpoint.get("frozen_scale_checkpoint_sha256")) != expected_scale_sha:
+        raise RuntimeError("PriorDA checkpoint refers to a different frozen scale checkpoint")
+    expected_priorda_sha = str(cfg.model.priorda_v11.checkpoint_sha256)
+    if str(checkpoint.get("official_priorda_checkpoint_sha256")) != expected_priorda_sha:
+        raise RuntimeError("PriorDA checkpoint refers to a different official base checkpoint")
+    expected_commit = str(cfg.model.priorda_v11.official_repository_commit)
+    if str(checkpoint.get("official_priorda_repository_commit")) != expected_commit:
+        raise RuntimeError("PriorDA checkpoint refers to a different official source commit")
+
+    scale_path = resolve_project_path(cfg, cfg.model.frozen_scale.checkpoint)
+    if BENCHMARK._sha256(scale_path) != expected_scale_sha:
+        raise RuntimeError("Local frozen scale checkpoint SHA256 differs from config")
+    prior_cfg = cfg.model.priorda_v11
+    priorda_path = Path(
+        hf_hub_download(
+            repo_id=str(prior_cfg.checkpoint_repo),
+            filename=str(prior_cfg.checkpoint_filename),
+            revision=str(prior_cfg.checkpoint_revision),
+            local_files_only=bool(prior_cfg.local_files_only),
+        )
+    ).resolve()
+    if BENCHMARK._sha256(priorda_path) != expected_priorda_sha:
+        raise RuntimeError("Local official PriorDA checkpoint SHA256 differs from config")
+    scale_checkpoint = torch.load(scale_path, map_location="cpu", weights_only=False)
+    model = FrozenHuberPriorDAV11BIM.from_checkpoints(
+        cfg,
+        scale_checkpoint=scale_checkpoint,
+        priorda_checkpoint_path=priorda_path,
+    )
+    state = checkpoint["trainable_model"]
+    expected = {name for name in model.state_dict() if name.startswith("priorda.")}
+    if set(state) != expected:
+        raise RuntimeError(
+            "PriorDA trainable-state contract changed: "
+            f"missing={sorted(expected - set(state))[:5]}, "
+            f"unexpected={sorted(set(state) - expected)[:5]}"
+        )
+    merged = model.state_dict()
+    merged.update(state)
+    model.load_state_dict(merged, strict=True)
+    return model
+
+
 def main() -> None:
     args = parse_args()
     validate_args(args)
@@ -526,18 +649,24 @@ def main() -> None:
         raise FileExistsError(f"--no-resume refuses existing output: {csv_path}")
 
     cfg = load_config(args.config)
-    model = BIMPriorDA3(cfg)
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
-    validate_checkpoint_model_config(checkpoint, cfg.model)
-    model.load_state_dict(checkpoint["model"], strict=True)
+    if "priorda_v11" in cfg.model:
+        model = _load_frozen_huber_priorda_model(cfg, checkpoint)
+    elif "dav2_low_refiner" in cfg.model:
+        model = _load_frozen_huber_dpt_model(cfg, checkpoint)
+    else:
+        model = BIMPriorDA3(cfg)
+        validate_checkpoint_model_config(checkpoint, cfg.model)
+        model.load_state_dict(checkpoint["model"], strict=True)
     model.to(device).eval()
-    if not model.attention_scale_enabled or model.attention_scale is None:
-        raise RuntimeError("Checkpoint does not contain the learned scale head")
-    if model.use_frame_residual or not model.use_low_residual:
-        raise RuntimeError("Expected released r_low+r_detail refiner with frame residual disabled")
+    if isinstance(model, BIMPriorDA3):
+        if not model.attention_scale_enabled or model.attention_scale is None:
+            raise RuntimeError("Checkpoint does not contain the learned scale head")
+        if model.use_frame_residual or not model.use_low_residual:
+            raise RuntimeError("Expected released r_low+r_detail refiner with frame residual disabled")
     feature_layers = (
         tuple(int(value) for value in model.da3_feature_layers)
-        if model.da3_feature_fusion_enabled
+        if isinstance(model, BIMPriorDA3) and model.da3_feature_fusion_enabled
         else ()
     )
     if feature_layers and len(feature_layers) != 2:

@@ -6,12 +6,28 @@ from .bim_early_fusion_dav2_scale import (
     BIMEarlyFusionDAv2ScaleRegressor,
     scale_regression_loss,
 )
+from .frozen_huber_dav2_low_refiner import (
+    BIMEarlyFusionDAv2LowRefiner,
+    FrozenHuberDAv2LowRefiner,
+)
+from .priorda_v11_bim_adapter import (
+    FrozenHuberPriorDAV11BIM,
+    build_priorda_v11_bim_condition,
+    effective_attention_top_prior,
+    local_huber_log_scale_field,
+)
 from .system import BIMPriorDA3
 
 __all__ = [
+    "BIMEarlyFusionDAv2LowRefiner",
     "BIMEarlyFusionDAv2ScaleRegressor",
     "BIMEarlyFusionDepthAnythingV2",
     "BIMPriorDA3",
+    "FrozenHuberDAv2LowRefiner",
+    "FrozenHuberPriorDAV11BIM",
     "build_bim_condition",
+    "build_priorda_v11_bim_condition",
+    "effective_attention_top_prior",
+    "local_huber_log_scale_field",
     "scale_regression_loss",
 ]

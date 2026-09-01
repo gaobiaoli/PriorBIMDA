@@ -77,6 +77,16 @@ METHODS = {
         "directory": "hxp_iterative_attention_huber_reduced_refiner_continuation_zero_shot",
         "prediction_prefix": "final",
     },
+    "iterative_attention_huber_uniform_refiner": {
+        "label": "Iterative-attention Huber + uniform-pixel refiner (final)",
+        "directory": "hxp_iterative_attention_huber_refiner_uniform_pixels_zero_shot",
+        "prediction_prefix": "final",
+    },
+    "frozen_iterative_huber_dav2_dpt_rlow": {
+        "label": "Frozen iterative Huber + DAv2/DPT r_low",
+        "directory": "hxp_frozen_iterative_huber_dav2_dpt_rlow_zero_shot",
+        "prediction_prefix": "final",
+    },
 }
 
 

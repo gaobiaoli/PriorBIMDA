@@ -133,6 +133,22 @@ class BIMEarlyFusionDepthAnythingV2(nn.Module):
         height: int,
         width: int,
     ) -> torch.Tensor:
+        neck_output, patch_height, patch_width = self._neck_embeddings(
+            embeddings,
+            height=height,
+            width=width,
+        )
+        return self.dav2.head(neck_output, patch_height, patch_width)
+
+    def _neck_embeddings(
+        self,
+        embeddings: torch.Tensor,
+        *,
+        height: int,
+        width: int,
+    ) -> tuple[list[torch.Tensor], int, int]:
+        """Return the four features after DPT reassembly and top-down fusion."""
+
         backbone = self.dav2.backbone
         outputs = backbone.encoder(
             embeddings,
@@ -153,7 +169,9 @@ class BIMEarlyFusionDepthAnythingV2(nn.Module):
             raise RuntimeError(f"Expected four DAv2 feature maps, got {len(feature_maps)}")
         patch_height, patch_width = height // self.PATCH_SIZE, width // self.PATCH_SIZE
         neck_output = self.dav2.neck(feature_maps, patch_height, patch_width)
-        return self.dav2.head(neck_output, patch_height, patch_width)
+        if len(neck_output) != 4:
+            raise RuntimeError(f"Expected four fused DPT neck features, got {len(neck_output)}")
+        return neck_output, patch_height, patch_width
 
     def forward(self, rgb: torch.Tensor, bim_condition: torch.Tensor) -> torch.Tensor:
         normalized = self.normalized_rgb(rgb)

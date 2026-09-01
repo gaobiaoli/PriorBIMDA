@@ -1,0 +1,37 @@
+{
+  "alignment": "none",
+  "best_epoch": 9,
+  "frames": 1673,
+  "frozen_huber_dav2_dpt_rlow": {
+    "abs_rel": 0.06448433008021671,
+    "count": 422186615,
+    "delta1": 0.9393120504305899,
+    "delta2": 0.9780408623328809,
+    "mae": 0.19705327957199315,
+    "rmse": 0.6262104540584503,
+    "rmse_log": 0.14250338827175757
+  },
+  "frozen_huber_scale_only": {
+    "abs_rel": 0.07076656534162698,
+    "count": 422186615,
+    "delta1": 0.9365910854374196,
+    "delta2": 0.9766544801521005,
+    "mae": 0.2193725934197332,
+    "rmse": 0.6529288768788662,
+    "rmse_log": 0.14918265240015277
+  },
+  "inference_seconds": 54.891165632521734,
+  "mean_abs_r_low": 0.03508503898681098,
+  "raw_da3_focal_corrected": {
+    "abs_rel": 0.09070452423452083,
+    "count": 422186615,
+    "delta1": 0.9264027235917937,
+    "delta2": 0.9765475440286046,
+    "mae": 0.266044557365423,
+    "rmse": 0.6546223284125698,
+    "rmse_log": 0.1585523870627625
+  },
+  "relative_improvement_over_scale_only": 0.0887740592055394,
+  "selected_checkpoint": "best.pt",
+  "support": "official all positive non-sentinel GT depth"
+}

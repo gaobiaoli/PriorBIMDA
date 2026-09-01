@@ -1,0 +1,49 @@
+{
+  "alignment": "none",
+  "condition_channel_maximum": [
+    1.0,
+    1000.0,
+    1000.0
+  ],
+  "frames": 1673,
+  "frozen_iterative_huber_global": {
+    "abs_rel": 0.07076656510684669,
+    "count": 422186615,
+    "delta1": 0.9365910972805237,
+    "delta2": 0.9766544801521005,
+    "mae": 0.21937259420271968,
+    "rmse": 0.6529288776681879,
+    "rmse_log": 0.1491826527401163
+  },
+  "inference_seconds": 113.88996896380559,
+  "local_huber_condition_depth": {
+    "abs_rel": 0.2127650009747513,
+    "count": 422186615,
+    "delta1": 0.7581632946842713,
+    "delta2": 0.8466295052958986,
+    "mae": 0.4969764658608263,
+    "rmse": 1.1036090501987363,
+    "rmse_log": 0.35593910262876816
+  },
+  "mean_local_support_fraction": 0.9870490640322792,
+  "priorda_v11_bim_fine": {
+    "abs_rel": 0.23937159027597607,
+    "count": 422186615,
+    "delta1": 0.6989770957092043,
+    "delta2": 0.8342247870648386,
+    "mae": 0.6589478351172421,
+    "rmse": 1.3429295449407015,
+    "rmse_log": 0.4272062847730907
+  },
+  "raw_da3_focal_corrected": {
+    "abs_rel": 0.09070452451787633,
+    "count": 422186615,
+    "delta1": 0.9264027235917937,
+    "delta2": 0.9765475440286046,
+    "mae": 0.2660445576002033,
+    "rmse": 0.6546223282874344,
+    "rmse_log": 0.15855238686267792
+  },
+  "relative_improvement_over_global_scale": -2.382552055685642,
+  "support": "official all positive non-sentinel GT depth"
+}

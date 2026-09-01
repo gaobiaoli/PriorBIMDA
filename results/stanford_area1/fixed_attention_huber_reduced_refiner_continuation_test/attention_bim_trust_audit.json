@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "definition": {
+    "attention": "Head-mixture-weighted fixed neural attention, ranked independently within each frame over valid 63x63 ratio tokens.",
+    "huber_effective_attention": "Fixed neural attention multiplied by the final pseudo-Huber weight and renormalized per head before applying the learned head mixture.",
+    "top_region_projection": "Top-k token membership is nearest-neighbor projected to 504x504; metrics are pixel-micro over the selected support.",
+    "ground_truth_support": "official_all_valid",
+    "scale_ratio_bounds": [
+      0.2,
+      5.0
+    ]
+  },
+  "config": "/home/bgao491/PriorBIMDA/configs/stanford_area1_fixed_attention_huber_reduced_refiner_continuation_full_depth_metric_da3.yaml",
+  "checkpoint": "/home/bgao491/PriorBIMDA/outputs/stanford_area1_fixed_attention_huber_reduced_refiner_continuation/best.pt",
+  "split": "test",
+  "sample_count": 1641,
+  "all_bim_hit": {
+    "abs_rel": 0.24978591945251874,
+    "count": 413699152
+  },
+  "all_scale_eligible": {
+    "abs_rel": 0.22939280218527885,
+    "count": 410985578,
+    "support_fraction": 0.9934407068835375
+  },
+  "policies": {
+    "learned_attention": {
+      "attention_weighted_frame_macro_abs_rel_on_scale_eligible": 0.1255989041515668,
+      "selected_regions": {
+        "top_10_percent": {
+          "bim_hit": {
+            "abs_rel": 0.12637237214380873,
+            "count": 41275510,
+            "support_fraction": 0.09977180228786159
+          },
+          "scale_eligible": {
+            "abs_rel": 0.12631635197019642,
+            "count": 41271543,
+            "support_fraction": 0.10042090333398511
+          }
+        },
+        "top_25_percent": {
+          "bim_hit": {
+            "abs_rel": 0.11189329159153337,
+            "count": 103344974,
+            "support_fraction": 0.2498070723625752
+          },
+          "scale_eligible": {
+            "abs_rel": 0.11172356521110473,
+            "count": 103321397,
+            "support_fraction": 0.2513990819405347
+          }
+        },
+        "top_50_percent": {
+          "bim_hit": {
+            "abs_rel": 0.15426870070048176,
+            "count": 206560111,
+            "support_fraction": 0.4993003007170776
+          },
+          "scale_eligible": {
+            "abs_rel": 0.15385316378336214,
+            "count": 206490636,
+            "support_fraction": 0.5024279367778691
+          }
+        }
+      }
+    },
+    "huber_effective_attention": {
+      "attention_weighted_frame_macro_abs_rel_on_scale_eligible": 0.07357852060064163,
+      "selected_regions": {
+        "top_10_percent": {
+          "bim_hit": {
+            "abs_rel": 0.055700145114096065,
+            "count": 41389257,
+            "support_fraction": 0.10004675329863862
+          },
+          "scale_eligible": {
+            "abs_rel": 0.055685166183634394,
+            "count": 41388125,
+            "support_fraction": 0.1007045677889943
+          }
+        },
+        "top_25_percent": {
+          "bim_hit": {
+            "abs_rel": 0.0605797509310284,
+            "count": 103517549,
+            "support_fraction": 0.25022422332642347
+          },
+          "scale_eligible": {
+            "abs_rel": 0.06054211510180887,
+            "count": 103511577,
+            "support_fraction": 0.25186182323896533
+          }
+        },
+        "top_50_percent": {
+          "bim_hit": {
+            "abs_rel": 0.08511025603064601,
+            "count": 206787140,
+            "support_fraction": 0.49984907873342704
+          },
+          "scale_eligible": {
+            "abs_rel": 0.08494092216511383,
+            "count": 206764880,
+            "support_fraction": 0.503095220533505
+          }
+        }
+      }
+    }
+  }
+}

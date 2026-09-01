@@ -1,0 +1,76 @@
+extends: stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch_full_depth_metric_da3.yaml
+
+# Official PriorDA v1.1 fine-stage network with its native three-channel
+# semantics. PriorDA's sparse KNN coarse condition is replaced by a dense local
+# Huber field constructed from registered BIM/DA3 ratios; its architecture and
+# pretrained alpha_proj are loaded without modification.
+
+experiment:
+  name: stanford_area1_frozen_iterative_huber_priorda_v11_bim_condition_native_disparity
+  output_dir: outputs/stanford_area1_frozen_iterative_huber_priorda_v11_bim_condition_native_disparity
+  results_dir: results/stanford_area1/frozen_iterative_huber_priorda_v11_bim_condition_native_disparity
+
+model:
+  frozen_scale:
+    checkpoint: outputs/stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch/accepted.pt
+    checkpoint_sha256: f2ab611ab3bef37aae0aa24774dc689b93fdff3a43e8e8c7f3ffb19fd74254fc
+    freeze: true
+  priorda_v11:
+    official_repository: ../Prior-Depth-Anything
+    official_repository_commit: 8c029cbca669443fe0bbf8dcefb5f91ad531084d
+    checkpoint_repo: Rain729/Prior-Depth-Anything
+    checkpoint_revision: 25b3bfcf85209fb015e3b15259f4df8b6f13bb16
+    checkpoint_filename: prior_depth_anything_vitb_1_1.pth
+    checkpoint_sha256: bf827963b9e39c1bd3f89d8d93a88979e25483c52c19f33ad13d3ec834a47c42
+    local_files_only: true
+    encoder: vitb
+    input_size: 518
+    # Exact official normalization can diverge at depth ~= BIM minimum. The
+    # cap only guards that singularity and keeps the three channel semantics.
+    condition_max_disparity: 1000.0
+    condition_channels:
+      - bim_support_mask
+      - normalized_global_metric_disparity
+      - normalized_local_metric_disparity
+    normalization: official_v1_1_prior_support_min_max_then_inverse
+    load_pretrained_alpha_projection: true
+  local_huber_field:
+    kernel_size: 31
+    sigma: 7.0
+    huber_delta: 0.15
+    iterations: 3
+    ratio_min: 0.2
+    ratio_max: 5.0
+    min_support_fraction: 0.01
+
+train:
+  epochs: 9
+  batch_size: 1
+  val_batch_size: 1
+  gradient_accumulation: 16
+  num_workers: 8
+  region_balanced_sampling: false
+  backbone_learning_rate: 0.000005
+  alpha_projection_learning_rate: 0.00002
+  weight_decay: 0.01
+  scheduler: cosine
+  amp: true
+  # The pretrained condition projection sees much larger disparity values than
+  # the zero-initialized projectors used by our earlier refiners. A conservative
+  # initial loss scale avoids a spurious first-step overflow; GradScaler remains
+  # dynamic afterwards.
+  amp_initial_scale: 16.0
+  early_stopping_patience: 9
+  log_every: 400
+  augment:
+    # PriorDA v1.1's support-relative normalization is undefined when the
+    # complete prior is removed. Keep all other inherited BIM perturbations.
+    bim_full_dropout_probability: 0.0
+
+loss:
+  # PriorDA's native prediction is normalized disparity. Keeping that native
+  # supervision dominant avoids unstable reciprocal-depth gradients near zero.
+  normalized_disparity: 1.0
+  normalized_disparity_beta: 0.02
+  depth: 0.1
+  gradient: 0.02

@@ -1,0 +1,74 @@
+extends: stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch_full_depth_metric_da3.yaml
+
+# Frozen validation-selected three-round iterative-attention pseudo-Huber
+# scale followed by a pretrained DA2 Metric Indoor DINOv2+DPT low-frequency
+# residual refiner. The historical CNN refiner is not used.
+
+experiment:
+  name: stanford_area1_frozen_iterative_huber_dav2_dpt_rlow
+  output_dir: outputs/stanford_area1_frozen_iterative_huber_dav2_dpt_rlow
+  results_dir: results/stanford_area1/frozen_iterative_huber_dav2_dpt_rlow
+
+model:
+  frozen_scale:
+    checkpoint: outputs/stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch/accepted.pt
+    checkpoint_sha256: f2ab611ab3bef37aae0aa24774dc689b93fdff3a43e8e8c7f3ffb19fd74254fc
+    architecture: iterative_attention_pseudo_huber_3round_shared
+    freeze: true
+  dav2:
+    model_id: depth-anything/Depth-Anything-V2-Metric-Indoor-Base-hf
+    revision: 9560f57a2f07803ba353bb918d6a6e5e005b9277
+    checkpoint_sha256: 8b902f5d9a8c8a9520f3a8c6a00afe442b464eff5aaf0cb405d1da721cd9f79f
+    local_files_only: true
+    encoder: vitb
+    patch_size: 14
+    hidden_size: 768
+  bim_condition:
+    channels:
+      - normalized_bim_log_depth
+      - bim_hit_mask
+      - clipped_bim_scaled_da3_log_disagreement
+    disagreement_clip: 1.5
+    fusion: zero_init_additive_patch_before_dinov2_transformer
+  bim_normalization:
+    mean: 0.4236631010536673
+    std: 0.7573384621476941
+    valid_pixels: 1780781853
+  dav2_low_refiner:
+    feature_source: dpt_neck_top_down_fusion_index_1
+    native_grid_at_504: [72, 72]
+    hidden_channels: 64
+    max_low_log_residual: 0.25
+    use_detail_residual: false
+    depth_formula: scaled_da3_times_exp_r_low
+
+train:
+  # Equivalent to the old continuation's nine refiner-only epochs. The scale
+  # estimator is never optimized in this experiment.
+  epochs: 9
+  batch_size: 2
+  val_batch_size: 2
+  gradient_accumulation: 8
+  num_workers: 8
+  region_balanced_sampling: false
+  encoder_learning_rate: 0.000005
+  decoder_learning_rate: 0.00005
+  bim_condition_learning_rate: 0.00005
+  low_head_learning_rate: 0.00005
+  weight_decay: 0.01
+  scheduler: cosine
+  amp: true
+  amp_initial_scale: 1024.0
+  gradient_checkpointing: true
+  early_stopping_patience: 9
+  log_every: 200
+
+loss:
+  # Only losses applicable to r_low are active. Pixel emphasis matches the
+  # original weighted Huber SOTA refiner experiment.
+  depth: 1.0
+  gradient: 0.2
+  residual_teacher: 0.5
+  local_residual_teacher: 0.25
+  low_smoothness: 0.02
+

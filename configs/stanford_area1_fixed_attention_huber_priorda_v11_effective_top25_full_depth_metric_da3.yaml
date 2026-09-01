@@ -1,0 +1,54 @@
+extends: stanford_area1_fixed_attention_huber_reduced_refiner_continuation_full_depth_metric_da3.yaml
+
+# Inference-time PriorDA intervention. The fixed-attention Huber scale remains
+# unchanged; only the three-channel PriorDA condition is restricted to the top
+# 25% final attention-times-Huber tokens with an absolute log-ratio check.
+
+experiment:
+  name: stanford_area1_fixed_attention_huber_priorda_v11_effective_top25
+  output_dir: outputs/stanford_area1_fixed_attention_huber_priorda_v11_effective_top25
+  results_dir: results/stanford_area1/fixed_attention_huber_priorda_v11_effective_top25
+
+model:
+  frozen_scale:
+    checkpoint: outputs/stanford_area1_fixed_attention_huber_reduced_refiner_continuation/best.pt
+    checkpoint_sha256: 198737c586540520d062fbe72ebf90a56152d14b766a8439771a1a889d72f050
+    freeze: true
+  priorda_v11:
+    official_repository: ../Prior-Depth-Anything
+    official_repository_commit: 8c029cbca669443fe0bbf8dcefb5f91ad531084d
+    checkpoint_repo: Rain729/Prior-Depth-Anything
+    checkpoint_revision: 25b3bfcf85209fb015e3b15259f4df8b6f13bb16
+    checkpoint_filename: prior_depth_anything_vitb_1_1.pth
+    checkpoint_sha256: bf827963b9e39c1bd3f89d8d93a88979e25483c52c19f33ad13d3ec834a47c42
+    local_files_only: true
+    encoder: vitb
+    input_size: 518
+    condition_max_disparity: 1000.0
+    condition_channels:
+      - effective_attention_top25_mask
+      - normalized_global_metric_disparity
+      - normalized_trusted_local_metric_disparity
+    normalization: trusted_bim_support_min_max_then_inverse
+    load_pretrained_alpha_projection: true
+  effective_attention_prior:
+    top_fraction: 0.25
+    residual_threshold: 0.30
+    ranking: final_attention_times_pseudo_huber_per_frame
+    projection: nearest_token_membership
+    local_weighting: bilinear_effective_attention
+    recompute_global_scale: false
+  local_huber_field:
+    kernel_size: 31
+    sigma: 7.0
+    huber_delta: 0.15
+    iterations: 3
+    ratio_min: 0.2
+    ratio_max: 5.0
+    min_support_fraction: 0.01
+  output_max_depth_m: 128.0
+
+train:
+  val_batch_size: 1
+  num_workers: 8
+  amp: true

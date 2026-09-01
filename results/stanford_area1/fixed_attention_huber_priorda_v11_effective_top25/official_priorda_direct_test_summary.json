@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "config": "/home/bgao491/PriorBIMDA/configs/stanford_area1_fixed_attention_huber_priorda_v11_effective_top25_full_depth_metric_da3.yaml",
+  "split": "test",
+  "frames": 1641,
+  "support": "official all positive non-sentinel GT depth",
+  "alignment": "none",
+  "scale_checkpoint": "/home/bgao491/PriorBIMDA/outputs/stanford_area1_fixed_attention_huber_reduced_refiner_continuation/best.pt",
+  "scale_checkpoint_sha256": "198737c586540520d062fbe72ebf90a56152d14b766a8439771a1a889d72f050",
+  "priorda_weights_source": "official PriorDA v1.1 pretrained checkpoint",
+  "priorda_state_epoch": null,
+  "condition_semantics": "[BIM support mask, normalized global disparity, normalized local disparity]",
+  "effective_attention_prior": {
+    "top_fraction": 0.25,
+    "residual_threshold": 0.3,
+    "ranking": "final_attention_times_pseudo_huber_per_frame",
+    "projection": "nearest_token_membership",
+    "local_weighting": "bilinear_effective_attention",
+    "recompute_global_scale": false
+  },
+  "trusted_bim_fraction_of_original_bim_hits": 0.24349776824966965,
+  "mean_local_support_fraction": 0.35967095984693104,
+  "metrics": {
+    "raw_da3": {
+      "abs_rel": 0.08545340168029102,
+      "rmse": 0.43524245926896676,
+      "mae": 0.17712399818033572,
+      "delta1": 0.9380457313789677,
+      "delta2": 0.9753179429356188,
+      "rmse_log": 0.17823455142217012,
+      "count": 413756559
+    },
+    "fixed_attention_huber_scale": {
+      "abs_rel": 0.06811440575567729,
+      "rmse": 0.4201883825670941,
+      "mae": 0.14041818664273636,
+      "delta1": 0.9444185463655695,
+      "delta2": 0.9751554947555526,
+      "rmse_log": 0.16956034665908368,
+      "count": 413756559
+    },
+    "trusted_local": {
+      "abs_rel": 0.07302033122068322,
+      "rmse": 0.423377085804188,
+      "mae": 0.14970779879424295,
+      "delta1": 0.9408619574294168,
+      "delta2": 0.9749104907845099,
+      "rmse_log": 0.17176235356557004,
+      "count": 413756559
+    },
+    "priorda": {
+      "abs_rel": 0.23363238956920454,
+      "rmse": 0.740251893500496,
+      "mae": 0.3668761051877764,
+      "delta1": 0.7905648137411159,
+      "delta2": 0.873569354099351,
+      "rmse_log": 0.35913281317521834,
+      "count": 413756559
+    }
+  },
+  "priorda_relative_improvement_over_scale": -2.4299996744775454,
+  "trusted_local_relative_improvement_over_scale": -0.07202478551458291
+}

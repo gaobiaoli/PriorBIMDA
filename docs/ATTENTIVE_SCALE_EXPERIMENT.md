@@ -2419,3 +2419,66 @@ The validation/test summaries and compact comparison are stored in
 `results/stanford_area1/dav2_early_fusion_scale_3epoch_full_depth_metric_da3/val_summary.json`
 and `test_summary.json`, plus `comparison.json`; the validation-selected checkpoint is
 `outputs/stanford_area1_dav2_early_fusion_scale_3epoch_full_depth_metric_da3/best.pt`.
+
+## Official PriorDA v1.1 fine network with BIM global/local conditions
+
+An independent negative experiment tested whether the official PriorDA v1.1
+fine network and its pretrained three-channel `alpha_proj` can be reused
+without changing its internal architecture. The frozen Area_1 iterative-Huber
+head provides
+
+\[
+D_{global}=s_H D_{DA3},
+\qquad
+D_{local}=\exp(\operatorname{Huber}_{\mathcal N}
+  [\log(D_{BIM}/D_{DA3})])D_{DA3}.
+\]
+
+The actual conditioned network input follows the official v1.1 channel order
+and normalization exactly: `[BIM support mask, normalized global disparity,
+normalized local disparity]`. The valid BIM minimum/range defines the two
+normalized depth maps before inversion. A maximum normalized disparity of
+1000 is the only numerical guard; without it, dense BIM values arbitrarily
+close to the BIM minimum reached `1.23e5`, overflowed FP16 and produced
+non-finite gradients. The official repository commit and checkpoint are pinned
+to `8c029cbca669443fe0bbf8dcefb5f91ad531084d` and SHA256
+`bf827963b9e39c1bd3f89d8d93a88979e25483c52c19f33ad13d3ec834a47c42`.
+The loaded `alpha_proj` weight is elementwise identical to the official
+checkpoint, nonzero, and has L2 norm `1.737870`.
+
+Before fine-tuning, the complete 1,673-frame validation result was:
+
+| Output | AbsRel |
+|---|---:|
+| Raw focal-corrected DA3 | 0.090705 |
+| Frozen iterative-Huber global depth | **0.070767** |
+| Local Huber condition depth | 0.212765 |
+| Official PriorDA v1.1 fine output | 0.239372 |
+
+The average BIM support fraction was `0.98705`, so the v1.1 support-mask
+channel is almost constant in this application. This differs materially from
+the sparse/area metric priors on which PriorDA was trained. Moreover, the local
+condition is much less accurate than the global condition because an envelope
+BIM describes surfaces behind furniture rather than the currently visible
+surface. Limiting `|log(s_local)-log(s_global)|` on the first 128 validation
+frames reduced the pretrained fine output from `0.169486` (unlimited) to
+`0.158685` at a `0.1` cap, but remained far worse than global scale alone.
+
+Direct final metric-depth supervision was unstable: after one complete epoch,
+validation AbsRel degraded from `0.239372` to `0.407291`, with six skipped AMP
+steps. Training in the native normalized-disparity domain removed all skipped
+steps and improved a nonrepresentative first-128-frame pilot from `0.169486`
+to `0.129755`; on the complete validation set it nevertheless degraded to
+`0.359057` after epoch 1. Both long runs were stopped after this decisive
+validation result, and the untouched epoch-0 official weights were retained as
+the best checkpoint. No Area_1 test or Matterport zero-shot result is reported
+for this rejected candidate, avoiding unnecessary test-set reuse.
+
+The implementation is isolated in
+`src/bim_priorda3/models/priorda_v11_bim_adapter.py`; the native-disparity
+training entry point is
+`scripts/model/train_frozen_huber_priorda_v11_bim.py`, with config
+`configs/stanford_area1_frozen_iterative_huber_priorda_v11_bim_condition_full_depth_metric_da3.yaml`.
+The negative result indicates that merely matching three channel names and
+loading `alpha_proj` is insufficient: the support density and visibility
+semantics of a dense envelope BIM do not match PriorDA's metric prior domain.
