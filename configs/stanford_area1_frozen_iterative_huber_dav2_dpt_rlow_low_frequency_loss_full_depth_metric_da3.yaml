@@ -1,0 +1,21 @@
+extends: stanford_area1_frozen_iterative_huber_dav2_dpt_rlow_full_depth_metric_da3.yaml
+
+# Loss-only successor to the original frozen-Huber + DAv2/DPT r_low model.
+# The 72x72 decoder is supervised with a masked area-downsampled log-depth
+# residual target on its native grid instead of a duplicated full-resolution
+# residual target.
+
+experiment:
+  name: stanford_area1_frozen_iterative_huber_dav2_dpt_rlow_low_frequency_loss
+  output_dir: outputs/stanford_area1_frozen_iterative_huber_dav2_dpt_rlow_low_frequency_loss
+  results_dir: results/stanford_area1/frozen_iterative_huber_dav2_dpt_rlow_low_frequency_loss
+
+loss:
+  depth: 1.0
+  gradient: 0.2
+  low_residual_teacher: 0.5
+  low_smoothness: 0.02
+  # Explicitly disable the two legacy full-resolution aliases inherited from
+  # the baseline. The dedicated training script no longer reads either key.
+  residual_teacher: 0.0
+  local_residual_teacher: 0.0

@@ -1,0 +1,305 @@
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low72_only_3epoch
+  seed: 42
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low72_only_3epoch
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low72_only_3epoch
+data:
+  slabim_root: ../SLABIM
+  processed_root: data/processed/stanford_area1_hit_only_504
+  regions:
+  - WC_1
+  - conferenceRoom_1
+  - conferenceRoom_2
+  - copyRoom_1
+  - hallway_1
+  - hallway_2
+  - hallway_3
+  - hallway_4
+  - hallway_5
+  - hallway_6
+  - hallway_7
+  - hallway_8
+  - office_1
+  - office_2
+  - office_3
+  - office_4
+  - office_5
+  - office_6
+  - office_7
+  - office_8
+  - office_9
+  - office_10
+  - office_11
+  - office_12
+  - office_13
+  - office_14
+  - office_15
+  - office_16
+  - office_17
+  - office_18
+  - office_19
+  - office_20
+  - office_21
+  - office_22
+  - office_23
+  - office_24
+  - office_25
+  - office_26
+  - office_27
+  - office_28
+  - office_29
+  - office_30
+  - office_31
+  - pantry_1
+  train_regions: []
+  val_regions: []
+  test_regions: []
+  target_height: 504
+  target_width: 504
+  min_depth: 0.2
+  max_depth: 5.0
+  max_time_diff: 0.06
+  fusion_radius: 50
+  splat_radius: 1
+  occlusion_abs_m: 0.06
+  occlusion_rel: 0.02
+  min_gt_support: 1
+  pose_bim_file: lidar_pose_local_to_bim_from_rosbag.txt
+  pose_slam_file: lidar_pose_local_to_slam_smoothed.txt
+  da3_cache_roots:
+    area_1: data/processed/stanford_area1_504/da3_cache/area_1
+  da3_model: depth-anything/da3metric-large
+  da3_revision: 4010e39f3634a45bc60553321fb49fb760bd594e
+  local_files_only: true
+  da3_require_pinned_revision: true
+  da3_process_res: 504
+  recompute_cached_baselines: true
+  split_annotation: data/annotations/stanford_area1_room_v1.jsonl
+  split_annotation_sha256: 18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59
+  split_fingerprint_sha256: 98df6610a13d97d61edac37d8191512fc129e2a521993cbfc1110e699be19b0e
+  record_stride_by_region: {}
+  source_root: ../Stanford2D3DS/no_xyz
+  stanford_area_root: ../Stanford2D3DS/no_xyz/area_1
+  semantic_labels: ../Stanford2D3DS/metadata/assets/semantic_labels.json
+  bimsyn_ifc_root: ../BIMSyn/BIM_model/ifc
+  bimsyn_rvt_root: ../BIMSyn/BIM_model/rvt
+  bim_alignment: data/provenance/stanford_area1_bimsyn_alignment.json
+  bim_alignment_sha256: 079ff394fbfa9317953e0358d71e0548cd39171278dd16121d6c300c5a23e6d6
+  da3_feature_cache_root: data/processed/stanford_area1_hit_only_504/da3_features_l11_l23
+  ground_truth_support: official_all_valid
+  apply_da3_metric_focal_scaling: true
+model:
+  variant: prior_conditioned_v4
+  base_channels: 16
+  use_rgb_condition: true
+  use_bim_condition: true
+  use_frame_residual: false
+  use_low_residual: true
+  max_frame_log_residual: 0.2
+  max_low_log_residual: 0.25
+  max_detail_log_residual: 0.15
+  max_total_log_residual: 0.45
+  scale_estimator:
+    name: log_upper_cap_v1
+    q10_log_cap: inf
+    q25_log_cap: 0.05
+    ratio_min: 0.2
+    ratio_max: 5.0
+    min_samples: 100
+  depth_aware_residual_routing: true
+  residual_routing_depth: 1.0
+  residual_routing_temperature: 0.05
+  residual_routing_scope: frame_only
+  attention_scale:
+    enabled: true
+    hidden_channels: 24
+    attention_heads: 4
+    min_support: 100
+    ratio_min: 0.2
+    ratio_max: 5.0
+    huber_delta: 0.15
+    token_dropout_probability: 0.1
+    fallback_gate_bias: -1.5
+    min_normalized_entropy: 0.35
+    equivariance_probability: 0.5
+    equivariance_log_range: 0.2
+    bounded_log_scale_residual: 0.0
+    residual_hidden_channels: 32
+    estimator: full_regression_iterative_v1
+    iterative_updates: 3
+    iterative_hidden_channels: 32
+    delta_hidden_channels: 64
+    iterative_max_log_update: 0.15
+    use_fallback_gate: false
+  da3_feature_fusion:
+    enabled: false
+    layers:
+    - 11
+    - 23
+    channels: 1024
+    scale_enabled: false
+    refiner_enabled: false
+  output_max_depth_m: 128.0
+  dav2:
+    model_id: depth-anything/Depth-Anything-V2-Metric-Indoor-Base-hf
+    revision: 9560f57a2f07803ba353bb918d6a6e5e005b9277
+    checkpoint_sha256: 8b902f5d9a8c8a9520f3a8c6a00afe442b464eff5aaf0cb405d1da721cd9f79f
+    local_files_only: true
+    encoder: vitb
+    patch_size: 14
+    hidden_size: 768
+  bim_condition:
+    channels:
+    - normalized_bim_log_depth
+    - bim_hit_mask
+    - clipped_bim_da3_log_disagreement
+    disagreement_clip: 1.5
+    fusion: additive_before_dinov2_transformer
+    projection_initialization: zeros
+  bim_normalization:
+    mean: 0.4236631010536673
+    std: 0.7573384621476941
+    valid_pixels: 1780781853
+  dav2_scale:
+    pooling: concat_cls_mean_patch
+    regression_hidden_size: 256
+    head_dropout_probability: 0.0
+    output_weight_std: 0.001
+    equivariance_probability: 0.5
+    equivariance_log_range: 0.2
+  dinov2_feature_fusion:
+    enabled: false
+  dav2_joint_scale_low:
+    scale_feature: final_dinov2_concat_cls_mean_patch
+    residual_features:
+      low1: dpt_deepest_top_down_pre_upsample_native_18x18
+      low2: dpt_second_top_down_pre_upsample_native_36x36
+    residual_composition: low72_only
+    regression_hidden_size: 256
+    head_dropout_probability: 0.0
+    output_weight_std: 0.001
+    residual_hidden_channels: 64
+    max_low1_log_residual: 0.2
+    max_low2_log_residual: 0.1
+    equivariance_probability: 0.5
+    equivariance_log_range: 0.2
+    residual_mode: low72_only
+loss:
+  depth: 1.0
+  gradient: 0.2
+  residual_teacher: 0.0
+  frame_residual_teacher: 0.0
+  local_residual_teacher: 0.0
+  low_smoothness: 0.02
+  detail_regularization: 0.005
+  trust: 0.1
+  frame_trust: 0.02
+  uncertainty: 0.01
+  degradation: 0.0
+  near_range_boost: 2.0
+  trust_margin: 0.005
+  trust_temperature: 0.03
+  warmup_epochs: 0
+  furniture_multiplier: 2.0
+  bim_foreground_conflict_multiplier: 2.0
+  coarse_depth: 0.0
+  spatial_mean: 0.1
+  attention_entropy: 0.01
+  attention_scale_equivariance: 0.1
+  attention_scale_oracle: 0.5
+  attention_scale_oracle_beta: 0.02
+  attention_scale_oracle_min_support: 100
+  attention_scale_residual: 0.0
+  attention_scale_iteration_weights:
+  - 0.25
+  - 0.5
+  - 1.0
+  disable_degradation_anchor_access: true
+  low1_residual_teacher: 0.0
+  low2_residual_teacher: 0.5
+  native_teacher_beta: 0.02
+  residual_zero_mean: 0.1
+train:
+  epochs: 3
+  batch_size: 2
+  num_workers: 8
+  region_balanced_sampling: true
+  learning_rate: 4.0e-05
+  weight_decay: 0.01
+  amp: true
+  gradient_accumulation: 8
+  gradient_clip_norm: 1.0
+  log_every: 200
+  save_every: 1
+  early_stopping_patience: 3
+  acceptance:
+    enabled: false
+    near_relative_tolerance: 1.02
+    require_learned_scale_better_than_universal: false
+  augment:
+    horizontal_flip_probability: 0.5
+    color_jitter: 0.1
+    bim_shift_probability: 0.2
+    bim_shift_pixels: 4
+    bim_dropout_probability: 0.15
+    bim_dropout_fraction: 0.12
+    bim_full_dropout_probability: 0.03
+    bim_depth_noise_probability: 0.2
+    bim_depth_noise_log_std: 0.02
+    bim_edge_dilation_probability: 0.15
+    bim_edge_dilation_pixels: 3
+    crop_height: 504
+    crop_width: 504
+  lr_warmup_epochs: 0
+  amp_init_scale: 32768
+  samples_per_epoch: null
+  val_batch_size: 2
+  region_balance_exponent: 0.5
+  init_checkpoint_policy: preserve
+  refiner_head_warmup_epochs: 0
+  attention_scale_learning_rate: 8.0e-05
+  scratch_stage_epochs:
+    scale_only: 3
+    refiner_only: 9
+    joint: 3
+  scale_only_experiment: false
+  optimizer: AdamW
+  encoder_learning_rate: 5.0e-06
+  bim_condition_learning_rate: 5.0e-05
+  scale_head_learning_rate: 5.0e-05
+  scheduler: cosine
+  amp_initial_scale: 1024.0
+  gradient_checkpointing: true
+  decoder_learning_rate: 5.0e-05
+  residual_head_learning_rate: 5.0e-05
+evaluation:
+  distance_bins:
+  - 0.2
+  - 1.0
+  - 2.0
+  - 3.0
+  - 5.0
+  min_valid_points: 50
+  universal_scale_protocol: data/provenance/universal_scale_estimator_v1.json
+  universal_scale_protocol_sha256: 361fc2c97ffca9dde1a3a1b6b97fcd1d894003809a01935205f16cb4043c3ba1
+  robust_scale_estimator:
+    name: log_upper_cap_v1
+    q10_log_cap: inf
+    q25_log_cap: 0.05
+    ratio_min: 0.2
+    ratio_max: 5.0
+    min_samples: 100
+  robust_scale_selection_receipt: null
+  robust_scale_selection_receipt_sha256: null
+  robust_scale_selection_protocol_sha256: null
+config_path: /home/bgao491/PriorBIMDA/configs/stanford_area1_dav2_early_fusion_scale_low72_only_3epoch_full_depth_metric_da3.yaml
+project_root: /home/bgao491/PriorBIMDA
+runtime:
+  epochs: 3
+  output_dir: /home/bgao491/PriorBIMDA/outputs/stanford_area1_dav2_early_fusion_scale_low72_only_3epoch
+  results_dir: /home/bgao491/PriorBIMDA/results/stanford_area1/dav2_early_fusion_scale_low72_only_3epoch
+  max_train_samples: null
+  max_val_samples: null
+  resume_checkpoint: null
+  reset_optimizer_scheduler_on_resume: false
+  continuation_start_epoch: 1

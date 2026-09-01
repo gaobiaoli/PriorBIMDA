@@ -1,0 +1,18 @@
+extends: stanford_area1_dav2_early_fusion_joint_scale_low18_low36_3epoch_full_depth_metric_da3.yaml
+
+# Epochs 4--6 continue from the three-epoch validation winner. The optimizer,
+# GradScaler and cosine schedule are intentionally restarted; model weights,
+# history and the epoch-3 validation winner are retained.
+experiment:
+  name: stanford_area1_dav2_early_fusion_joint_scale_low18_low36_6epoch_continuation
+  output_dir: outputs/stanford_area1_dav2_early_fusion_joint_scale_low18_low36_6epoch_continuation
+  results_dir: results/stanford_area1/dav2_early_fusion_joint_scale_low18_low36_6epoch_continuation
+
+train:
+  epochs: 6
+  reset_optimizer_scheduler_on_resume: true
+  encoder_learning_rate: 0.000002
+  decoder_learning_rate: 0.00002
+  bim_condition_learning_rate: 0.00002
+  scale_head_learning_rate: 0.00002
+  residual_head_learning_rate: 0.00002

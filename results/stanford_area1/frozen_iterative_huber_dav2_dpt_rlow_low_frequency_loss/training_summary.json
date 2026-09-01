@@ -1,0 +1,104 @@
+{
+  "best_epoch": 9,
+  "best_validation_abs_rel": 0.06241620243698949,
+  "final_epoch_validation_abs_rel": 0.06241620243698949,
+  "initialization": {
+    "all_pass": true,
+    "bim_patch_projection_zero": true,
+    "dav2_checkpoint": "/home/bgao491/.cache/huggingface/hub/models--depth-anything--Depth-Anything-V2-Metric-Indoor-Base-hf/blobs/8b902f5d9a8c8a9520f3a8c6a00afe442b464eff5aaf0cb405d1da721cd9f79f",
+    "dav2_checkpoint_sha256": "8b902f5d9a8c8a9520f3a8c6a00afe442b464eff5aaf0cb405d1da721cd9f79f",
+    "initial_depth_equals_frozen_scale": {
+      "max_abs_difference_m": 0.0,
+      "pass": true
+    },
+    "low_feature_source": "dav2.dpt_neck.top_down_fusion[1]",
+    "low_output_zero": true,
+    "native_grid_matches_config": true,
+    "observed_native_r_low_grid": [
+      72,
+      72
+    ],
+    "scale_all_frozen": true,
+    "scale_checkpoint": "/home/bgao491/PriorBIMDA/outputs/stanford_area1_iterative_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch/accepted.pt",
+    "scale_checkpoint_best_validation_abs_rel": 0.07076655605685836,
+    "scale_checkpoint_epoch": 2,
+    "scale_checkpoint_sha256": "f2ab611ab3bef37aae0aa24774dc689b93fdff3a43e8e8c7f3ffb19fd74254fc"
+  },
+  "optimizer_steps": 3951,
+  "skipped_steps": 0,
+  "test": {
+    "alignment": "none",
+    "best_epoch": 9,
+    "frames": 1641,
+    "frozen_huber_dav2_dpt_rlow": {
+      "abs_rel": 0.0634762007197174,
+      "count": 413756559,
+      "delta1": 0.943558794435933,
+      "delta2": 0.9756025378198294,
+      "mae": 0.1263078114170942,
+      "rmse": 0.4112252214233891,
+      "rmse_log": 0.1645716201939406
+    },
+    "frozen_huber_scale_only": {
+      "abs_rel": 0.06809077566801561,
+      "count": 413756559,
+      "delta1": 0.9442820627285814,
+      "delta2": 0.9751389318761229,
+      "mae": 0.14032918044714685,
+      "rmse": 0.42027814558678955,
+      "rmse_log": 0.1695485889884195
+    },
+    "inference_seconds": 52.57502484321594,
+    "mean_abs_r_low": 0.03329972318510195,
+    "raw_da3_focal_corrected": {
+      "abs_rel": 0.08545340163190622,
+      "count": 413756559,
+      "delta1": 0.9380457313789677,
+      "delta2": 0.9753179429356188,
+      "mae": 0.17712399906424353,
+      "rmse": 0.4352424593313714,
+      "rmse_log": 0.17823455059700963
+    },
+    "relative_improvement_over_scale_only": 0.0677709264291114,
+    "selected_checkpoint": "best.pt",
+    "support": "official all positive non-sentinel GT depth"
+  },
+  "training_seconds": 6408.312185327057,
+  "validation": {
+    "alignment": "none",
+    "best_epoch": 9,
+    "frames": 1673,
+    "frozen_huber_dav2_dpt_rlow": {
+      "abs_rel": 0.06241620243698949,
+      "count": 422186615,
+      "delta1": 0.9415986316856587,
+      "delta2": 0.978602206514766,
+      "mae": 0.19212321942021274,
+      "rmse": 0.6155638471284107,
+      "rmse_log": 0.1390525697991426
+    },
+    "frozen_huber_scale_only": {
+      "abs_rel": 0.07076656534162698,
+      "count": 422186615,
+      "delta1": 0.9365910854374196,
+      "delta2": 0.9766544801521005,
+      "mae": 0.2193725934197332,
+      "rmse": 0.6529288768788662,
+      "rmse_log": 0.14918265240015277
+    },
+    "inference_seconds": 54.76892998814583,
+    "mean_abs_r_low": 0.036371604542610174,
+    "raw_da3_focal_corrected": {
+      "abs_rel": 0.09070452423452083,
+      "count": 422186615,
+      "delta1": 0.9264027235917937,
+      "delta2": 0.9765475440286046,
+      "mae": 0.266044557365423,
+      "rmse": 0.6546223284125698,
+      "rmse_log": 0.1585523870627625
+    },
+    "relative_improvement_over_scale_only": 0.11799870269704273,
+    "selected_checkpoint": "best.pt",
+    "support": "official all positive non-sentinel GT depth"
+  }
+}

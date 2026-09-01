@@ -14,9 +14,7 @@ import argparse
 import csv
 import hashlib
 import importlib.util
-import json
 import math
-import os
 import sys
 import time
 from collections.abc import Iterable, Mapping
@@ -26,7 +24,6 @@ from typing import Any
 
 import cv2
 import numpy as np
-import open3d as o3d
 import torch
 from huggingface_hub import hf_hub_download
 
@@ -34,9 +31,11 @@ from bim_priorda3.checkpoints import validate_checkpoint_model_config
 from bim_priorda3.config import load_config, resolve_project_path
 from bim_priorda3.data.geometry import depth_edges
 from bim_priorda3.models import (
+    BIMEarlyFusionDAv2JointScaleLow,
     BIMPriorDA3,
     FrozenHuberDAv2LowRefiner,
     FrozenHuberPriorDAV11BIM,
+    build_bim_condition,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -140,7 +139,7 @@ def _tensor(value: np.ndarray, device: torch.device, *, channel: bool = False) -
 
 def build_batch(
     *,
-    model: BIMPriorDA3 | FrozenHuberDAv2LowRefiner | FrozenHuberPriorDAV11BIM,
+    model: BIMPriorDA3 | FrozenHuberDAv2LowRefiner | FrozenHuberPriorDAV11BIM | BIMEarlyFusionDAv2JointScaleLow,
     rgb: np.ndarray,
     base_depth: np.ndarray,
     base_confidence: np.ndarray,
@@ -164,14 +163,21 @@ def build_batch(
         batch["da3_feature_mid"] = _tensor(da3_feature_mid, device)
     if da3_feature_deep is not None:
         batch["da3_feature_deep"] = _tensor(da3_feature_deep, device)
-    scale_system = (
-        model.scale_system
-        if isinstance(model, (FrozenHuberDAv2LowRefiner, FrozenHuberPriorDAV11BIM))
-        else model
-    )
-    deterministic_scale, support, _, _ = scale_system._robust_bim_scale(
-        batch["base_depth"], batch["bim_depth"], batch["bim_valid"]
-    )
+    if isinstance(model, BIMEarlyFusionDAv2JointScaleLow):
+        # The joint regressor never consumes an analytic BIM scale. Keep the
+        # legacy diagnostic columns neutral rather than instantiating a
+        # deterministic estimator outside the model.
+        deterministic_scale = torch.ones_like(batch["base_depth"][:, :1, :1, :1])
+        support = batch["bim_valid"].flatten(1).sum(dim=1)
+    else:
+        scale_system = (
+            model.scale_system
+            if isinstance(model, (FrozenHuberDAv2LowRefiner, FrozenHuberPriorDAV11BIM))
+            else model
+        )
+        deterministic_scale, support, _, _ = scale_system._robust_bim_scale(
+            batch["base_depth"], batch["bim_depth"], batch["bim_valid"]
+        )
     batch["scaled_depth"] = batch["base_depth"] * deterministic_scale
     return batch, float(deterministic_scale.item()), int(support.item())
 
@@ -180,10 +186,12 @@ def evaluate_frame(
     *,
     frame: Any,
     da3_model: Any,
-    model: BIMPriorDA3 | FrozenHuberDAv2LowRefiner | FrozenHuberPriorDAV11BIM,
+    model: BIMPriorDA3 | FrozenHuberDAv2LowRefiner | FrozenHuberPriorDAV11BIM | BIMEarlyFusionDAv2JointScaleLow,
     raycaster: Any,
     args: argparse.Namespace,
     feature_layers: tuple[int, ...],
+    bim_log_mean: float | None = None,
+    bim_log_std: float | None = None,
 ) -> dict[str, Any]:
     height, width = frame.image_shape
     process_height, process_width, processed_k, focal_scale = BENCHMARK.processed_geometry(
@@ -280,13 +288,27 @@ def evaluate_frame(
     with torch.inference_mode(), torch.autocast(
         device_type=device.type, dtype=amp_dtype, enabled=device.type == "cuda"
     ):
-        output = model(batch)
+        if isinstance(model, BIMEarlyFusionDAv2JointScaleLow):
+            if bim_log_mean is None or bim_log_std is None:
+                raise RuntimeError("Joint DAv2 evaluator lacks BIM normalization statistics")
+            condition = build_bim_condition(
+                batch,
+                bim_log_mean=bim_log_mean,
+                bim_log_std=bim_log_std,
+            )
+            output = model(batch["rgb"], condition, batch["base_depth"])
+        else:
+            output = model(batch)
     if torch.cuda.is_available():
         torch.cuda.synchronize()
     model_seconds = time.perf_counter() - model_start
 
     scale_process = output["scaled_depth"].detach().float().squeeze().cpu().numpy()
-    if isinstance(model, FrozenHuberDAv2LowRefiner):
+    if isinstance(model, BIMEarlyFusionDAv2JointScaleLow):
+        scale_low_process = (
+            output["scaled_depth"] * torch.exp(output["low1_log_residual"].float())
+        ).detach().float().squeeze().cpu().numpy()
+    elif isinstance(model, FrozenHuberDAv2LowRefiner):
         # This architecture deliberately has no r_detail; its final prediction
         # is exactly the scale+r_low stage.
         scale_low_process = output["depth"].detach().float().squeeze().cpu().numpy()
@@ -299,7 +321,11 @@ def evaluate_frame(
             output["refinement_anchor_depth"] * torch.exp(output["low_log_residual"])
         ).clamp(1e-3, model.output_max_depth).detach().float().squeeze().cpu().numpy()
     final_process = output["depth"].detach().float().squeeze().cpu().numpy()
-    learned_scale = float((scale_process / np.maximum(base_depth, 1e-6)).mean())
+    learned_scale = (
+        float(output["scale"].detach().float().item())
+        if isinstance(model, BIMEarlyFusionDAv2JointScaleLow)
+        else float((scale_process / np.maximum(base_depth, 1e-6)).mean())
+    )
 
     predictions_process = {
         "raw": base_depth,
@@ -439,7 +465,7 @@ def build_summary(
     rows: list[dict[str, Any]],
     *,
     args: argparse.Namespace,
-    model: BIMPriorDA3 | FrozenHuberDAv2LowRefiner | FrozenHuberPriorDAV11BIM,
+    model: BIMPriorDA3 | FrozenHuberDAv2LowRefiner | FrozenHuberPriorDAV11BIM | BIMEarlyFusionDAv2JointScaleLow,
     scene_id: str,
     bimnet_key: str,
     mesh_metadata: Mapping[str, Any],
@@ -480,12 +506,24 @@ def build_summary(
             "checkpoint": str(args.checkpoint.expanduser().resolve()),
             "checkpoint_sha256": BENCHMARK._sha256(args.checkpoint),
             "architecture": (
-                "frozen 3-round iterative-attention Huber + official PriorDA v1.1 BIM fine stage"
-                if isinstance(model, FrozenHuberPriorDAV11BIM)
+                (
+                    "single early-fusion DAv2 global scale + native 72x72 r_low"
+                    if model.residual_mode == "low72_only"
+                    else (
+                        "single early-fusion DAv2 global scale + native 36x36 r_low"
+                        if model.residual_mode == "low36_only"
+                        else "single early-fusion DAv2 global scale + native 18/36 Laplacian r_low"
+                    )
+                )
+                if isinstance(model, BIMEarlyFusionDAv2JointScaleLow)
                 else (
-                    "frozen 3-round iterative-attention Huber + pretrained DINOv2/DPT r_low"
-                    if isinstance(model, FrozenHuberDAv2LowRefiner)
-                    else "3-round attention scale + r_low + r_detail"
+                    "frozen 3-round iterative-attention Huber + official PriorDA v1.1 BIM fine stage"
+                    if isinstance(model, FrozenHuberPriorDAV11BIM)
+                    else (
+                        "frozen 3-round iterative-attention Huber + pretrained DINOv2/DPT r_low"
+                        if isinstance(model, FrozenHuberDAv2LowRefiner)
+                        else "3-round attention scale + r_low + r_detail"
+                    )
                 )
             ),
             "da3_feature_layers": (
@@ -630,6 +668,36 @@ def _load_frozen_huber_priorda_model(
     return model
 
 
+def _load_joint_dav2_scale_low_model(
+    cfg: Any,
+    checkpoint: Mapping[str, Any],
+) -> BIMEarlyFusionDAv2JointScaleLow:
+    expected_architectures = {
+        "dav2_early_fusion_joint_global_scale_laplacian_low18_low36",
+        "dav2_early_fusion_joint_global_scale_low36",
+        "dav2_early_fusion_joint_global_scale_low72",
+    }
+    if checkpoint.get("architecture") not in expected_architectures:
+        raise RuntimeError("Checkpoint is not the registered joint DAv2 scale+r_low model")
+    joint = cfg.model.dav2_joint_scale_low
+    dav2 = cfg.model.dav2
+    model = BIMEarlyFusionDAv2JointScaleLow.from_pretrained(
+        str(dav2.model_id),
+        revision=str(dav2.revision),
+        local_files_only=bool(dav2.local_files_only),
+        regression_hidden_size=int(joint.regression_hidden_size),
+        head_dropout_probability=float(joint.head_dropout_probability),
+        output_weight_std=float(joint.output_weight_std),
+        residual_hidden_channels=int(joint.residual_hidden_channels),
+        max_low1_log_residual=float(joint.max_low1_log_residual),
+        max_low2_log_residual=float(joint.max_low2_log_residual),
+        output_max_depth_m=float(cfg.model.output_max_depth_m),
+        residual_mode=str(getattr(joint, "residual_mode", "low18_low36")),
+    )
+    model.load_state_dict(checkpoint["model"], strict=True)
+    return model
+
+
 def main() -> None:
     args = parse_args()
     validate_args(args)
@@ -650,7 +718,9 @@ def main() -> None:
 
     cfg = load_config(args.config)
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
-    if "priorda_v11" in cfg.model:
+    if "dav2_joint_scale_low" in cfg.model:
+        model = _load_joint_dav2_scale_low_model(cfg, checkpoint)
+    elif "priorda_v11" in cfg.model:
         model = _load_frozen_huber_priorda_model(cfg, checkpoint)
     elif "dav2_low_refiner" in cfg.model:
         model = _load_frozen_huber_dpt_model(cfg, checkpoint)
@@ -740,6 +810,16 @@ def main() -> None:
                     raycaster=raycaster,
                     args=args,
                     feature_layers=feature_layers,
+                    bim_log_mean=(
+                        float(cfg.model.bim_normalization.mean)
+                        if isinstance(model, BIMEarlyFusionDAv2JointScaleLow)
+                        else None
+                    ),
+                    bim_log_std=(
+                        float(cfg.model.bim_normalization.std)
+                        if isinstance(model, BIMEarlyFusionDAv2JointScaleLow)
+                        else None
+                    ),
                 )
             except Exception as error:  # noqa: BLE001 - preserve resumable benchmark progress
                 row = {

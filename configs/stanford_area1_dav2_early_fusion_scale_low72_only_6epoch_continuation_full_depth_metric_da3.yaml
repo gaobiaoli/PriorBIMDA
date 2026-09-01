@@ -1,0 +1,15 @@
+extends: stanford_area1_dav2_early_fusion_scale_low72_only_3epoch_full_depth_metric_da3.yaml
+
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low72_only_6epoch_continuation
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low72_only_6epoch_continuation
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low72_only_6epoch_continuation
+
+train:
+  epochs: 6
+  reset_optimizer_scheduler_on_resume: true
+  encoder_learning_rate: 0.000002
+  decoder_learning_rate: 0.00002
+  bim_condition_learning_rate: 0.00002
+  scale_head_learning_rate: 0.00002
+  residual_head_learning_rate: 0.00002

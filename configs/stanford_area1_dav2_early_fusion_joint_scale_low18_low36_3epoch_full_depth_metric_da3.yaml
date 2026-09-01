@@ -1,0 +1,53 @@
+extends: stanford_area1_dav2_early_fusion_scale_3epoch_full_depth_metric_da3.yaml
+
+# One pretrained DAv2 ViT-B/DPT pass jointly predicts a global DA3 scale and
+# a two-level native-grid Laplacian residual. This is a three-epoch matched
+# screen against the existing early-fusion scale-only experiment.
+
+experiment:
+  name: stanford_area1_dav2_early_fusion_joint_scale_low18_low36_3epoch
+  output_dir: outputs/stanford_area1_dav2_early_fusion_joint_scale_low18_low36_3epoch
+  results_dir: results/stanford_area1/dav2_early_fusion_joint_scale_low18_low36_3epoch
+
+model:
+  dav2_joint_scale_low:
+    scale_feature: final_dinov2_concat_cls_mean_patch
+    residual_features:
+      low1: dpt_deepest_top_down_pre_upsample_native_18x18
+      low2: dpt_second_top_down_pre_upsample_native_36x36
+    residual_composition: upsample_low1_plus_laplacian_low2
+    regression_hidden_size: 256
+    head_dropout_probability: 0.0
+    output_weight_std: 0.001
+    residual_hidden_channels: 64
+    max_low1_log_residual: 0.20
+    max_low2_log_residual: 0.10
+    equivariance_probability: 0.50
+    equivariance_log_range: 0.20
+
+loss:
+  # The final metric-depth loss supervises the complete scale+r_low output.
+  depth: 1.0
+  coarse_depth: 0.0
+  # Direct per-frame oracle supervision for the global log-scale head.
+  attention_scale_oracle: 0.5
+  attention_scale_oracle_beta: 0.02
+  attention_scale_oracle_min_support: 100
+  attention_scale_equivariance: 0.10
+  # Native-grid deep supervision. low2 is a 36x36 Laplacian band relative to
+  # the bilinearly expanded 18x18 target rather than a duplicate target.
+  low1_residual_teacher: 0.25
+  low2_residual_teacher: 0.50
+  native_teacher_beta: 0.02
+  residual_zero_mean: 0.10
+  residual_teacher: 0.0
+  local_residual_teacher: 0.0
+
+train:
+  epochs: 3
+  scale_only_experiment: false
+  encoder_learning_rate: 0.000005
+  decoder_learning_rate: 0.00005
+  bim_condition_learning_rate: 0.00005
+  scale_head_learning_rate: 0.00005
+  residual_head_learning_rate: 0.00005

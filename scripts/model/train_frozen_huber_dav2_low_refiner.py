@@ -154,6 +154,30 @@ def masked_per_sample_mean(
     return sample.mean()
 
 
+def masked_area_downsample(
+    value: torch.Tensor,
+    valid: torch.Tensor,
+    output_size: tuple[int, int],
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Average valid full-resolution values onto a native low-res grid.
+
+    Pooling the value and support separately prevents invalid GT pixels from
+    being interpreted as zero residual. A native cell is supervised whenever
+    it contains at least one valid source pixel.
+    """
+    if value.shape != valid.shape:
+        raise ValueError(
+            f"value/valid shapes must match, got {value.shape} and {valid.shape}"
+        )
+    support = valid.to(dtype=value.dtype)
+    pooled_support = functional.adaptive_avg_pool2d(support, output_size)
+    pooled_value = functional.adaptive_avg_pool2d(value * support, output_size)
+    low_valid = pooled_support > 0
+    low_value = pooled_value / pooled_support.clamp_min(torch.finfo(value.dtype).eps)
+    low_value = torch.where(low_valid, low_value, torch.zeros_like(low_value))
+    return low_value, low_valid
+
+
 def low_refiner_loss(
     output: dict[str, Any],
     batch: dict[str, torch.Tensor],
@@ -181,20 +205,46 @@ def low_refiner_loss(
         + masked_mean((pred_dy - gt_dy).abs(), vertical_valid)
     )
 
-    residual_target = (
-        log_target - torch.log(output["scaled_depth"].detach().float().clamp_min(1e-6))
-    ).clamp(-0.45, 0.45)
-    residual_teacher = masked_per_sample_mean(
-        functional.smooth_l1_loss(
-            output["low_log_residual"].float(),
-            residual_target,
-            reduction="none",
-            beta=0.02,
-        ),
-        valid,
-        pixel_weight,
+    residual_target = log_target - torch.log(
+        output["scaled_depth"].detach().float().clamp_min(1e-6)
     )
     low_native = output["low_log_residual_native"].float()
+    if "low_residual_teacher" in cfg.loss:
+        low_residual_target, low_valid = masked_area_downsample(
+            residual_target,
+            valid,
+            tuple(low_native.shape[-2:]),
+        )
+        low_residual_teacher = masked_per_sample_mean(
+            functional.smooth_l1_loss(
+                low_native,
+                low_residual_target,
+                reduction="none",
+                beta=0.02,
+            ),
+            low_valid,
+        )
+        residual_teacher = low_native.sum() * 0.0
+        teacher_loss = float(cfg.loss.low_residual_teacher) * low_residual_teacher
+    else:
+        # Preserve exact reproducibility of the original experiment config.
+        # That baseline intentionally records the historical duplicated
+        # full-resolution teacher as a separate control.
+        residual_teacher = masked_per_sample_mean(
+            functional.smooth_l1_loss(
+                output["low_log_residual"].float(),
+                residual_target.clamp(-0.45, 0.45),
+                reduction="none",
+                beta=0.02,
+            ),
+            valid,
+            pixel_weight,
+        )
+        low_residual_teacher = low_native.sum() * 0.0
+        teacher_loss = (
+            float(cfg.loss.residual_teacher)
+            + float(cfg.loss.local_residual_teacher)
+        ) * residual_teacher
     low_smoothness = 0.5 * (
         (low_native[..., :, 1:] - low_native[..., :, :-1]).abs().mean()
         + (low_native[..., 1:, :] - low_native[..., :-1, :]).abs().mean()
@@ -202,11 +252,7 @@ def low_refiner_loss(
     total = (
         float(cfg.loss.depth) * depth
         + float(cfg.loss.gradient) * gradient
-        + (
-            float(cfg.loss.residual_teacher)
-            + float(cfg.loss.local_residual_teacher)
-        )
-        * residual_teacher
+        + teacher_loss
         + float(cfg.loss.low_smoothness) * low_smoothness
     )
     return {
@@ -214,6 +260,7 @@ def low_refiner_loss(
         "depth": depth,
         "gradient": gradient,
         "residual_teacher": residual_teacher,
+        "low_residual_teacher": low_residual_teacher,
         "low_smoothness": low_smoothness,
     }
 
@@ -510,7 +557,17 @@ def main() -> None:
         if model.scale_system.training:
             raise RuntimeError("Frozen scale system entered training mode")
         optimizer.zero_grad(set_to_none=True)
-        totals = {key: 0.0 for key in ("total", "depth", "gradient", "residual_teacher", "low_smoothness")}
+        totals = {
+            key: 0.0
+            for key in (
+                "total",
+                "depth",
+                "gradient",
+                "residual_teacher",
+                "low_residual_teacher",
+                "low_smoothness",
+            )
+        }
         samples = 0
         accumulation_count = 0
         epoch_started = time.perf_counter()
