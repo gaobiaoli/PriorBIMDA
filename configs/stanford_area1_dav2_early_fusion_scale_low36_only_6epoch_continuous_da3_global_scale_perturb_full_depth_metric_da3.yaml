@@ -1,0 +1,29 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_full_depth_metric_da3.yaml
+
+# Main-path DA3 global-scale augmentation for the learned scale head. Every
+# training sample receives q=exp(epsilon), epsilon~U(-0.20,0.20). GT and BIM
+# remain unchanged; the training loop rebuilds BIM/DA3 z and the oracle scale
+# target from the perturbed DA3 depth. Validation and test remain unperturbed.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_da3_global_scale_perturb
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_da3_global_scale_perturb
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low36_only_6epoch_continuous_da3_global_scale_perturb
+
+data:
+  # The pulled baseline is pinned to the former hit-only preparation. Bind the
+  # derived run to the currently materialized 10,327-frame manifest instead.
+  split_fingerprint_sha256: 87dbde4e9e454c9dca1e2f38d86fd339ae45b401145b29324ada4174d35043f7
+
+train:
+  augment:
+    da3_global_scale_perturbation:
+      enabled: true
+      probability: 1.0
+      log_range: 0.20
+    # Independent condition-level augmentation. Kept disabled until the BIM
+    # dropout-only and combined experiment variants are selected. The inherited
+    # data-level bim_full_dropout_probability=0.03 is separate; set that to zero
+    # later if an isolated condition-dropout ablation is desired.
+    bim_condition_dropout:
+      enabled: false
+      probability: 0.15

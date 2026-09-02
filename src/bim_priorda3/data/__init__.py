@@ -1,3 +1,4 @@
+from .augmentation import apply_bim_condition_dropout, apply_da3_global_scale_perturbation
 from .dataset import BIMDepthDataset, relocate_record
 from .ifc_envelope import (
     GLOBAL_CORE_CATEGORIES,
@@ -26,6 +27,8 @@ __all__ = [
     "PoseRecoveryResult",
     "StanfordFrame",
     "accepted_transforms",
+    "apply_bim_condition_dropout",
+    "apply_da3_global_scale_perturbation",
     "build_global_ifc_envelope_scene",
     "build_ifc_envelope_scene",
     "discover_stanford_frames",

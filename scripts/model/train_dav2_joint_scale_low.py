@@ -27,7 +27,11 @@ from train_bim_early_fusion_scale import (
 )
 
 from bim_priorda3.config import load_config, resolve_project_path
-from bim_priorda3.data import BIMDepthDataset
+from bim_priorda3.data import (
+    BIMDepthDataset,
+    apply_bim_condition_dropout,
+    apply_da3_global_scale_perturbation,
+)
 from bim_priorda3.early_fusion import DenseDepthMetricAccumulator
 from bim_priorda3.engine import build_loader
 from bim_priorda3.losses import absrel_optimal_log_scale, build_depth_supervision_weight
@@ -382,6 +386,28 @@ def main() -> None:
     oracle_min_support = int(loss_cfg.attention_scale_oracle_min_support)
     equivariance_probability = float(joint.equivariance_probability)
     equivariance_log_range = float(joint.equivariance_log_range)
+    perturb_cfg = cfg.train.augment.get("da3_global_scale_perturbation", {})
+    perturb_enabled = bool(perturb_cfg.get("enabled", False))
+    perturb_probability = float(perturb_cfg.get("probability", 1.0)) if perturb_enabled else 0.0
+    perturb_log_range = float(perturb_cfg.get("log_range", 0.0)) if perturb_enabled else 0.0
+    condition_dropout_cfg = cfg.train.augment.get("bim_condition_dropout", {})
+    condition_dropout_enabled = bool(condition_dropout_cfg.get("enabled", False))
+    condition_dropout_probability = (
+        float(condition_dropout_cfg.get("probability", 0.15))
+        if condition_dropout_enabled
+        else 0.0
+    )
+    # Validate once before training rather than discovering a malformed config
+    # after the first expensive model forward.
+    apply_da3_global_scale_perturbation(
+        {"base_depth": torch.ones((1, 1, 1, 1), device=device)},
+        probability=perturb_probability,
+        log_range=perturb_log_range,
+    )
+    apply_bim_condition_dropout(
+        torch.ones((1, 3, 1, 1), device=device),
+        probability=condition_dropout_probability,
+    )
     training_started = time.perf_counter()
     log_every = int(cfg.train.log_every)
     for epoch in range(start_epoch, epochs + 1):
@@ -401,15 +427,30 @@ def main() -> None:
             "predicted_residual_mean",
         )
         totals = {key: 0.0 for key in keys}
+        perturb_applied = 0
+        perturb_abs_log_q = 0.0
+        perturb_signed_log_q = 0.0
+        condition_dropout_applied = 0
         samples = 0
         accumulation_count = 0
         epoch_started = time.perf_counter()
         for batch_index, raw_batch in enumerate(train_loader, start=1):
             batch = selected_batch(raw_batch, device)
+            batch, augmentation_log_q, augmentation_applied = (
+                apply_da3_global_scale_perturbation(
+                    batch,
+                    probability=perturb_probability,
+                    log_range=perturb_log_range,
+                )
+            )
             condition = build_bim_condition(
                 batch,
                 bim_log_mean=bim_stats["mean"],
                 bim_log_std=bim_stats["std"],
+            )
+            condition, condition_dropout_mask = apply_bim_condition_dropout(
+                condition,
+                probability=condition_dropout_probability,
             )
             oracle_log_scale, oracle_supported = absrel_optimal_log_scale(
                 batch["base_depth"],
@@ -436,6 +477,11 @@ def main() -> None:
                         bim_log_mean=bim_stats["mean"],
                         bim_log_std=bim_stats["std"],
                     )
+                    if condition_dropout_enabled:
+                        perturbed_condition, _ = apply_bim_condition_dropout(
+                            perturbed_condition,
+                            applied=condition_dropout_mask,
+                        )
                     perturbed_log_scale = model.predict_log_scale(
                         batch["rgb"],
                         perturbed_condition,
@@ -459,6 +505,10 @@ def main() -> None:
                 )
                 scaled_loss = losses["total"] / accumulation
             batch_samples = batch["rgb"].shape[0]
+            perturb_applied += int(augmentation_applied.sum())
+            perturb_abs_log_q += float(augmentation_log_q.abs().sum())
+            perturb_signed_log_q += float(augmentation_log_q.sum())
+            condition_dropout_applied += int(condition_dropout_mask.sum())
             for key in keys:
                 totals[key] += float(losses[key].detach()) * batch_samples
             samples += batch_samples
@@ -505,6 +555,10 @@ def main() -> None:
         row = {
             "epoch": epoch,
             **{f"train_{key}": value / samples for key, value in totals.items()},
+            "train_da3_scale_perturbation_fraction": perturb_applied / samples,
+            "train_da3_scale_perturbation_abs_log_q": perturb_abs_log_q / samples,
+            "train_da3_scale_perturbation_mean_log_q": perturb_signed_log_q / samples,
+            "train_bim_condition_dropout_fraction": condition_dropout_applied / samples,
             "val_abs_rel": learned["abs_rel"],
             "val_rmse": learned["rmse"],
             "val_delta1": learned["delta1"],
