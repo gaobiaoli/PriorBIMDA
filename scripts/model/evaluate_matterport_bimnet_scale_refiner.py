@@ -151,7 +151,10 @@ def _tensor(value: np.ndarray, device: torch.device, *, channel: bool = False) -
 
 def build_batch(
     *,
-    model: BIMPriorDA3 | FrozenHuberDAv2LowRefiner | FrozenHuberPriorDAV11BIM | BIMEarlyFusionDAv2JointScaleLow,
+    model: BIMPriorDA3
+    | FrozenHuberDAv2LowRefiner
+    | FrozenHuberPriorDAV11BIM
+    | BIMEarlyFusionDAv2JointScaleLow,
     rgb: np.ndarray,
     base_depth: np.ndarray,
     base_confidence: np.ndarray,
@@ -198,7 +201,10 @@ def evaluate_frame(
     *,
     frame: Any,
     da3_model: Any,
-    model: BIMPriorDA3 | FrozenHuberDAv2LowRefiner | FrozenHuberPriorDAV11BIM | BIMEarlyFusionDAv2JointScaleLow,
+    model: BIMPriorDA3
+    | FrozenHuberDAv2LowRefiner
+    | FrozenHuberPriorDAV11BIM
+    | BIMEarlyFusionDAv2JointScaleLow,
     raycaster: Any,
     args: argparse.Namespace,
     feature_layers: tuple[int, ...],
@@ -296,9 +302,14 @@ def evaluate_frame(
     )
     model_start = time.perf_counter()
     device = next(model.parameters()).device
-    amp_dtype = torch.bfloat16 if device.type == "cuda" and torch.cuda.is_bf16_supported() else torch.float16
-    with torch.inference_mode(), torch.autocast(
-        device_type=device.type, dtype=amp_dtype, enabled=device.type == "cuda"
+    amp_dtype = (
+        torch.bfloat16
+        if device.type == "cuda" and torch.cuda.is_bf16_supported()
+        else torch.float16
+    )
+    with (
+        torch.inference_mode(),
+        torch.autocast(device_type=device.type, dtype=amp_dtype, enabled=device.type == "cuda"),
     ):
         if isinstance(model, BIMEarlyFusionDAv2JointScaleLow):
             if bim_log_mean is None or bim_log_std is None:
@@ -318,8 +329,13 @@ def evaluate_frame(
     scale_process = output["scaled_depth"].detach().float().squeeze().cpu().numpy()
     if isinstance(model, BIMEarlyFusionDAv2JointScaleLow):
         scale_low_process = (
-            output["scaled_depth"] * torch.exp(output["low1_log_residual"].float())
-        ).detach().float().squeeze().cpu().numpy()
+            (output["scaled_depth"] * torch.exp(output["low1_log_residual"].float()))
+            .detach()
+            .float()
+            .squeeze()
+            .cpu()
+            .numpy()
+        )
     elif isinstance(model, FrozenHuberDAv2LowRefiner):
         # This architecture deliberately has no r_detail; its final prediction
         # is exactly the scale+r_low stage.
@@ -330,8 +346,14 @@ def evaluate_frame(
         scale_low_process = output["local_depth"].detach().float().squeeze().cpu().numpy()
     else:
         scale_low_process = (
-            output["refinement_anchor_depth"] * torch.exp(output["low_log_residual"])
-        ).clamp(1e-3, model.output_max_depth).detach().float().squeeze().cpu().numpy()
+            (output["refinement_anchor_depth"] * torch.exp(output["low_log_residual"]))
+            .clamp(1e-3, model.output_max_depth)
+            .detach()
+            .float()
+            .squeeze()
+            .cpu()
+            .numpy()
+        )
     final_process = output["depth"].detach().float().squeeze().cpu().numpy()
     learned_scale = (
         float(output["scale"].detach().float().item())
@@ -422,15 +444,20 @@ def evaluate_frame(
 def _micro_metrics(rows: list[dict[str, Any]], prefix: str) -> dict[str, float | int]:
     weights = np.asarray([int(row["gt_valid_pixels"]) for row in rows], dtype=np.float64)
     output: dict[str, float | int] = {
-        metric: float(np.average([float(row[f"{prefix}_{metric}"]) for row in rows], weights=weights))
+        metric: float(
+            np.average([float(row[f"{prefix}_{metric}"]) for row in rows], weights=weights)
+        )
         for metric in LINEAR_MICRO_METRICS
     }
     for metric in ("rmse_m", "rmse_log"):
         output[metric] = float(
-            math.sqrt(np.average([float(row[f"{prefix}_{metric}"]) ** 2 for row in rows], weights=weights))
+            math.sqrt(
+                np.average([float(row[f"{prefix}_{metric}"]) ** 2 for row in rows], weights=weights)
+            )
         )
     output["silog_x100"] = float(
-        100.0 * math.sqrt(max(0.0, float(output["rmse_log"]) ** 2 - float(output["mean_log_error"]) ** 2))
+        100.0
+        * math.sqrt(max(0.0, float(output["rmse_log"]) ** 2 - float(output["mean_log_error"]) ** 2))
     )
     output["valid_pixels"] = int(weights.sum())
     return output
@@ -457,7 +484,12 @@ def aggregate_rows(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
             "pixel_micro_abs_rel_difference": value - raw_abs,
             "pixel_micro_abs_rel_relative_improvement": (raw_abs - value) / raw_abs,
             "frame_win_fraction": float(
-                np.mean([float(row[f"{prefix}_abs_rel"]) < float(row["raw_abs_rel"]) for row in selected])
+                np.mean(
+                    [
+                        float(row[f"{prefix}_abs_rel"]) < float(row["raw_abs_rel"])
+                        for row in selected
+                    ]
+                )
             ),
         }
     return {
@@ -526,7 +558,10 @@ def build_summary(
     rows: list[dict[str, Any]],
     *,
     args: argparse.Namespace,
-    model: BIMPriorDA3 | FrozenHuberDAv2LowRefiner | FrozenHuberPriorDAV11BIM | BIMEarlyFusionDAv2JointScaleLow,
+    model: BIMPriorDA3
+    | FrozenHuberDAv2LowRefiner
+    | FrozenHuberPriorDAV11BIM
+    | BIMEarlyFusionDAv2JointScaleLow,
     scene_id: str,
     bimnet_key: str,
     mesh_metadata: Mapping[str, Any],
@@ -537,7 +572,9 @@ def build_summary(
     expected = _expected_selection(args, bimnet_key=bimnet_key, scene_id=scene_id)
     if expected is not None:
         expected_rows = int(
-            expected["selected_frames"] if args.evaluate_selected_only else expected["source_frames"]
+            expected["selected_frames"]
+            if args.evaluate_selected_only
+            else expected["source_frames"]
         )
         if len(rows) != expected_rows:
             raise RuntimeError(
@@ -569,7 +606,9 @@ def build_summary(
             "aggregation": "pixel-micro; no scale/affine alignment",
             "gt_is_model_input": False,
             "inference_scope": (
-                "frozen three-rule frame set" if args.evaluate_selected_only else "all source frames"
+                "frozen three-rule frame set"
+                if args.evaluate_selected_only
+                else "all source frames"
             ),
         },
         "scene": {"matterport_scene_id": scene_id, "bimnet_scene_key": bimnet_key},
@@ -579,12 +618,16 @@ def build_summary(
             "checkpoint_sha256": BENCHMARK._sha256(args.checkpoint),
             "architecture": (
                 (
-                    "single early-fusion DAv2 global scale + native 72x72 r_low"
-                    if model.residual_mode == "low72_only"
+                    "single early-fusion DAv2 native 18x18 direct residual; no global scale"
+                    if model.residual_mode == "direct_low18"
                     else (
-                        "single early-fusion DAv2 global scale + native 36x36 r_low"
-                        if model.residual_mode == "low36_only"
-                        else "single early-fusion DAv2 global scale + native 18/36 Laplacian r_low"
+                        "single early-fusion DAv2 global scale + native 72x72 r_low"
+                        if model.residual_mode == "low72_only"
+                        else (
+                            "single early-fusion DAv2 global scale + native 36x36 r_low"
+                            if model.residual_mode == "low36_only"
+                            else "single early-fusion DAv2 global scale + native 18/36 Laplacian r_low"
+                        )
                     )
                 )
                 if isinstance(model, BIMEarlyFusionDAv2JointScaleLow)
@@ -640,19 +683,49 @@ def build_summary(
 
 def _csv_columns() -> list[str]:
     identifiers = [
-        "scene_id", "panorama_id", "frame_id", "camera_index", "yaw_index",
-        "rgb_path", "depth_path", "height", "width", "process_height", "process_width",
-        "focal_scale", "gt_valid_pixels", "gt_valid_fraction",
+        "scene_id",
+        "panorama_id",
+        "frame_id",
+        "camera_index",
+        "yaw_index",
+        "rgb_path",
+        "depth_path",
+        "height",
+        "width",
+        "process_height",
+        "process_width",
+        "focal_scale",
+        "gt_valid_pixels",
+        "gt_valid_fraction",
     ]
     diagnostic = [
-        "camera_x", "camera_y", "camera_z", "camera_in_bim_aabb", "bim_hit_pixels",
-        "bim_hit_fraction", "three_rule_pass", "filter_reasons", "deterministic_scale",
-        "deterministic_scale_support", "learned_scale", "learned_log_scale",
-        "oracle_frame_scale", "scale_abs_log_error", "confidence_source",
-        "round_1_log_scale", "round_2_log_scale", "round_3_log_scale",
+        "camera_x",
+        "camera_y",
+        "camera_z",
+        "camera_in_bim_aabb",
+        "bim_hit_pixels",
+        "bim_hit_fraction",
+        "three_rule_pass",
+        "filter_reasons",
+        "deterministic_scale",
+        "deterministic_scale_support",
+        "learned_scale",
+        "learned_log_scale",
+        "oracle_frame_scale",
+        "scale_abs_log_error",
+        "confidence_source",
+        "round_1_log_scale",
+        "round_2_log_scale",
+        "round_3_log_scale",
     ]
     metrics = [f"{prefix}_{metric}" for prefix in PREDICTION_NAMES for metric in METRICS]
-    timing = ["bim_render_seconds", "da3_inference_seconds", "model_inference_seconds", "status", "error"]
+    timing = [
+        "bim_render_seconds",
+        "da3_inference_seconds",
+        "model_inference_seconds",
+        "status",
+        "error",
+    ]
     return [*identifiers, *diagnostic, *metrics, *timing]
 
 
@@ -756,6 +829,7 @@ def _load_joint_dav2_scale_low_model(
         "dav2_early_fusion_joint_global_scale_laplacian_low18_low36",
         "dav2_early_fusion_joint_global_scale_low36",
         "dav2_early_fusion_joint_global_scale_low72",
+        "dav2_early_fusion_direct_low18_no_global_scale",
     }
     if checkpoint.get("architecture") not in expected_architectures:
         raise RuntimeError("Checkpoint is not the registered joint DAv2 scale+r_low model")
@@ -813,7 +887,9 @@ def main() -> None:
         if not model.attention_scale_enabled or model.attention_scale is None:
             raise RuntimeError("Checkpoint does not contain the learned scale head")
         if model.use_frame_residual or not model.use_low_residual:
-            raise RuntimeError("Expected released r_low+r_detail refiner with frame residual disabled")
+            raise RuntimeError(
+                "Expected released r_low+r_detail refiner with frame residual disabled"
+            )
     feature_layers = (
         tuple(int(value) for value in model.da3_feature_layers)
         if isinstance(model, BIMPriorDA3) and model.da3_feature_fusion_enabled
@@ -832,7 +908,9 @@ def main() -> None:
         available_frame_ids = {frame.frame_id for frame in frames}
         missing = selected_frame_ids - available_frame_ids
         if missing:
-            raise RuntimeError(f"Selection audit contains unavailable frame IDs: {sorted(missing)[:5]}")
+            raise RuntimeError(
+                f"Selection audit contains unavailable frame IDs: {sorted(missing)[:5]}"
+            )
         frames = [frame for frame in frames if frame.frame_id in selected_frame_ids]
     if args.max_frames is not None:
         frames = frames[: args.max_frames]
@@ -930,7 +1008,8 @@ def main() -> None:
                 metric_text = (
                     f" raw={row['raw_abs_rel']:.5f} scale={row['scale_abs_rel']:.5f} "
                     f"final={row['final_abs_rel']:.5f}"
-                    if row.get("status") == "ok" else ""
+                    if row.get("status") == "ok"
+                    else ""
                 )
                 print(
                     f"progress={index}/{len(pending)} frame={frame.frame_id}{metric_text} "

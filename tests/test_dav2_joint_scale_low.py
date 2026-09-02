@@ -71,3 +71,41 @@ def test_single_native_teacher_ignores_disabled_low18() -> None:
         assert float(losses["low1_teacher"]) == 0.0
         assert float(losses["low2_teacher"]) == 0.0
         assert float(losses["zero_mean"]) == 0.0
+
+
+@torch.no_grad()
+def test_direct_low18_teacher_keeps_global_dc_and_has_no_zero_mean_loss() -> None:
+    shape = (1, 1, 4, 4)
+    gt = torch.full(shape, 2.0)
+    base = torch.ones(shape)
+    output = {
+        "depth": base.clone(),
+        "log_scale": torch.zeros((1, 1, 1, 1)),
+        "low1_log_residual_native": torch.zeros((1, 1, 2, 2)),
+        "low2_log_residual_native": torch.zeros((1, 1, 2, 2)),
+    }
+    batch = {
+        "gt_depth": gt,
+        "gt_valid": torch.ones(shape, dtype=torch.bool),
+        "base_depth": base,
+    }
+    losses = joint_scale_low_loss(
+        output,
+        batch,
+        pixel_weight=torch.ones(shape),
+        oracle_log_scale=torch.full((1, 1, 1, 1), torch.log(torch.tensor(2.0))),
+        oracle_supported=torch.ones(1, dtype=torch.bool),
+        depth_weight=1.0,
+        scale_teacher_weight=0.0,
+        low1_teacher_weight=1.0,
+        low2_teacher_weight=0.0,
+        zero_mean_weight=0.0,
+        teacher_beta=0.02,
+        residual_mode="direct_low18",
+    )
+
+    # A mean-centered target would be exactly zero for this constant scale
+    # error. The positive teacher proves that direct r18 retains the DC term.
+    assert float(losses["low1_teacher"]) > 0.6
+    assert float(losses["scale_teacher"]) == 0.0
+    assert float(losses["zero_mean"]) == 0.0

@@ -106,9 +106,7 @@ def evaluate(
             seconds += time.perf_counter() - started
 
             support = fixed_all_valid_support(batch["gt_depth"], batch["gt_valid"])
-            low1_depth = output["scaled_depth"] * torch.exp(
-                output["low1_log_residual"].float()
-            )
+            low1_depth = output["scaled_depth"] * torch.exp(output["low1_log_residual"].float())
             predictions = {
                 "raw_da3_focal_corrected": batch["base_depth"],
                 "joint_global_scale": output["scaled_depth"],
@@ -124,7 +122,14 @@ def evaluate(
                 batch["gt_valid"],
                 min_support=oracle_min_support,
             )
-            predicted = output["log_scale"].float().flatten(1).mean(dim=1)
+            if model.residual_mode == "direct_low18":
+                residual = output["low1_log_residual"].float()
+                valid = batch["gt_valid"].float()
+                predicted = (residual * valid).flatten(1).sum(dim=1) / valid.flatten(1).sum(
+                    dim=1
+                ).clamp_min(1.0)
+            else:
+                predicted = output["log_scale"].float().flatten(1).mean(dim=1)
             oracle_vector = oracle.flatten(1).mean(dim=1)
             available = oracle_supported.bool()
             if bool(available.any()):
@@ -136,12 +141,15 @@ def evaluate(
             low1_mean_abs += float(
                 output["low1_log_residual_native"].float().mean(dim=(1, 2, 3)).abs().sum()
             )
-            combined36 = torch.nn.functional.interpolate(
-                output["low1_log_residual_native"].float(),
-                size=output["low2_log_residual_native"].shape[-2:],
-                mode="bilinear",
-                align_corners=False,
-            ) + output["low2_log_residual_native"].float()
+            combined36 = (
+                torch.nn.functional.interpolate(
+                    output["low1_log_residual_native"].float(),
+                    size=output["low2_log_residual_native"].shape[-2:],
+                    mode="bilinear",
+                    align_corners=False,
+                )
+                + output["low2_log_residual_native"].float()
+            )
             low12_mean_abs += float(combined36.mean(dim=(1, 2, 3)).abs().sum())
             frames += batch["rgb"].shape[0]
 
@@ -154,6 +162,11 @@ def evaluate(
         "alignment": "none",
         **metrics,
         "scale": {
+            "prediction_source": (
+                "GT-support mean of direct r18"
+                if model.residual_mode == "direct_low18"
+                else "global scale head"
+            ),
             "oracle_supported_frames": scale_frames,
             "oracle_log_scale_mae": scale_abs_error / max(scale_frames, 1),
             "oracle_log_scale_bias": scale_signed_error / max(scale_frames, 1),
@@ -163,9 +176,7 @@ def evaluate(
             "mean_abs_low1_native_mean": low1_mean_abs / max(frames, 1),
             "mean_abs_combined36_mean": low12_mean_abs / max(frames, 1),
         },
-        "relative_improvement_over_scale_only": (
-            (scale_abs_rel - final_abs_rel) / scale_abs_rel
-        ),
+        "relative_improvement_over_scale_only": ((scale_abs_rel - final_abs_rel) / scale_abs_rel),
         "inference_seconds": seconds,
     }
 
@@ -190,8 +201,7 @@ def main() -> None:
         else resolve_project_path(cfg, cfg.experiment.results_dir)
     )
     if args.resume is None and any(
-        (output_dir / name).exists()
-        for name in ("best.pt", "latest.pt", "training_history.csv")
+        (output_dir / name).exists() for name in ("best.pt", "latest.pt", "training_history.csv")
     ):
         raise FileExistsError(f"Fresh run refuses existing artifacts in {output_dir}")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -208,7 +218,9 @@ def main() -> None:
         "train_records": len(train_dataset),
     }
     if args.max_train_samples is not None:
-        train_dataset = Subset(train_dataset, range(min(args.max_train_samples, len(train_dataset))))
+        train_dataset = Subset(
+            train_dataset, range(min(args.max_train_samples, len(train_dataset)))
+        )
     if args.max_val_samples is not None:
         val_dataset = Subset(val_dataset, range(min(args.max_val_samples, len(val_dataset))))
 
@@ -265,11 +277,17 @@ def main() -> None:
             audit_batch["base_depth"],
         )
     initialization["native_feature_shapes"] = audit_output["native_feature_shapes"]
-    initialization["native_shapes_match"] = (
-        initialization["native_feature_shapes"] == [[18, 18], [36, 36], [72, 72]]
-    )
+    initialization["native_shapes_match"] = initialization["native_feature_shapes"] == [
+        [18, 18],
+        [36, 36],
+        [72, 72],
+    ]
     initialization["active_residual_shape"] = audit_output["active_residual_shape"]
-    expected_active_shape = [72, 72] if model.residual_mode == "low72_only" else [36, 36]
+    expected_active_shape = (
+        [18, 18]
+        if model.residual_mode == "direct_low18"
+        else ([72, 72] if model.residual_mode == "low72_only" else [36, 36])
+    )
     initialization["active_residual_shape_match"] = (
         initialization["active_residual_shape"] == expected_active_shape
     )
@@ -422,9 +440,7 @@ def main() -> None:
                         batch["rgb"],
                         perturbed_condition,
                     )
-                    equivariance_error = (
-                        perturbed_log_scale + log_factor - output["log_scale"]
-                    )
+                    equivariance_error = perturbed_log_scale + log_factor - output["log_scale"]
                 losses = joint_scale_low_loss(
                     output,
                     batch,
@@ -456,7 +472,9 @@ def main() -> None:
             should_step = accumulation_count == accumulation or batch_index == len(train_loader)
             if should_step:
                 scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(model.parameters(), float(cfg.train.gradient_clip_norm))
+                torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), float(cfg.train.gradient_clip_norm)
+                )
                 scale_before = scaler.get_scale()
                 scaler.step(optimizer)
                 scaler.update()
@@ -506,12 +524,16 @@ def main() -> None:
         payload = {
             "schema_version": 1,
             "architecture": (
-                "dav2_early_fusion_joint_global_scale_low72"
-                if model.residual_mode == "low72_only"
+                "dav2_early_fusion_direct_low18_no_global_scale"
+                if model.residual_mode == "direct_low18"
                 else (
-                    "dav2_early_fusion_joint_global_scale_low36"
-                    if model.residual_mode == "low36_only"
-                    else "dav2_early_fusion_joint_global_scale_laplacian_low18_low36"
+                    "dav2_early_fusion_joint_global_scale_low72"
+                    if model.residual_mode == "low72_only"
+                    else (
+                        "dav2_early_fusion_joint_global_scale_low36"
+                        if model.residual_mode == "low36_only"
+                        else "dav2_early_fusion_joint_global_scale_laplacian_low18_low36"
+                    )
                 )
             ),
             "model": model.state_dict(),

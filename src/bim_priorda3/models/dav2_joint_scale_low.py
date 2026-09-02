@@ -13,7 +13,7 @@ from .bim_early_fusion_dav2 import BIMEarlyFusionDepthAnythingV2
 
 
 class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
-    """One early-fusion DAv2 encoder for global scale and two native residuals.
+    """One early-fusion DAv2 encoder for global scale and/or native residuals.
 
     The final DINOv2 CLS/mean-patch descriptor predicts one global log-scale.
     The two deepest pretrained DPT fusion stages are tapped immediately before
@@ -45,7 +45,12 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
             raise ValueError("output_weight_std must be positive")
         if min(max_low1_log_residual, max_low2_log_residual, output_max_depth_m) <= 0:
             raise ValueError("Residual bounds and maximum depth must be positive")
-        if residual_mode not in {"low18_low36", "low36_only", "low72_only"}:
+        if residual_mode not in {
+            "low18_low36",
+            "low36_only",
+            "low72_only",
+            "direct_low18",
+        }:
             raise ValueError(f"Unsupported residual_mode: {residual_mode}")
 
         hidden_size = int(self.dav2.config.backbone_config.hidden_size)
@@ -82,6 +87,13 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         self.low2_head = residual_head()
         if self.residual_mode in {"low36_only", "low72_only"}:
             for parameter in self.low1_head.parameters():
+                parameter.requires_grad_(False)
+        elif self.residual_mode == "direct_low18":
+            # The DC component of r18 is the scale estimate in this ablation.
+            # No independent global regression path is trainable or applied.
+            for parameter in self.scale_head.parameters():
+                parameter.requires_grad_(False)
+            for parameter in self.low2_head.parameters():
                 parameter.requires_grad_(False)
         # The official metric-depth output head is not part of this task. It is
         # retained only so the pinned checkpoint contract remains auditable.
@@ -183,6 +195,8 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         bim_condition: torch.Tensor,
     ) -> torch.Tensor:
         """Scale-only auxiliary path used by DA3 scale equivariance."""
+        if self.residual_mode == "direct_low18":
+            return rgb.new_zeros((rgb.shape[0], 1, 1, 1))
         normalized = self.normalized_rgb(rgb)
         embeddings = self._early_embeddings(normalized, bim_condition)
         outputs = self.dav2.backbone.encoder(
@@ -210,17 +224,24 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
 
         tokens, feature18, feature36, feature72 = self._encoded_neck(rgb, bim_condition)
         descriptor = torch.cat((tokens[:, 0], tokens[:, 1:].mean(dim=1)), dim=1)
-        log_scale = self.scale_head(descriptor.float()).view(-1, 1, 1, 1)
+        log_scale = (
+            descriptor.new_zeros((descriptor.shape[0], 1, 1, 1))
+            if self.residual_mode == "direct_low18"
+            else self.scale_head(descriptor.float()).view(-1, 1, 1, 1)
+        )
         scale = log_scale.exp()
         scaled_depth = base_depth.float() * scale
 
         low1_native = (
             self.max_low1_log_residual * torch.tanh(self.low1_head(feature18))
-            if self.residual_mode == "low18_low36"
+            if self.residual_mode in {"low18_low36", "direct_low18"}
             else torch.zeros_like(feature18[:, :1])
         )
-        low2_feature = feature72 if self.residual_mode == "low72_only" else feature36
-        low2_native = self.max_low2_log_residual * torch.tanh(self.low2_head(low2_feature))
+        if self.residual_mode == "direct_low18":
+            low2_native = torch.zeros_like(low1_native)
+        else:
+            low2_feature = feature72 if self.residual_mode == "low72_only" else feature36
+            low2_native = self.max_low2_log_residual * torch.tanh(self.low2_head(low2_feature))
         low1_full = functional.interpolate(
             low1_native,
             size=base_depth.shape[-2:],
@@ -251,7 +272,9 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 list(feature36.shape[-2:]),
                 list(feature72.shape[-2:]),
             ],
-            "active_residual_shape": list(low2_native.shape[-2:]),
+            "active_residual_shape": list(
+                (low1_native if self.residual_mode == "direct_low18" else low2_native).shape[-2:]
+            ),
         }
 
     def optimizer_parameter_groups(
@@ -263,11 +286,30 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         scale_head_lr: float,
         residual_head_lr: float,
     ) -> list[dict[str, Any]]:
+        def trainable(parameters: Any) -> list[nn.Parameter]:
+            return [parameter for parameter in parameters if parameter.requires_grad]
+
         groups = [
-            {"name": "dinov2_encoder", "params": list(self.dav2.backbone.parameters()), "lr": encoder_lr},
-            {"name": "dpt_top_down_decoder", "params": list(self.dav2.neck.parameters()), "lr": decoder_lr},
-            {"name": "bim_condition_projection", "params": list(self.bim_condition_embed.parameters()), "lr": condition_lr},
-            {"name": "scale_regression_head", "params": list(self.scale_head.parameters()), "lr": scale_head_lr},
+            {
+                "name": "dinov2_encoder",
+                "params": trainable(self.dav2.backbone.parameters()),
+                "lr": encoder_lr,
+            },
+            {
+                "name": "dpt_top_down_decoder",
+                "params": trainable(self.dav2.neck.parameters()),
+                "lr": decoder_lr,
+            },
+            {
+                "name": "bim_condition_projection",
+                "params": trainable(self.bim_condition_embed.parameters()),
+                "lr": condition_lr,
+            },
+            {
+                "name": "scale_regression_head",
+                "params": trainable(self.scale_head.parameters()),
+                "lr": scale_head_lr,
+            },
             {
                 "name": "native_residual_heads",
                 "params": [
@@ -395,27 +437,37 @@ def joint_scale_low_loss(
     frame_macro = (per_numerator[available] / per_denominator[available]).mean()
     depth = 0.5 * (pixel_micro + frame_macro)
 
-    predicted_scale = output["log_scale"].float().flatten(1).mean(dim=1)
-    oracle_scale = oracle_log_scale.detach().float().flatten(1).mean(dim=1)
-    scale_raw = functional.smooth_l1_loss(
-        predicted_scale,
-        oracle_scale,
-        reduction="none",
-        beta=float(teacher_beta),
-    )
-    scale_teacher = (
-        scale_raw[oracle_supported.bool()].mean()
-        if bool(oracle_supported.any())
-        else prediction.sum() * 0.0
-    )
-
-    oracle_scaled = batch["base_depth"].detach().float() * oracle_log_scale.detach().float().exp()
-    spatial_target = target.clamp_min(1e-6).log() - oracle_scaled.clamp_min(1e-6).log()
-    dimensions = tuple(range(1, spatial_target.ndim))
-    target_mean = (spatial_target * valid).sum(dim=dimensions) / valid.sum(
-        dim=dimensions
-    ).clamp_min(1)
-    spatial_target = spatial_target - target_mean.view(-1, 1, 1, 1)
+    if residual_mode == "direct_low18":
+        scale_teacher = prediction.sum() * 0.0
+        # Direct r18 contains both its DC/global-scale component and spatial
+        # low-frequency correction. Do not oracle-scale or mean-center it.
+        spatial_target = (
+            target.clamp_min(1e-6).log()
+            - batch["base_depth"].detach().float().clamp_min(1e-6).log()
+        )
+    else:
+        predicted_scale = output["log_scale"].float().flatten(1).mean(dim=1)
+        oracle_scale = oracle_log_scale.detach().float().flatten(1).mean(dim=1)
+        scale_raw = functional.smooth_l1_loss(
+            predicted_scale,
+            oracle_scale,
+            reduction="none",
+            beta=float(teacher_beta),
+        )
+        scale_teacher = (
+            scale_raw[oracle_supported.bool()].mean()
+            if bool(oracle_supported.any())
+            else prediction.sum() * 0.0
+        )
+        oracle_scaled = (
+            batch["base_depth"].detach().float() * oracle_log_scale.detach().float().exp()
+        )
+        spatial_target = target.clamp_min(1e-6).log() - oracle_scaled.clamp_min(1e-6).log()
+        dimensions = tuple(range(1, spatial_target.ndim))
+        target_mean = (spatial_target * valid).sum(dim=dimensions) / valid.sum(
+            dim=dimensions
+        ).clamp_min(1)
+        spatial_target = spatial_target - target_mean.view(-1, 1, 1, 1)
 
     low1 = output["low1_log_residual_native"].float()
     low2 = output["low2_log_residual_native"].float()
@@ -445,6 +497,17 @@ def joint_scale_low_loss(
             ),
             valid18,
         )
+    elif residual_mode == "direct_low18":
+        target_low2 = torch.zeros_like(low2)
+        low1_teacher = _masked_per_sample_mean(
+            functional.smooth_l1_loss(
+                low1,
+                target18,
+                reduction="none",
+                beta=float(teacher_beta),
+            ),
+            valid18,
+        )
     elif residual_mode in {"low36_only", "low72_only"}:
         target_low2 = target36
         low1_teacher = prediction.sum() * 0.0
@@ -460,20 +523,24 @@ def joint_scale_low_loss(
         valid36,
     )
 
-    combined36 = functional.interpolate(
-        low1,
-        size=low2.shape[-2:],
-        mode="bilinear",
-        align_corners=False,
-    ) + low2
-    zero_mean = (
-        0.5
-        * (
-            low1.mean(dim=(1, 2, 3)).abs().mean()
-            + combined36.mean(dim=(1, 2, 3)).abs().mean()
+    combined36 = (
+        functional.interpolate(
+            low1,
+            size=low2.shape[-2:],
+            mode="bilinear",
+            align_corners=False,
         )
-        if residual_mode == "low18_low36"
-        else low2.mean(dim=(1, 2, 3)).abs().mean()
+        + low2
+    )
+    zero_mean = (
+        prediction.sum() * 0.0
+        if residual_mode == "direct_low18"
+        else (
+            0.5
+            * (low1.mean(dim=(1, 2, 3)).abs().mean() + combined36.mean(dim=(1, 2, 3)).abs().mean())
+            if residual_mode == "low18_low36"
+            else low2.mean(dim=(1, 2, 3)).abs().mean()
+        )
     )
     equivariance = (
         equivariance_error.float().square().mean()
