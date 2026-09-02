@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-01T23:19:05.840253+00:00",
+  "protocol": {
+    "gt_min_valid_fraction": 0.1,
+    "bim_min_hit_fraction": 0.2,
+    "aabb_margin_m": 0.0,
+    "process_res": 504,
+    "selection_uses_model_prediction": false,
+    "selection_uses_bim_gt_agreement": false
+  },
+  "scenes": {
+    "train/hxp": {
+      "matterport_scene_id": "HxpKQynjfin",
+      "source_frames": 792,
+      "selected_frames": 624,
+      "selected_fraction": 0.7878787878787878,
+      "selected_frame_ids_sha256": "e6639e7bd16eb7b666a6f22f41ee17ec50a2ce8d8b841427ad489126013bd18b",
+      "individual_failure_counts": {
+        "sparse_gt": 52,
+        "low_bim_hit": 99,
+        "camera_outside_bim_aabb": 162
+      },
+      "failure_intersections": {
+        "camera_outside_bim_aabb": 58,
+        "low_bim_hit;camera_outside_bim_aabb": 58,
+        "pass": 624,
+        "sparse_gt": 6,
+        "sparse_gt;camera_outside_bim_aabb": 5,
+        "sparse_gt;low_bim_hit;camera_outside_bim_aabb": 41
+      },
+      "gt_valid_fraction_quantiles": {
+        "min": 0.0,
+        "p05": 0.05505794525146485,
+        "p25": 0.5425401687622071,
+        "median": 0.8611068725585938,
+        "p75": 0.9279193878173828,
+        "p95": 0.9711496353149413,
+        "max": 0.9965362548828125
+      },
+      "bim_hit_fraction_quantiles": {
+        "min": 0.0,
+        "p05": 0.0,
+        "p25": 1.0,
+        "median": 1.0,
+        "p75": 1.0,
+        "p95": 1.0,
+        "max": 1.0
+      },
+      "bim_hit_fraction_inside_aabb_quantiles": {
+        "min": 1.0,
+        "p05": 1.0,
+        "p25": 1.0,
+        "median": 1.0,
+        "p75": 1.0,
+        "p95": 1.0,
+        "max": 1.0
+      },
+      "mesh": {
+        "wall_filled": true,
+        "vertices": 2112,
+        "triangles": 3788,
+        "aabb_min": [
+          -1.0689999914169313,
+          -5.39000009059906,
+          -0.30000041484832773
+        ],
+        "aabb_max": [
+          4.827000274658203,
+          1.4571176910400387,
+          2.4600001716613766
+        ]
+      }
+    },
+    "train/759": {
+      "matterport_scene_id": "759xd9YjKW5",
+      "source_frames": 1098,
+      "selected_frames": 518,
+      "selected_fraction": 0.47176684881602915,
+      "selected_frame_ids_sha256": "d76fd7ed7b5d9b8a6bf882004c990b214e75877349357851d84e4a1b1a01c21e",
+      "individual_failure_counts": {
+        "sparse_gt": 10,
+        "low_bim_hit": 393,
+        "camera_outside_bim_aabb": 522
+      },
+      "failure_intersections": {
+        "camera_outside_bim_aabb": 184,
+        "low_bim_hit": 57,
+        "low_bim_hit;camera_outside_bim_aabb": 329,
+        "pass": 518,
+        "sparse_gt": 1,
+        "sparse_gt;camera_outside_bim_aabb": 2,
+        "sparse_gt;low_bim_hit;camera_outside_bim_aabb": 7
+      },
+      "gt_valid_fraction_quantiles": {
+        "min": 0.0020172119140625,
+        "p05": 0.48830963134765626,
+        "p25": 0.8379262924194336,
+        "median": 0.9215778350830078,
+        "p75": 0.9468801498413086,
+        "p95": 0.980102653503418,
+        "max": 0.9962966918945313
+      },
+      "bim_hit_fraction_quantiles": {
+        "min": 0.0,
+        "p05": 0.0,
+        "p25": 0.0,
+        "median": 0.6394679998436157,
+        "p75": 1.0,
+        "p95": 1.0,
+        "max": 1.0
+      },
+      "bim_hit_fraction_inside_aabb_quantiles": {
+        "min": 0.0,
+        "p05": 0.009523565173195716,
+        "p25": 0.9064919071076707,
+        "median": 1.0,
+        "p75": 1.0,
+        "p95": 1.0,
+        "max": 1.0
+      },
+      "mesh": {
+        "wall_filled": true,
+        "vertices": 15945,
+        "triangles": 29890,
+        "aabb_min": [
+          -14.311727714538574,
+          -13.997814979553223,
+          -0.3100006246566773
+        ],
+        "aabb_max": [
+          1.8017595291137694,
+          12.27331844329834,
+          3.2803824281692506
+        ]
+      }
+    },
+    "train/1px": {
+      "matterport_scene_id": "1pXnuDYAj8r",
+      "source_frames": 1710,
+      "selected_frames": 793,
+      "selected_fraction": 0.4637426900584795,
+      "selected_frame_ids_sha256": "91e589da309b4c3eca24e88667e8c31ceab29fee9a151698d41977beea41e13d",
+      "individual_failure_counts": {
+        "sparse_gt": 11,
+        "low_bim_hit": 505,
+        "camera_outside_bim_aabb": 900
+      },
+      "failure_intersections": {
+        "camera_outside_bim_aabb": 409,
+        "low_bim_hit": 16,
+        "low_bim_hit;camera_outside_bim_aabb": 481,
+        "pass": 793,
+        "sparse_gt": 1,
+        "sparse_gt;camera_outside_bim_aabb": 2,
+        "sparse_gt;low_bim_hit;camera_outside_bim_aabb": 8
+      },
+      "gt_valid_fraction_quantiles": {
+        "min": 0.0,
+        "p05": 0.636260986328125,
+        "p25": 0.8857719421386718,
+        "median": 0.9332992553710937,
+        "p75": 0.959501075744629,
+        "p95": 0.9901671981811523,
+        "max": 0.9995574951171875
+      },
+      "bim_hit_fraction_quantiles": {
+        "min": 0.0,
+        "p05": 0.0,
+        "p25": 0.09159727109234499,
+        "median": 0.8732431190867151,
+        "p75": 1.0,
+        "p95": 1.0,
+        "max": 1.0
+      },
+      "bim_hit_fraction_inside_aabb_quantiles": {
+        "min": 0.0,
+        "p05": 0.5109476405504731,
+        "p25": 1.0,
+        "median": 1.0,
+        "p75": 1.0,
+        "p95": 1.0,
+        "max": 1.0
+      },
+      "mesh": {
+        "wall_filled": true,
+        "vertices": 4436,
+        "triangles": 8433,
+        "aabb_min": [
+          0.7341785049438485,
+          -13.221203002929688,
+          3.1399994814395904
+        ],
+        "aabb_max": [
+          15.944179496765138,
+          10.486177291870117,
+          6.420000495910644
+        ]
+      }
+    }
+  }
+}

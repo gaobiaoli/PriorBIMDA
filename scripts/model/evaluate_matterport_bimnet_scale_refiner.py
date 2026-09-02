@@ -14,6 +14,7 @@ import argparse
 import csv
 import hashlib
 import importlib.util
+import json
 import math
 import sys
 import time
@@ -49,7 +50,6 @@ SPEC.loader.exec_module(BENCHMARK)
 METRICS = BENCHMARK.METRICS
 LINEAR_MICRO_METRICS = BENCHMARK.LINEAR_MICRO_METRICS
 PREDICTION_NAMES = ("raw", "scale", "scale_low", "final", "oracle_frame_scale")
-EXPECTED_FRAME_SET_SHA256 = "e6639e7bd16eb7b666a6f22f41ee17ec50a2ce8d8b841427ad489126013bd18b"
 
 
 def parse_args() -> argparse.Namespace:
@@ -70,6 +70,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gt-min-valid-fraction", type=float, default=0.10)
     parser.add_argument("--bim-min-hit-fraction", type=float, default=0.20)
     parser.add_argument("--aabb-margin-m", type=float, default=0.0)
+    parser.add_argument(
+        "--selection-audit",
+        type=Path,
+        help="Optional scene-level three-rule audit receipt used to freeze the frame set.",
+    )
+    parser.add_argument(
+        "--evaluate-selected-only",
+        action="store_true",
+        help="Run inference only on frame IDs frozen by the selection-audit companion CSV.",
+    )
     parser.add_argument("--progress-every", type=int, default=100)
     parser.add_argument("--max-frames", type=int)
     parser.add_argument("--no-resume", action="store_true")
@@ -90,6 +100,8 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError("--bim-min-hit-fraction must be in [0, 1]")
     if args.aabb_margin_m < 0:
         raise ValueError("--aabb-margin-m must be non-negative")
+    if args.evaluate_selected_only and args.selection_audit is None:
+        raise ValueError("--evaluate-selected-only requires --selection-audit")
 
 
 def render_bim_geometry(
@@ -461,6 +473,55 @@ def _frame_set_sha256(rows: Iterable[Mapping[str, Any]]) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _expected_selection(
+    args: argparse.Namespace,
+    *,
+    bimnet_key: str,
+    scene_id: str,
+) -> dict[str, Any] | None:
+    if args.selection_audit is None:
+        return None
+    path = args.selection_audit.expanduser().resolve()
+    receipt = json.loads(path.read_text(encoding="utf-8"))
+    scenes = receipt.get("scenes", {})
+    expected = scenes.get(bimnet_key)
+    if expected is None:
+        raise KeyError(f"Selection audit {path} has no scene entry for {bimnet_key!r}")
+    if str(expected["matterport_scene_id"]) != scene_id:
+        raise RuntimeError(
+            f"Selection audit scene mismatch: {expected['matterport_scene_id']} != {scene_id}"
+        )
+    protocol = receipt.get("protocol", {})
+    thresholds = {
+        "gt_min_valid_fraction": float(args.gt_min_valid_fraction),
+        "bim_min_hit_fraction": float(args.bim_min_hit_fraction),
+        "aabb_margin_m": float(args.aabb_margin_m),
+    }
+    for name, actual in thresholds.items():
+        recorded = float(protocol[name])
+        if not math.isclose(actual, recorded, rel_tol=0.0, abs_tol=1e-12):
+            raise RuntimeError(
+                f"Selection audit threshold mismatch for {name}: {recorded} != {actual}"
+            )
+    return dict(expected)
+
+
+def _audited_selected_frame_ids(args: argparse.Namespace, *, bimnet_key: str) -> set[str]:
+    if args.selection_audit is None:
+        raise ValueError("A selection audit is required")
+    csv_path = args.selection_audit.expanduser().resolve().with_suffix(".csv")
+    selected = set()
+    with csv_path.open("r", encoding="utf-8", newline="") as handle:
+        for row in csv.DictReader(handle):
+            if row["bimnet_scene_key"] != bimnet_key:
+                continue
+            if row["selected"].casefold() == "true":
+                selected.add(row["frame_id"])
+    if not selected:
+        raise RuntimeError(f"Selection audit companion {csv_path} selected no {bimnet_key} frames")
+    return selected
+
+
 def build_summary(
     rows: list[dict[str, Any]],
     *,
@@ -473,14 +534,22 @@ def build_summary(
     ok = [row for row in rows if row.get("status") == "ok"]
     valid = [row for row in ok if bool(row.get("three_rule_pass"))]
     frame_sha = _frame_set_sha256(valid)
-    # Fifteen Hxp frames have no positive GT and are expected to be marked as
-    # skipped_bad_gt.  They still count as successfully audited source frames.
-    complete_scene = len(rows) == 792 and not any(row.get("status") == "error" for row in rows)
-    if complete_scene and frame_sha != EXPECTED_FRAME_SET_SHA256:
-        raise RuntimeError(
-            "Three-rule frame set changed: "
-            f"{frame_sha} != expected {EXPECTED_FRAME_SET_SHA256}"
+    expected = _expected_selection(args, bimnet_key=bimnet_key, scene_id=scene_id)
+    if expected is not None:
+        expected_rows = int(
+            expected["selected_frames"] if args.evaluate_selected_only else expected["source_frames"]
         )
+        if len(rows) != expected_rows:
+            raise RuntimeError(
+                f"Incomplete scene evaluation: {len(rows)} != expected {expected_rows}"
+            )
+        if any(row.get("status") == "error" for row in rows):
+            raise RuntimeError("Complete scene evaluation contains error rows")
+        expected_sha = str(expected["selected_frame_ids_sha256"])
+        if frame_sha != expected_sha:
+            raise RuntimeError(
+                f"Three-rule frame set changed: {frame_sha} != expected {expected_sha}"
+            )
     return {
         "schema_version": 1,
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -499,6 +568,9 @@ def build_summary(
             "depth_support": "all finite positive Matterport GT depth",
             "aggregation": "pixel-micro; no scale/affine alignment",
             "gt_is_model_input": False,
+            "inference_scope": (
+                "frozen three-rule frame set" if args.evaluate_selected_only else "all source frames"
+            ),
         },
         "scene": {"matterport_scene_id": scene_id, "bimnet_scene_key": bimnet_key},
         "model": {
@@ -540,10 +612,18 @@ def build_summary(
         },
         "bim": dict(mesh_metadata),
         "selection": {
+            "source_frames": int(expected["source_frames"]) if expected is not None else None,
             "frames": len(valid),
             "frame_ids_sha256": frame_sha,
-            "expected_complete_scene_sha256": EXPECTED_FRAME_SET_SHA256,
-            "matches_expected": frame_sha == EXPECTED_FRAME_SET_SHA256,
+            "audit_receipt": (
+                str(args.selection_audit.expanduser().resolve())
+                if args.selection_audit is not None
+                else None
+            ),
+            "expected_complete_scene_sha256": (
+                str(expected["selected_frame_ids_sha256"]) if expected is not None else None
+            ),
+            "matches_expected": expected is not None,
         },
         "row_counts": {
             "unique_frames": len(rows),
@@ -747,6 +827,13 @@ def main() -> None:
     matterport_dataset = Matterport3DDataset(args.matterport_root)
     matterport_scene = bim_scene.matterport_scene(matterport_dataset)
     frames = list(matterport_scene.frames)
+    if args.evaluate_selected_only:
+        selected_frame_ids = _audited_selected_frame_ids(args, bimnet_key=bim_scene.key)
+        available_frame_ids = {frame.frame_id for frame in frames}
+        missing = selected_frame_ids - available_frame_ids
+        if missing:
+            raise RuntimeError(f"Selection audit contains unavailable frame IDs: {sorted(missing)[:5]}")
+        frames = [frame for frame in frames if frame.frame_id in selected_frame_ids]
     if args.max_frames is not None:
         frames = frames[: args.max_frames]
     wall_filled = not args.no_wall_filled
