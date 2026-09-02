@@ -1,0 +1,14 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_3epoch_full_depth_metric_da3.yaml
+
+# Fair continuous-training control for the former 3+3 staged continuation.
+# Training starts from the official DAv2 initialization and runs one unbroken
+# six-epoch AdamW/cosine schedule. No checkpoint, optimizer reset, or LR change
+# is introduced at epoch 3.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low36_only_6epoch_continuous
+
+train:
+  epochs: 6
+  reset_optimizer_scheduler_on_resume: false
