@@ -1,0 +1,20 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_full_depth_metric_da3.yaml
+
+# Preserve the anchor's post-fusion F36 residual path, but augment C36 from
+# [z_s, |z_s|, M] to [z_s, |z_s|, M, R, G, B]. RGB is clamped to [0,1] and
+# area-pooled to 36x36. Only the adapter input convolution changes 3->32 to
+# 6->32; all later adapter/decoder/loss/training settings remain unchanged.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_rgb6_adapter_32_64_128_decoder_128_64_32
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_rgb6_adapter_32_64_128_decoder_128_64_32
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_rgb6_adapter_32_64_128_decoder_128_64_32
+
+model:
+  dav2_joint_scale_low:
+    calibrated_disagreement_adapter:
+      enabled: true
+      hidden_channels: 32
+      residual_blocks: 3
+      expansion_channels: 64
+      injection: fused_f36
+      include_rgb: true

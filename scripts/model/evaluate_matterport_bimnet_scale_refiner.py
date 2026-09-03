@@ -593,6 +593,13 @@ def build_summary(
             raise RuntimeError(
                 f"Three-rule frame set changed: {frame_sha} != expected {expected_sha}"
             )
+    iterative_geometry_architecture = (
+        "single early-fusion DAv2 global scale + iterative independent geometry "
+        "encoders + native 18/36 Laplacian r_low"
+        if isinstance(model, BIMEarlyFusionDAv2JointScaleLow)
+        and model.iterative_geometry_adapters_enabled
+        else None
+    )
     return {
         "schema_version": 1,
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -622,7 +629,7 @@ def build_summary(
             "config": str(args.config.expanduser().resolve()),
             "checkpoint": str(args.checkpoint.expanduser().resolve()),
             "checkpoint_sha256": BENCHMARK._sha256(args.checkpoint),
-            "architecture": (
+            "architecture": iterative_geometry_architecture or (
                 (
                     "single early-fusion DAv2 native 18x18 direct residual; no global scale"
                     if model.residual_mode == "direct_low18"
@@ -634,10 +641,18 @@ def build_summary(
                                 (
                                     "single early-fusion DAv2 global scale + native 36x36 "
                                     "r_low + calibrated-disagreement adapter + detached "
-                                    "second-pass DINO feature adapter"
+                                    "second-pass DINO "
+                                    f"{model.detached_scale_second_pass_dino_adapter_scope} "
+                                    "feature adapter"
                                     if model.detached_scale_second_pass_dino_adapter_enabled
                                     else "single early-fusion DAv2 global scale + native 36x36 "
-                                    "r_low + calibrated-disagreement adapter"
+                                    "r_low + calibrated-disagreement adapter "
+                                    f"at {model.calibrated_disagreement_adapter_injection}"
+                                    + (
+                                        " with pooled RGB"
+                                        if model.calibrated_disagreement_adapter_include_rgb
+                                        else ""
+                                    )
                                 )
                                 if model.calibrated_disagreement_adapter_enabled
                                 else "single early-fusion DAv2 global scale + native 36x36 r_low"
@@ -844,9 +859,14 @@ def _load_joint_dav2_scale_low_model(
 ) -> BIMEarlyFusionDAv2JointScaleLow:
     expected_architectures = {
         "dav2_early_fusion_joint_global_scale_laplacian_low18_low36",
+        "dav2_early_fusion_joint_global_scale_iterative_independent_geometry18_geometry36_low18_low36",
         "dav2_early_fusion_joint_global_scale_low36",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter",
+        "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_rgb6",
+        "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_projected_p36",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_detached_second_pass_dino_adapter",
+        "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_detached_second_pass_dino_all_dino_tokens_adapter",
+        "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_detached_second_pass_dino_r36_shortcut_adapter",
         "dav2_early_fusion_joint_global_scale_low72",
         "dav2_early_fusion_direct_low18_no_global_scale",
     }
@@ -855,6 +875,7 @@ def _load_joint_dav2_scale_low_model(
     joint = cfg.model.dav2_joint_scale_low
     dav2 = cfg.model.dav2
     disagreement_adapter = joint.get("calibrated_disagreement_adapter", {})
+    iterative_geometry = joint.get("iterative_geometry_adapters", {})
     model = BIMEarlyFusionDAv2JointScaleLow.from_pretrained(
         str(dav2.model_id),
         revision=str(dav2.revision),
@@ -879,6 +900,27 @@ def _load_joint_dav2_scale_low_model(
             if disagreement_adapter.get("expansion_channels") is not None
             else None
         ),
+        calibrated_disagreement_adapter_injection=str(
+            disagreement_adapter.get("injection", "fused_f36")
+        ),
+        calibrated_disagreement_adapter_include_rgb=bool(
+            disagreement_adapter.get("include_rgb", False)
+        ),
+        iterative_geometry_adapters_enabled=bool(
+            iterative_geometry.get("enabled", False)
+        ),
+        iterative_geometry_adapters_hidden_channels=int(
+            iterative_geometry.get("hidden_channels", 32)
+        ),
+        iterative_geometry_adapters_residual_blocks=int(
+            iterative_geometry.get("residual_blocks", 0)
+        ),
+        iterative_geometry_adapters_expansion_channels=(
+            int(iterative_geometry.expansion_channels)
+            if iterative_geometry.get("expansion_channels") is not None
+            else None
+        ),
+        low1_decoder_hidden_channels=joint.get("low1_decoder_hidden_channels"),
         low2_decoder_hidden_channels=joint.get("low2_decoder_hidden_channels"),
         detached_scale_second_pass_dino_adapter_enabled=bool(
             joint.get("detached_scale_second_pass_dino_adapter", {}).get("enabled", False)
@@ -886,6 +928,11 @@ def _load_joint_dav2_scale_low_model(
         detached_scale_second_pass_dino_adapter_hidden_channels=int(
             joint.get("detached_scale_second_pass_dino_adapter", {}).get(
                 "hidden_channels", 64
+            )
+        ),
+        detached_scale_second_pass_dino_adapter_scope=str(
+            joint.get("detached_scale_second_pass_dino_adapter", {}).get(
+                "scope", "all_dino_tokens"
             )
         ),
     )

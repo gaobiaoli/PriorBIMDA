@@ -9,6 +9,7 @@ from bim_priorda3.models import (
     AdapterResidualBlock,
     CalibratedDisagreementAdapter,
     ZeroInitDINOFeatureAdapter,
+    ZeroInitDPTShortcutAdapter,
     build_calibrated_disagreement_condition,
     build_native_residual_head,
     rebuild_bim_condition_with_scaled_prediction,
@@ -74,6 +75,27 @@ def test_disagreement_is_clipped_before_masked_pooling() -> None:
     torch.testing.assert_close(condition[:, 1], torch.tensor([[[0.5]]]))
 
 
+def test_rgb6_condition_appends_raw_area_pooled_rgb() -> None:
+    base = torch.ones((1, 1, 2, 2))
+    bim = torch.full_like(base, 2.0)
+    mask = torch.ones_like(base)
+    rgb = torch.tensor(
+        [[[[0.0, 1.0], [0.5, 0.5]], [[0.2, 0.4], [0.6, 0.8]], [[1.0, 0.0], [1.0, 0.0]]]]
+    )
+
+    condition = build_calibrated_disagreement_condition(
+        base,
+        bim,
+        mask,
+        torch.zeros((1, 1, 1, 1)),
+        (1, 1),
+        rgb=rgb,
+    )
+
+    assert condition.shape == (1, 6, 1, 1)
+    torch.testing.assert_close(condition[:, 3:], rgb.mean(dim=(-2, -1), keepdim=True))
+
+
 def test_calibrated_condition_stops_residual_gradient_into_global_scale() -> None:
     base = torch.ones((1, 1, 2, 2))
     bim = torch.full((1, 1, 2, 2), 2.0, requires_grad=True)
@@ -94,6 +116,30 @@ def test_calibrated_condition_stops_residual_gradient_into_global_scale() -> Non
 
     assert bim_gradient is not None
     assert scale_gradient is None
+
+
+def test_iterative_r36_condition_uses_and_detaches_r18_prediction() -> None:
+    base = torch.ones((1, 1, 2, 2))
+    log_scale = torch.full((1, 1, 1, 1), math.log(2.0), requires_grad=True)
+    r18 = torch.tensor(
+        [[[[math.log(1.5), 0.0], [math.log(0.5), math.log(2.0)]]]],
+        requires_grad=True,
+    )
+    bim = base * torch.exp(log_scale.detach() + r18.detach())
+
+    condition = build_calibrated_disagreement_condition(
+        base,
+        bim,
+        torch.ones_like(base),
+        log_scale,
+        (2, 2),
+        log_residual=r18,
+    )
+
+    torch.testing.assert_close(condition[:, :2], torch.zeros_like(condition[:, :2]))
+    assert not condition.requires_grad
+    assert log_scale.grad is None
+    assert r18.grad is None
 
 
 def test_second_pass_condition_uses_detached_scaled_prediction() -> None:
@@ -179,6 +225,26 @@ def test_progressive_adapter_uses_32_64_128_channels_and_stays_zero() -> None:
     assert sum(parameter.numel() for parameter in adapter.parameters()) == 83_200
 
 
+def test_rgb6_progressive_adapter_changes_only_the_input_projection() -> None:
+    adapter = CalibratedDisagreementAdapter(
+        128,
+        input_channels=6,
+        hidden_channels=32,
+        residual_blocks=3,
+        expansion_channels=64,
+    )
+    condition = torch.randn(2, 6, 36, 36)
+
+    delta = adapter(condition)
+
+    assert adapter.input_projection.weight.shape == (32, 6, 3, 3)
+    assert adapter.expansion_projection is not None
+    assert adapter.expansion_projection.weight.shape == (64, 32, 3, 3)
+    assert adapter.output_projection.weight.shape == (128, 64, 1, 1)
+    assert torch.count_nonzero(delta) == 0
+    assert sum(parameter.numel() for parameter in adapter.parameters()) == 84_064
+
+
 def test_deeper_r36_decoder_uses_128_64_32_1_channels_and_stays_zero() -> None:
     decoder = build_native_residual_head(128, (64, 32))
     feature36 = torch.randn(2, 128, 36, 36)
@@ -208,6 +274,22 @@ def test_shared_second_pass_dino_adapter_is_zero_initialized() -> None:
     assert torch.equal(original_tokens + delta, original_tokens)
     delta.sum().backward()
     assert second_pass_tokens.grad is None
+    assert adapter.output_projection.weight.grad is not None
+
+
+def test_r36_shortcut_adapter_is_spatial_zero_initialized_and_detached() -> None:
+    adapter = ZeroInitDPTShortcutAdapter(128, hidden_channels=64)
+    second_pass_shortcut = torch.randn(2, 128, 36, 36, requires_grad=True)
+    original_shortcut = torch.randn_like(second_pass_shortcut)
+
+    delta = adapter(second_pass_shortcut.detach())
+
+    assert adapter.input_projection.weight.shape == (64, 128, 3, 3)
+    assert adapter.output_projection.weight.shape == (128, 64, 1, 1)
+    assert torch.count_nonzero(delta) == 0
+    assert torch.equal(original_shortcut + delta, original_shortcut)
+    delta.sum().backward()
+    assert second_pass_shortcut.grad is None
     assert adapter.output_projection.weight.grad is not None
 
 
@@ -252,6 +334,80 @@ def test_progressive_adapter_and_decoder_experiment_channels() -> None:
     assert list(joint.low2_decoder_hidden_channels) == [64, 32]
 
 
+def test_projected_p36_experiment_moves_only_the_adapter_injection() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_"
+        "continuous_calibrated_disagreement_adapter_32_64_128_decoder_"
+        "128_64_32_projected_p36_injection_full_depth_metric_da3.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    adapter = joint.calibrated_disagreement_adapter
+    assert adapter.enabled is True
+    assert adapter.hidden_channels == 32
+    assert adapter.expansion_channels == 64
+    assert adapter.residual_blocks == 3
+    assert adapter.injection == "projected_p36"
+    assert list(joint.low2_decoder_hidden_channels) == [64, 32]
+    assert cfg.train.epochs == 6
+
+
+def test_rgb6_experiment_keeps_anchor_post_fusion_path() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_"
+        "continuous_calibrated_disagreement_rgb6_adapter_32_64_128_decoder_"
+        "128_64_32_full_depth_metric_da3.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    adapter = joint.calibrated_disagreement_adapter
+    assert adapter.include_rgb is True
+    assert adapter.injection == "fused_f36"
+    assert adapter.hidden_channels == 32
+    assert adapter.expansion_channels == 64
+    assert adapter.residual_blocks == 3
+    assert list(joint.low2_decoder_hidden_channels) == [64, 32]
+    assert cfg.train.epochs == 6
+
+
+def test_iterative_geometry_experiment_has_two_three_channel_stages() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_dav2_early_fusion_scale_iterative_geometry_"
+        "r18_r36_6epoch_continuous_full_depth_metric_da3.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    geometry = joint.iterative_geometry_adapters
+    assert joint.residual_mode == "low18_low36"
+    assert joint.calibrated_disagreement_adapter.enabled is False
+    assert geometry.enabled is True
+    assert geometry.hidden_channels == 32
+    assert geometry.residual_blocks == 3
+    assert geometry.expansion_channels == 64
+    assert list(joint.low1_decoder_hidden_channels) == [64, 32]
+    assert list(joint.low2_decoder_hidden_channels) == [64, 32]
+    assert cfg.loss.low1_residual_teacher == 0.25
+    assert cfg.loss.low2_residual_teacher == 0.50
+    assert cfg.train.epochs == 6
+
+    geometry18 = CalibratedDisagreementAdapter(
+        128,
+        hidden_channels=geometry.hidden_channels,
+        residual_blocks=geometry.residual_blocks,
+        expansion_channels=geometry.expansion_channels,
+    )
+    geometry36 = CalibratedDisagreementAdapter(
+        128,
+        hidden_channels=geometry.hidden_channels,
+        residual_blocks=geometry.residual_blocks,
+        expansion_channels=geometry.expansion_channels,
+    )
+    assert geometry18 is not geometry36
+    assert geometry18.input_projection.weight.data_ptr() != geometry36.input_projection.weight.data_ptr()
+    assert geometry18.input_projection.in_channels == 3
+    assert geometry36.input_projection.in_channels == 3
+
+
 def test_second_pass_adapter_experiment_changes_only_the_requested_switch() -> None:
     cfg = load_config(
         "configs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_"
@@ -266,4 +422,22 @@ def test_second_pass_adapter_experiment_changes_only_the_requested_switch() -> N
     assert joint.calibrated_disagreement_adapter.hidden_channels == 32
     assert joint.calibrated_disagreement_adapter.expansion_channels == 64
     assert joint.calibrated_disagreement_adapter.residual_blocks == 3
+    assert cfg.train.epochs == 6
+
+
+def test_second_pass_r36_shortcut_experiment_is_spatially_scoped() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_"
+        "continuous_calibrated_disagreement_adapter_32_64_128_decoder_"
+        "128_64_32_detached_second_pass_r36_shortcut_adapter_"
+        "full_depth_metric_da3.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    second_pass = joint.detached_scale_second_pass_dino_adapter
+    assert second_pass.enabled is True
+    assert second_pass.hidden_channels == 64
+    assert second_pass.scope == "r36_shortcut"
+    assert joint.residual_mode == "low36_only"
+    assert list(joint.low2_decoder_hidden_channels) == [64, 32]
     assert cfg.train.epochs == 6

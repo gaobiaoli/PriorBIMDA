@@ -1,0 +1,18 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_full_depth_metric_da3.yaml
+
+# Pass 1 remains the original RGB+BIM early-fusion DINO+DPT path. Detached c
+# rebuilds only the BIM disagreement channel for pass 2 through the same DINO.
+# Only pass-2 stage 2 is mapped to the native 36x36 lateral shortcut, fully
+# detached, adapted by 128->64->128 (zero-init), and added to the original
+# fusion36 shortcut. F18 and every other DINO/DPT shortcut remain unchanged.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_detached_second_pass_r36_shortcut_adapter
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_detached_second_pass_r36_shortcut_adapter
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_detached_second_pass_r36_shortcut_adapter
+
+model:
+  dav2_joint_scale_low:
+    detached_scale_second_pass_dino_adapter:
+      enabled: true
+      hidden_channels: 64
+      scope: r36_shortcut

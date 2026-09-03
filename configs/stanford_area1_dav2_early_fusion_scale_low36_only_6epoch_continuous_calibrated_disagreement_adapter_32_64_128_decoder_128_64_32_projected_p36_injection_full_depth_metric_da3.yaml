@@ -1,0 +1,20 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_full_depth_metric_da3.yaml
+
+# Move the existing calibrated-disagreement adapter from post-fusion F36 to
+# the DINO/DPT lateral feature P36 before fusion36.residual_layer1:
+#   P36' = P36 + A(C36)
+#   F36  = Fuse36(Up(F18), P36')
+# Adapter capacity, C36, decoder, losses, data, and schedule are unchanged.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_projected_p36_injection
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_projected_p36_injection
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_projected_p36_injection
+
+model:
+  dav2_joint_scale_low:
+    calibrated_disagreement_adapter:
+      enabled: true
+      hidden_channels: 32
+      residual_blocks: 3
+      expansion_channels: 64
+      injection: projected_p36
