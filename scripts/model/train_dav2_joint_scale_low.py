@@ -104,7 +104,13 @@ def evaluate(
                 torch.cuda.synchronize()
             started = time.perf_counter()
             with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=amp):
-                output = model(batch["rgb"], condition, batch["base_depth"])
+                output = model(
+                    batch["rgb"],
+                    condition,
+                    batch["base_depth"],
+                    bim_depth=batch["bim_depth"],
+                    bim_valid=batch["bim_valid"],
+                )
             if device.type == "cuda":
                 torch.cuda.synchronize()
             seconds += time.perf_counter() - started
@@ -230,6 +236,7 @@ def main() -> None:
 
     official_path, model_id, revision = resolve_checkpoint(cfg)
     joint = cfg.model.dav2_joint_scale_low
+    disagreement_adapter = joint.get("calibrated_disagreement_adapter", {})
     model = BIMEarlyFusionDAv2JointScaleLow.from_pretrained(
         model_id,
         revision=revision,
@@ -242,6 +249,10 @@ def main() -> None:
         max_low2_log_residual=float(joint.max_low2_log_residual),
         output_max_depth_m=float(cfg.model.output_max_depth_m),
         residual_mode=str(getattr(joint, "residual_mode", "low18_low36")),
+        calibrated_disagreement_adapter_enabled=bool(disagreement_adapter.get("enabled", False)),
+        calibrated_disagreement_adapter_hidden_channels=int(
+            disagreement_adapter.get("hidden_channels", 32)
+        ),
     ).to(device)
     initialization = model.initialization_audit(official_path)
     if bool(cfg.train.gradient_checkpointing):
@@ -279,6 +290,8 @@ def main() -> None:
             audit_batch["rgb"],
             audit_condition,
             audit_batch["base_depth"],
+            bim_depth=audit_batch["bim_depth"],
+            bim_valid=audit_batch["bim_valid"],
         )
     initialization["native_feature_shapes"] = audit_output["native_feature_shapes"]
     initialization["native_shapes_match"] = initialization["native_feature_shapes"] == [
@@ -393,9 +406,7 @@ def main() -> None:
     condition_dropout_cfg = cfg.train.augment.get("bim_condition_dropout", {})
     condition_dropout_enabled = bool(condition_dropout_cfg.get("enabled", False))
     condition_dropout_probability = (
-        float(condition_dropout_cfg.get("probability", 0.15))
-        if condition_dropout_enabled
-        else 0.0
+        float(condition_dropout_cfg.get("probability", 0.15)) if condition_dropout_enabled else 0.0
     )
     # Validate once before training rather than discovering a malformed config
     # after the first expensive model forward.
@@ -436,12 +447,10 @@ def main() -> None:
         epoch_started = time.perf_counter()
         for batch_index, raw_batch in enumerate(train_loader, start=1):
             batch = selected_batch(raw_batch, device)
-            batch, augmentation_log_q, augmentation_applied = (
-                apply_da3_global_scale_perturbation(
-                    batch,
-                    probability=perturb_probability,
-                    log_range=perturb_log_range,
-                )
+            batch, augmentation_log_q, augmentation_applied = apply_da3_global_scale_perturbation(
+                batch,
+                probability=perturb_probability,
+                log_range=perturb_log_range,
             )
             condition = build_bim_condition(
                 batch,
@@ -459,7 +468,19 @@ def main() -> None:
                 min_support=oracle_min_support,
             )
             with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=amp):
-                output = model(batch["rgb"], condition, batch["base_depth"])
+                adapter_bim_valid = batch["bim_valid"]
+                if condition_dropout_enabled:
+                    available = (~condition_dropout_mask).view(-1, 1, 1, 1)
+                    adapter_bim_valid = adapter_bim_valid * available.to(
+                        dtype=adapter_bim_valid.dtype
+                    )
+                output = model(
+                    batch["rgb"],
+                    condition,
+                    batch["base_depth"],
+                    bim_depth=batch["bim_depth"],
+                    bim_valid=adapter_bim_valid,
+                )
                 equivariance_error = None
                 if equivariance_probability > 0 and equivariance_log_range > 0:
                     selected = (
@@ -584,7 +605,11 @@ def main() -> None:
                     "dav2_early_fusion_joint_global_scale_low72"
                     if model.residual_mode == "low72_only"
                     else (
-                        "dav2_early_fusion_joint_global_scale_low36"
+                        (
+                            "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter"
+                            if model.calibrated_disagreement_adapter_enabled
+                            else "dav2_early_fusion_joint_global_scale_low36"
+                        )
                         if model.residual_mode == "low36_only"
                         else "dav2_early_fusion_joint_global_scale_laplacian_low18_low36"
                     )

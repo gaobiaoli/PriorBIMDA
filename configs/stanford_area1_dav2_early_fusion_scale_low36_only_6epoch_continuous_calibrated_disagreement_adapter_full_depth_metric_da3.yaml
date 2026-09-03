@@ -1,0 +1,18 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_local_retrain_full_depth_metric_da3.yaml
+
+# Zero-initialized native-F36 adapter experiment. The adapter receives only:
+#   z_s = log(D_BIM) - log(D_DA3) - predicted_log_scale,
+#   |z_s|,
+#   BIM validity/support M.
+# No RGB, raw depth, geometry, edge, normals, or explicit scale channels are
+# added at this stage.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter
+
+model:
+  dav2_joint_scale_low:
+    calibrated_disagreement_adapter:
+      enabled: true
+      hidden_channels: 32

@@ -12,6 +12,81 @@ from torch.nn import functional
 from .bim_early_fusion_dav2 import BIMEarlyFusionDepthAnythingV2
 
 
+class CalibratedDisagreementAdapter(nn.Module):
+    """Zero-initialized residual adapter from three condition maps to DPT features."""
+
+    def __init__(self, output_channels: int, *, hidden_channels: int = 32) -> None:
+        super().__init__()
+        if output_channels < 1 or hidden_channels < 1:
+            raise ValueError("Adapter channel counts must be positive")
+        self.input_projection = nn.Conv2d(3, hidden_channels, kernel_size=3, padding=1)
+        self.activation = nn.GELU()
+        self.output_projection = nn.Conv2d(hidden_channels, output_channels, kernel_size=1)
+        nn.init.kaiming_normal_(self.input_projection.weight, nonlinearity="relu")
+        nn.init.zeros_(self.input_projection.bias)
+        # This is the identity-preserving part of the adapter: at initialization
+        # F36 + A(C36) is bitwise F36 for every possible condition.
+        nn.init.zeros_(self.output_projection.weight)
+        nn.init.zeros_(self.output_projection.bias)
+
+    def forward(self, condition: torch.Tensor) -> torch.Tensor:
+        if condition.ndim != 4 or condition.shape[1] != 3:
+            raise ValueError("Calibrated disagreement condition must have shape [B,3,H,W]")
+        return self.output_projection(self.activation(self.input_projection(condition)))
+
+
+def build_calibrated_disagreement_condition(
+    base_depth: torch.Tensor,
+    bim_depth: torch.Tensor,
+    bim_valid: torch.Tensor,
+    log_scale: torch.Tensor,
+    output_size: tuple[int, int],
+) -> torch.Tensor:
+    """Build C=[z_s, |z_s|, M] at a native DPT feature resolution.
+
+    ``z_s = log(D_BIM) - log(D_DA3) - c`` is evaluated at full image
+    resolution before mask-aware area pooling. The mask channel is the BIM hit
+    fraction in each output cell, rather than a nearest-neighbour binary mask.
+    No disagreement clipping or normalization is applied.
+    """
+
+    if base_depth.ndim != 4 or base_depth.shape[1] != 1:
+        raise ValueError("base_depth must have shape [B,1,H,W]")
+    if bim_depth.shape != base_depth.shape or bim_valid.shape != base_depth.shape:
+        raise ValueError("DA3 depth, BIM depth, and BIM mask must have identical shapes")
+    if log_scale.shape != (base_depth.shape[0], 1, 1, 1):
+        raise ValueError("log_scale must have shape [B,1,1,1]")
+    if len(output_size) != 2 or min(output_size) < 1:
+        raise ValueError("output_size must contain two positive dimensions")
+
+    base = base_depth.float()
+    bim = bim_depth.float()
+    valid = (
+        (bim_valid > 0.5)
+        & torch.isfinite(base)
+        & torch.isfinite(bim)
+        & (base > 1e-3)
+        & (bim > 1e-3)
+    )
+    support = valid.float()
+    disagreement = (bim.clamp_min(1e-3).log() - base.clamp_min(1e-3).log()) - log_scale.float()
+    pooled_support = functional.adaptive_avg_pool2d(support, output_size)
+    denominator = pooled_support.clamp_min(torch.finfo(disagreement.dtype).eps)
+
+    def masked_pool(value: torch.Tensor) -> torch.Tensor:
+        pooled = functional.adaptive_avg_pool2d(value * support, output_size)
+        return torch.where(pooled_support > 0, pooled / denominator, torch.zeros_like(pooled))
+
+    return torch.cat(
+        (
+            masked_pool(disagreement),
+            masked_pool(disagreement.abs()),
+            pooled_support,
+        ),
+        dim=1,
+    )
+
+
 class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
     """One early-fusion DAv2 encoder for global scale and/or native residuals.
 
@@ -35,6 +110,8 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         max_low2_log_residual: float = 0.10,
         output_max_depth_m: float = 128.0,
         residual_mode: str = "low18_low36",
+        calibrated_disagreement_adapter_enabled: bool = False,
+        calibrated_disagreement_adapter_hidden_channels: int = 32,
     ) -> None:
         super().__init__(pretrained_model)
         if regression_hidden_size < 1 or residual_hidden_channels < 1:
@@ -59,6 +136,11 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         self.max_low2_log_residual = float(max_low2_log_residual)
         self.output_max_depth_m = float(output_max_depth_m)
         self.residual_mode = str(residual_mode)
+        self.calibrated_disagreement_adapter_enabled = bool(calibrated_disagreement_adapter_enabled)
+        if self.calibrated_disagreement_adapter_enabled and self.residual_mode != "low36_only":
+            raise ValueError(
+                "The calibrated disagreement adapter requires a native 36x36 residual head"
+            )
         self.scale_head = nn.Sequential(
             nn.LayerNorm(hidden_size * 2),
             nn.Linear(hidden_size * 2, int(regression_hidden_size)),
@@ -85,6 +167,14 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
 
         self.low1_head = residual_head()
         self.low2_head = residual_head()
+        self.calibrated_disagreement_adapter = (
+            CalibratedDisagreementAdapter(
+                fusion_channels,
+                hidden_channels=int(calibrated_disagreement_adapter_hidden_channels),
+            )
+            if self.calibrated_disagreement_adapter_enabled
+            else None
+        )
         if self.residual_mode in {"low36_only", "low72_only"}:
             for parameter in self.low1_head.parameters():
                 parameter.requires_grad_(False)
@@ -214,6 +304,9 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         rgb: torch.Tensor,
         bim_condition: torch.Tensor,
         base_depth: torch.Tensor,
+        *,
+        bim_depth: torch.Tensor | None = None,
+        bim_valid: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor | list[list[int]]]:
         if base_depth.ndim != 4 or base_depth.shape[1] != 1:
             raise ValueError("base_depth must have shape [B,1,H,W]")
@@ -241,6 +334,25 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
             low2_native = torch.zeros_like(low1_native)
         else:
             low2_feature = feature72 if self.residual_mode == "low72_only" else feature36
+            calibrated_condition = None
+            calibrated_delta = None
+            if self.calibrated_disagreement_adapter is not None:
+                if bim_depth is None or bim_valid is None:
+                    raise ValueError(
+                        "The calibrated disagreement adapter requires BIM depth and BIM mask"
+                    )
+                calibrated_condition = build_calibrated_disagreement_condition(
+                    base_depth,
+                    bim_depth,
+                    bim_valid,
+                    log_scale,
+                    tuple(feature36.shape[-2:]),
+                )
+                adapter_dtype = self.calibrated_disagreement_adapter.input_projection.weight.dtype
+                calibrated_delta = self.calibrated_disagreement_adapter(
+                    calibrated_condition.to(dtype=adapter_dtype)
+                ).to(dtype=feature36.dtype)
+                low2_feature = feature36 + calibrated_delta
             low2_native = self.max_low2_log_residual * torch.tanh(self.low2_head(low2_feature))
         low1_full = functional.interpolate(
             low1_native,
@@ -256,7 +368,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         )
         low_full = low1_full.float() + low2_full.float()
         depth = (scaled_depth * torch.exp(low_full)).clamp(1e-3, self.output_max_depth_m)
-        return {
+        result: dict[str, torch.Tensor | list[list[int]]] = {
             "depth": depth,
             "scaled_depth": scaled_depth,
             "scale": scale,
@@ -276,6 +388,11 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 (low1_native if self.residual_mode == "direct_low18" else low2_native).shape[-2:]
             ),
         }
+        if self.calibrated_disagreement_adapter is not None:
+            assert calibrated_condition is not None and calibrated_delta is not None
+            result["calibrated_disagreement_condition_native"] = calibrated_condition
+            result["calibrated_disagreement_adapter_delta_native"] = calibrated_delta
+        return result
 
     def optimizer_parameter_groups(
         self,
@@ -321,6 +438,14 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 "lr": residual_head_lr,
             },
         ]
+        if self.calibrated_disagreement_adapter is not None:
+            groups.append(
+                {
+                    "name": "calibrated_disagreement_adapter",
+                    "params": trainable(self.calibrated_disagreement_adapter.parameters()),
+                    "lr": residual_head_lr,
+                }
+            )
         parameter_ids = [id(parameter) for group in groups for parameter in group["params"]]
         if len(parameter_ids) != len(set(parameter_ids)):
             raise RuntimeError("Optimizer parameter groups overlap")
@@ -366,6 +491,19 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 torch.count_nonzero(self.low2_head[-1].weight).item() == 0
                 and torch.count_nonzero(self.low2_head[-1].bias).item() == 0
             ),
+            "calibrated_disagreement_adapter_zero": bool(
+                self.calibrated_disagreement_adapter is None
+                or (
+                    torch.count_nonzero(
+                        self.calibrated_disagreement_adapter.output_projection.weight
+                    ).item()
+                    == 0
+                    and torch.count_nonzero(
+                        self.calibrated_disagreement_adapter.output_projection.bias
+                    ).item()
+                    == 0
+                )
+            ),
         }
         result["all_pass"] = all(
             bool(result[key])
@@ -374,6 +512,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 "bim_projection_zero",
                 "low1_output_zero",
                 "low2_output_zero",
+                "calibrated_disagreement_adapter_zero",
             )
         )
         return result

@@ -8,6 +8,8 @@ from .bim_early_fusion_dav2_scale import (
 )
 from .dav2_joint_scale_low import (
     BIMEarlyFusionDAv2JointScaleLow,
+    CalibratedDisagreementAdapter,
+    build_calibrated_disagreement_condition,
     joint_scale_low_loss,
     masked_area_downsample,
 )
@@ -29,13 +31,15 @@ __all__ = [
     "BIMEarlyFusionDAv2ScaleRegressor",
     "BIMEarlyFusionDepthAnythingV2",
     "BIMPriorDA3",
+    "CalibratedDisagreementAdapter",
     "FrozenHuberDAv2LowRefiner",
     "FrozenHuberPriorDAV11BIM",
     "build_bim_condition",
+    "build_calibrated_disagreement_condition",
     "build_priorda_v11_bim_condition",
     "effective_attention_top_prior",
-    "local_huber_log_scale_field",
     "joint_scale_low_loss",
+    "local_huber_log_scale_field",
     "masked_area_downsample",
     "scale_regression_loss",
 ]

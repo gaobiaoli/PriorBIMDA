@@ -319,7 +319,13 @@ def evaluate_frame(
                 bim_log_mean=bim_log_mean,
                 bim_log_std=bim_log_std,
             )
-            output = model(batch["rgb"], condition, batch["base_depth"])
+            output = model(
+                batch["rgb"],
+                condition,
+                batch["base_depth"],
+                bim_depth=batch["bim_depth"],
+                bim_valid=batch["bim_valid"],
+            )
         else:
             output = model(batch)
     if torch.cuda.is_available():
@@ -624,7 +630,12 @@ def build_summary(
                         "single early-fusion DAv2 global scale + native 72x72 r_low"
                         if model.residual_mode == "low72_only"
                         else (
-                            "single early-fusion DAv2 global scale + native 36x36 r_low"
+                            (
+                                "single early-fusion DAv2 global scale + native 36x36 "
+                                "r_low + calibrated-disagreement adapter"
+                                if model.calibrated_disagreement_adapter_enabled
+                                else "single early-fusion DAv2 global scale + native 36x36 r_low"
+                            )
                             if model.residual_mode == "low36_only"
                             else "single early-fusion DAv2 global scale + native 18/36 Laplacian r_low"
                         )
@@ -828,6 +839,7 @@ def _load_joint_dav2_scale_low_model(
     expected_architectures = {
         "dav2_early_fusion_joint_global_scale_laplacian_low18_low36",
         "dav2_early_fusion_joint_global_scale_low36",
+        "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter",
         "dav2_early_fusion_joint_global_scale_low72",
         "dav2_early_fusion_direct_low18_no_global_scale",
     }
@@ -835,6 +847,7 @@ def _load_joint_dav2_scale_low_model(
         raise RuntimeError("Checkpoint is not the registered joint DAv2 scale+r_low model")
     joint = cfg.model.dav2_joint_scale_low
     dav2 = cfg.model.dav2
+    disagreement_adapter = joint.get("calibrated_disagreement_adapter", {})
     model = BIMEarlyFusionDAv2JointScaleLow.from_pretrained(
         str(dav2.model_id),
         revision=str(dav2.revision),
@@ -847,6 +860,10 @@ def _load_joint_dav2_scale_low_model(
         max_low2_log_residual=float(joint.max_low2_log_residual),
         output_max_depth_m=float(cfg.model.output_max_depth_m),
         residual_mode=str(getattr(joint, "residual_mode", "low18_low36")),
+        calibrated_disagreement_adapter_enabled=bool(disagreement_adapter.get("enabled", False)),
+        calibrated_disagreement_adapter_hidden_channels=int(
+            disagreement_adapter.get("hidden_channels", 32)
+        ),
     )
     model.load_state_dict(checkpoint["model"], strict=True)
     return model

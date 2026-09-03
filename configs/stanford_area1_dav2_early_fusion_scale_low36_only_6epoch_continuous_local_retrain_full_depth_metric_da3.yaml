@@ -1,0 +1,13 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_full_depth_metric_da3.yaml
+
+# Local full reproduction of the original continuous scale+r36 baseline.
+# Only the artifact destinations and prepared-data fingerprint differ from the
+# pulled baseline; model, losses, augmentations, optimizer, and schedule remain
+# inherited unchanged.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_local_retrain
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_local_retrain
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low36_only_6epoch_continuous_local_retrain
+
+data:
+  split_fingerprint_sha256: 87dbde4e9e454c9dca1e2f38d86fd339ae45b401145b29324ada4174d35043f7
