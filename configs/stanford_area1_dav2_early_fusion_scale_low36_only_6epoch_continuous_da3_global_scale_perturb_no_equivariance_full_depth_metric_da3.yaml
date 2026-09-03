@@ -1,0 +1,16 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_da3_global_scale_perturb_full_depth_metric_da3.yaml
+
+# Isolate the main-path DA3 global-scale perturbation by disabling the older
+# auxiliary scale-equivariance second forward and its loss. The inherited
+# main-path augmentation remains q=exp(epsilon), epsilon~U(-0.20, 0.20), p=1.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_da3_global_scale_perturb_no_equivariance
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_da3_global_scale_perturb_no_equivariance
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low36_only_6epoch_continuous_da3_global_scale_perturb_no_equivariance
+
+model:
+  dav2_joint_scale_low:
+    equivariance_probability: 0.0
+
+loss:
+  attention_scale_equivariance: 0.0
