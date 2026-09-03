@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -12,18 +12,63 @@ from torch.nn import functional
 from .bim_early_fusion_dav2 import BIMEarlyFusionDepthAnythingV2
 
 
+class AdapterResidualBlock(nn.Module):
+    """Spatial residual block in the calibrated-disagreement bottleneck."""
+
+    def __init__(self, channels: int) -> None:
+        super().__init__()
+        if channels < 1:
+            raise ValueError("Residual block channels must be positive")
+        self.conv1 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
+        self.activation = nn.GELU()
+        self.conv2 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
+        for convolution in (self.conv1, self.conv2):
+            nn.init.kaiming_normal_(convolution.weight, nonlinearity="relu")
+            nn.init.zeros_(convolution.bias)
+
+    def forward(self, values: torch.Tensor) -> torch.Tensor:
+        return values + self.conv2(self.activation(self.conv1(values)))
+
+
 class CalibratedDisagreementAdapter(nn.Module):
     """Zero-initialized residual adapter from three condition maps to DPT features."""
 
-    def __init__(self, output_channels: int, *, hidden_channels: int = 32) -> None:
+    def __init__(
+        self,
+        output_channels: int,
+        *,
+        hidden_channels: int = 32,
+        residual_blocks: int = 0,
+        expansion_channels: int | None = None,
+    ) -> None:
         super().__init__()
-        if output_channels < 1 or hidden_channels < 1:
+        if (
+            output_channels < 1
+            or hidden_channels < 1
+            or residual_blocks < 0
+            or (expansion_channels is not None and expansion_channels < 1)
+        ):
             raise ValueError("Adapter channel counts must be positive")
         self.input_projection = nn.Conv2d(3, hidden_channels, kernel_size=3, padding=1)
         self.activation = nn.GELU()
-        self.output_projection = nn.Conv2d(hidden_channels, output_channels, kernel_size=1)
+        self.residual_blocks = nn.ModuleList(
+            AdapterResidualBlock(hidden_channels) for _ in range(residual_blocks)
+        )
+        self.expansion_projection = (
+            nn.Conv2d(hidden_channels, expansion_channels, kernel_size=3, padding=1)
+            if expansion_channels is not None
+            else None
+        )
+        self.expansion_activation = nn.GELU()
+        output_input_channels = (
+            int(expansion_channels) if expansion_channels is not None else hidden_channels
+        )
+        self.output_projection = nn.Conv2d(output_input_channels, output_channels, kernel_size=1)
         nn.init.kaiming_normal_(self.input_projection.weight, nonlinearity="relu")
         nn.init.zeros_(self.input_projection.bias)
+        if self.expansion_projection is not None:
+            nn.init.kaiming_normal_(self.expansion_projection.weight, nonlinearity="relu")
+            nn.init.zeros_(self.expansion_projection.bias)
         # This is the identity-preserving part of the adapter: at initialization
         # F36 + A(C36) is bitwise F36 for every possible condition.
         nn.init.zeros_(self.output_projection.weight)
@@ -32,7 +77,36 @@ class CalibratedDisagreementAdapter(nn.Module):
     def forward(self, condition: torch.Tensor) -> torch.Tensor:
         if condition.ndim != 4 or condition.shape[1] != 3:
             raise ValueError("Calibrated disagreement condition must have shape [B,3,H,W]")
-        return self.output_projection(self.activation(self.input_projection(condition)))
+        values = self.activation(self.input_projection(condition))
+        for block in self.residual_blocks:
+            values = block(values)
+        if self.expansion_projection is not None:
+            values = self.expansion_activation(self.expansion_projection(values))
+        return self.output_projection(values)
+
+
+def build_native_residual_head(
+    input_channels: int,
+    hidden_channels: Sequence[int],
+) -> nn.Sequential:
+    """Build a native-grid residual decoder with a zero-output initialization."""
+
+    widths = tuple(int(channels) for channels in hidden_channels)
+    if input_channels < 1 or not widths or min(widths) < 1:
+        raise ValueError("Residual decoder channel counts must be positive")
+    layers: list[nn.Module] = []
+    current_channels = input_channels
+    for channels in widths:
+        convolution = nn.Conv2d(current_channels, channels, kernel_size=3, padding=1)
+        nn.init.kaiming_normal_(convolution.weight, nonlinearity="relu")
+        nn.init.zeros_(convolution.bias)
+        layers.extend((convolution, nn.GELU()))
+        current_channels = channels
+    output = nn.Conv2d(current_channels, 1, kernel_size=1)
+    nn.init.zeros_(output.weight)
+    nn.init.zeros_(output.bias)
+    layers.append(output)
+    return nn.Sequential(*layers)
 
 
 def build_calibrated_disagreement_condition(
@@ -44,10 +118,11 @@ def build_calibrated_disagreement_condition(
 ) -> torch.Tensor:
     """Build C=[z_s, |z_s|, M] at a native DPT feature resolution.
 
-    ``z_s = log(D_BIM) - log(D_DA3) - c`` is evaluated at full image
-    resolution before mask-aware area pooling. The mask channel is the BIM hit
-    fraction in each output cell, rather than a nearest-neighbour binary mask.
-    No disagreement clipping or normalization is applied.
+    ``z_s = log(D_BIM) - log(D_DA3) - stop_gradient(c)`` is evaluated at full
+    image resolution. Before mask-aware area pooling, signed disagreement is
+    normalized by 1.5 and clipped to [-1,1], while its magnitude is normalized
+    by 1.5 and clipped to [0,1]. The mask channel is the BIM hit fraction in
+    each output cell, rather than a nearest-neighbour binary mask.
     """
 
     if base_depth.ndim != 4 or base_depth.shape[1] != 1:
@@ -69,7 +144,10 @@ def build_calibrated_disagreement_condition(
         & (bim > 1e-3)
     )
     support = valid.float()
-    disagreement = (bim.clamp_min(1e-3).log() - base.clamp_min(1e-3).log()) - log_scale.float()
+    calibrated_log_scale = log_scale.detach().float()
+    disagreement = bim.clamp_min(1e-3).log() - base.clamp_min(1e-3).log() - calibrated_log_scale
+    normalized_disagreement = (disagreement / 1.5).clamp(-1.0, 1.0)
+    normalized_magnitude = (disagreement.abs() / 1.5).clamp(0.0, 1.0)
     pooled_support = functional.adaptive_avg_pool2d(support, output_size)
     denominator = pooled_support.clamp_min(torch.finfo(disagreement.dtype).eps)
 
@@ -79,8 +157,8 @@ def build_calibrated_disagreement_condition(
 
     return torch.cat(
         (
-            masked_pool(disagreement),
-            masked_pool(disagreement.abs()),
+            masked_pool(normalized_disagreement),
+            masked_pool(normalized_magnitude),
             pooled_support,
         ),
         dim=1,
@@ -112,6 +190,9 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         residual_mode: str = "low18_low36",
         calibrated_disagreement_adapter_enabled: bool = False,
         calibrated_disagreement_adapter_hidden_channels: int = 32,
+        calibrated_disagreement_adapter_residual_blocks: int = 0,
+        calibrated_disagreement_adapter_expansion_channels: int | None = None,
+        low2_decoder_hidden_channels: Sequence[int] | None = None,
     ) -> None:
         super().__init__(pretrained_model)
         if regression_hidden_size < 1 or residual_hidden_channels < 1:
@@ -153,24 +234,22 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 nn.init.zeros_(module.bias)
         nn.init.normal_(self.scale_head[-1].weight, mean=0.0, std=float(output_weight_std))
 
-        def residual_head() -> nn.Sequential:
-            head = nn.Sequential(
-                nn.Conv2d(fusion_channels, residual_hidden_channels, kernel_size=3, padding=1),
-                nn.GELU(),
-                nn.Conv2d(residual_hidden_channels, 1, kernel_size=1),
-            )
-            nn.init.kaiming_normal_(head[0].weight, nonlinearity="relu")
-            nn.init.zeros_(head[0].bias)
-            nn.init.zeros_(head[-1].weight)
-            nn.init.zeros_(head[-1].bias)
-            return head
-
-        self.low1_head = residual_head()
-        self.low2_head = residual_head()
+        low2_widths = (
+            (residual_hidden_channels,)
+            if low2_decoder_hidden_channels is None
+            else tuple(int(channels) for channels in low2_decoder_hidden_channels)
+        )
+        self.low1_head = build_native_residual_head(
+            fusion_channels,
+            (residual_hidden_channels,),
+        )
+        self.low2_head = build_native_residual_head(fusion_channels, low2_widths)
         self.calibrated_disagreement_adapter = (
             CalibratedDisagreementAdapter(
                 fusion_channels,
                 hidden_channels=int(calibrated_disagreement_adapter_hidden_channels),
+                residual_blocks=int(calibrated_disagreement_adapter_residual_blocks),
+                expansion_channels=calibrated_disagreement_adapter_expansion_channels,
             )
             if self.calibrated_disagreement_adapter_enabled
             else None

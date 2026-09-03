@@ -6,8 +6,10 @@ import torch
 
 from bim_priorda3.config import load_config
 from bim_priorda3.models import (
+    AdapterResidualBlock,
     CalibratedDisagreementAdapter,
     build_calibrated_disagreement_condition,
+    build_native_residual_head,
 )
 
 
@@ -26,8 +28,8 @@ def test_calibrated_disagreement_condition_uses_predicted_global_scale() -> None
         (1, 1),
     )
 
-    torch.testing.assert_close(condition[:, 0], torch.tensor([[[2.0 / 3.0]]]))
-    torch.testing.assert_close(condition[:, 1], torch.tensor([[[4.0 / 3.0]]]))
+    torch.testing.assert_close(condition[:, 0], torch.tensor([[[1.0 / 3.0]]]))
+    torch.testing.assert_close(condition[:, 1], torch.tensor([[[7.0 / 9.0]]]))
     torch.testing.assert_close(condition[:, 2], torch.tensor([[[0.75]]]))
 
 
@@ -44,10 +46,52 @@ def test_calibrated_disagreement_condition_zeros_unsupported_cells() -> None:
         (2, 2),
     )
 
-    expected_z = torch.tensor([[[[math.log(2.0), 0.0], [0.0, math.log(2.0)]]]])
+    normalized_log_two = math.log(2.0) / 1.5
+    expected_z = torch.tensor([[[[normalized_log_two, 0.0], [0.0, normalized_log_two]]]])
     torch.testing.assert_close(condition[:, :1], expected_z)
     torch.testing.assert_close(condition[:, 1:2], expected_z.abs())
     torch.testing.assert_close(condition[:, 2:], mask)
+
+
+def test_disagreement_is_clipped_before_masked_pooling() -> None:
+    base = torch.ones((1, 1, 1, 2))
+    bim = torch.exp(torch.tensor([[[[3.0, 0.0]]]]))
+    mask = torch.ones_like(base)
+
+    condition = build_calibrated_disagreement_condition(
+        base,
+        bim,
+        mask,
+        torch.zeros((1, 1, 1, 1)),
+        (1, 1),
+    )
+
+    # Per-pixel normalized values are [1,0]. Pooling first would incorrectly
+    # produce clip(mean([3,0]) / 1.5) == 1 rather than the expected 0.5.
+    torch.testing.assert_close(condition[:, 0], torch.tensor([[[0.5]]]))
+    torch.testing.assert_close(condition[:, 1], torch.tensor([[[0.5]]]))
+
+
+def test_calibrated_condition_stops_residual_gradient_into_global_scale() -> None:
+    base = torch.ones((1, 1, 2, 2))
+    bim = torch.full((1, 1, 2, 2), 2.0, requires_grad=True)
+    log_scale = torch.zeros((1, 1, 1, 1), requires_grad=True)
+
+    condition = build_calibrated_disagreement_condition(
+        base,
+        bim,
+        torch.ones_like(base),
+        log_scale,
+        (1, 1),
+    )
+    bim_gradient, scale_gradient = torch.autograd.grad(
+        condition[:, :2].sum(),
+        (bim, log_scale),
+        allow_unused=True,
+    )
+
+    assert bim_gradient is not None
+    assert scale_gradient is None
 
 
 def test_zero_initialized_adapter_preserves_f36_exactly() -> None:
@@ -64,6 +108,57 @@ def test_zero_initialized_adapter_preserves_f36_exactly() -> None:
     assert torch.equal(feature36 + delta, feature36)
 
 
+def test_residual_adapter_preserves_f36_exactly_at_zero_initialized_output() -> None:
+    torch.manual_seed(13)
+    adapter = CalibratedDisagreementAdapter(128, hidden_channels=32, residual_blocks=3)
+    condition = torch.randn(2, 3, 36, 36)
+    feature36 = torch.randn(2, 128, 36, 36)
+
+    delta = adapter(condition)
+
+    assert len(adapter.residual_blocks) == 3
+    assert all(isinstance(block, AdapterResidualBlock) for block in adapter.residual_blocks)
+    assert torch.count_nonzero(delta) == 0
+    assert torch.equal(feature36 + delta, feature36)
+    assert sum(parameter.numel() for parameter in adapter.parameters()) == 60_608
+
+
+def test_progressive_adapter_uses_32_64_128_channels_and_stays_zero() -> None:
+    torch.manual_seed(17)
+    adapter = CalibratedDisagreementAdapter(
+        128,
+        hidden_channels=32,
+        residual_blocks=3,
+        expansion_channels=64,
+    )
+    condition = torch.randn(2, 3, 36, 36)
+
+    delta = adapter(condition)
+
+    assert adapter.input_projection.weight.shape == (32, 3, 3, 3)
+    assert adapter.expansion_projection is not None
+    assert adapter.expansion_projection.weight.shape == (64, 32, 3, 3)
+    assert adapter.output_projection.weight.shape == (128, 64, 1, 1)
+    assert torch.count_nonzero(delta) == 0
+    assert sum(parameter.numel() for parameter in adapter.parameters()) == 83_200
+
+
+def test_deeper_r36_decoder_uses_128_64_32_1_channels_and_stays_zero() -> None:
+    decoder = build_native_residual_head(128, (64, 32))
+    feature36 = torch.randn(2, 128, 36, 36)
+
+    residual = decoder(feature36)
+
+    convolutions = [module for module in decoder if isinstance(module, torch.nn.Conv2d)]
+    assert [tuple(module.weight.shape) for module in convolutions] == [
+        (64, 128, 3, 3),
+        (32, 64, 3, 3),
+        (1, 32, 1, 1),
+    ]
+    assert torch.count_nonzero(residual) == 0
+    assert sum(parameter.numel() for parameter in decoder.parameters()) == 92_289
+
+
 def test_adapter_experiment_keeps_only_the_requested_three_channels() -> None:
     cfg = load_config(
         "configs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_"
@@ -76,3 +171,30 @@ def test_adapter_experiment_keeps_only_the_requested_three_channels() -> None:
     assert cfg.model.dav2_joint_scale_low.residual_mode == "low36_only"
     assert cfg.train.augment.get("da3_global_scale_perturbation", {}) == {}
     assert cfg.train.augment.get("bim_condition_dropout", {}) == {}
+
+
+def test_residual_adapter_experiment_adds_three_blocks() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_"
+        "continuous_calibrated_disagreement_adapter_resblocks3_full_depth_metric_da3.yaml"
+    )
+
+    adapter = cfg.model.dav2_joint_scale_low.calibrated_disagreement_adapter
+    assert adapter.enabled is True
+    assert adapter.hidden_channels == 32
+    assert adapter.residual_blocks == 3
+
+
+def test_progressive_adapter_and_decoder_experiment_channels() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_"
+        "continuous_calibrated_disagreement_adapter_32_64_128_decoder_"
+        "128_64_32_full_depth_metric_da3.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    adapter = joint.calibrated_disagreement_adapter
+    assert adapter.hidden_channels == 32
+    assert adapter.expansion_channels == 64
+    assert adapter.residual_blocks == 3
+    assert list(joint.low2_decoder_hidden_channels) == [64, 32]

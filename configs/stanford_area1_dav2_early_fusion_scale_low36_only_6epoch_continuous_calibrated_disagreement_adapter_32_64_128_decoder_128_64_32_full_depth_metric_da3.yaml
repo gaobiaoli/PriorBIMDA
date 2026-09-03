@@ -1,0 +1,22 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_resblocks3_full_depth_metric_da3.yaml
+
+# Progressive calibrated-disagreement adapter and deeper r36 decoder:
+#   C3 -> 32 -> 3x ResBlock(32) -> 64 -> 128 (zero-init) -> add F36
+#   F36' -> 64 -> 32 -> 1 (zero-init output)
+# All data, losses, optimizer settings, and the six-epoch continuous schedule
+# remain inherited from the preceding residual-adapter experiment.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32
+
+model:
+  dav2_joint_scale_low:
+    low2_decoder_hidden_channels:
+      - 64
+      - 32
+    calibrated_disagreement_adapter:
+      enabled: true
+      hidden_channels: 32
+      residual_blocks: 3
+      expansion_channels: 64

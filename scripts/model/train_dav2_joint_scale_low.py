@@ -253,6 +253,15 @@ def main() -> None:
         calibrated_disagreement_adapter_hidden_channels=int(
             disagreement_adapter.get("hidden_channels", 32)
         ),
+        calibrated_disagreement_adapter_residual_blocks=int(
+            disagreement_adapter.get("residual_blocks", 0)
+        ),
+        calibrated_disagreement_adapter_expansion_channels=(
+            int(disagreement_adapter.expansion_channels)
+            if disagreement_adapter.get("expansion_channels") is not None
+            else None
+        ),
+        low2_decoder_hidden_channels=joint.get("low2_decoder_hidden_channels"),
     ).to(device)
     initialization = model.initialization_audit(official_path)
     if bool(cfg.train.gradient_checkpointing):

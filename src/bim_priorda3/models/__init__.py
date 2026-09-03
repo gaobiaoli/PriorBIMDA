@@ -7,9 +7,11 @@ from .bim_early_fusion_dav2_scale import (
     scale_regression_loss,
 )
 from .dav2_joint_scale_low import (
+    AdapterResidualBlock,
     BIMEarlyFusionDAv2JointScaleLow,
     CalibratedDisagreementAdapter,
     build_calibrated_disagreement_condition,
+    build_native_residual_head,
     joint_scale_low_loss,
     masked_area_downsample,
 )
@@ -26,6 +28,7 @@ from .priorda_v11_bim_adapter import (
 from .system import BIMPriorDA3
 
 __all__ = [
+    "AdapterResidualBlock",
     "BIMEarlyFusionDAv2JointScaleLow",
     "BIMEarlyFusionDAv2LowRefiner",
     "BIMEarlyFusionDAv2ScaleRegressor",
@@ -36,6 +39,7 @@ __all__ = [
     "FrozenHuberPriorDAV11BIM",
     "build_bim_condition",
     "build_calibrated_disagreement_condition",
+    "build_native_residual_head",
     "build_priorda_v11_bim_condition",
     "effective_attention_top_prior",
     "joint_scale_low_loss",
