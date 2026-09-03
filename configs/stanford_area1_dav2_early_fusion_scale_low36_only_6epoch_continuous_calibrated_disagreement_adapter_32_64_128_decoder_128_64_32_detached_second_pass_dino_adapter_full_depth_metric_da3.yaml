@@ -1,0 +1,17 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_full_depth_metric_da3.yaml
+
+# Pass 1 uses the existing RGB+BIM early-fusion DINO encoder and predicts c.
+# Detached c calibrates DA3 and rebuilds the BIM disagreement channel. The
+# same RGB+BIM early-fusion encoder runs again, but its four feature maps are
+# fully detached. A shared zero-init token adapter injects their residual into
+# the corresponding original feature maps before the unchanged DPT decoder.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_detached_second_pass_dino_adapter
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_detached_second_pass_dino_adapter
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_detached_second_pass_dino_adapter
+
+model:
+  dav2_joint_scale_low:
+    detached_scale_second_pass_dino_adapter:
+      enabled: true
+      hidden_channels: 64

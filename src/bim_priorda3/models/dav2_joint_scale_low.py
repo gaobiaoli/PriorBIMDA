@@ -85,6 +85,27 @@ class CalibratedDisagreementAdapter(nn.Module):
         return self.output_projection(values)
 
 
+class ZeroInitDINOFeatureAdapter(nn.Module):
+    """Shared bottleneck adapter for detached second-pass DINO tokens."""
+
+    def __init__(self, channels: int, *, hidden_channels: int = 64) -> None:
+        super().__init__()
+        if channels < 1 or hidden_channels < 1:
+            raise ValueError("DINO feature adapter channel counts must be positive")
+        self.input_projection = nn.Linear(channels, hidden_channels)
+        self.activation = nn.GELU()
+        self.output_projection = nn.Linear(hidden_channels, channels)
+        nn.init.kaiming_normal_(self.input_projection.weight, nonlinearity="relu")
+        nn.init.zeros_(self.input_projection.bias)
+        nn.init.zeros_(self.output_projection.weight)
+        nn.init.zeros_(self.output_projection.bias)
+
+    def forward(self, tokens: torch.Tensor) -> torch.Tensor:
+        if tokens.ndim != 3 or tokens.shape[-1] != self.input_projection.in_features:
+            raise ValueError("DINO tokens must have shape [B,N,C]")
+        return self.output_projection(self.activation(self.input_projection(tokens)))
+
+
 def build_native_residual_head(
     input_channels: int,
     hidden_channels: Sequence[int],
@@ -165,6 +186,63 @@ def build_calibrated_disagreement_condition(
     )
 
 
+def rebuild_bim_condition_with_scaled_prediction(
+    bim_condition: torch.Tensor,
+    base_depth: torch.Tensor,
+    bim_depth: torch.Tensor,
+    log_scale: torch.Tensor,
+    *,
+    disagreement_clip: float = 1.5,
+) -> torch.Tensor:
+    """Rebuild the early-fusion disagreement using detached scaled DA3 depth.
+
+    The normalized BIM log-depth and BIM hit-mask channels are copied exactly
+    from the first-pass condition. Only the third channel is recomputed as
+    ``clip((log(D_BIM) - log(D_DA3) - stop_gradient(c)) / clip, -1, 1)``.
+    """
+
+    if bim_condition.ndim != 4 or bim_condition.shape[1] != 3:
+        raise ValueError("bim_condition must have shape [B,3,H,W]")
+    if base_depth.ndim != 4 or base_depth.shape[1] != 1:
+        raise ValueError("base_depth must have shape [B,1,H,W]")
+    if bim_depth.shape != base_depth.shape:
+        raise ValueError("DA3 depth and BIM depth must have identical shapes")
+    if bim_condition.shape[0] != base_depth.shape[0] or bim_condition.shape[-2:] != (
+        base_depth.shape[-2:]
+    ):
+        raise ValueError("BIM condition and depth tensors must be pixel-aligned")
+    if log_scale.shape != (base_depth.shape[0], 1, 1, 1):
+        raise ValueError("log_scale must have shape [B,1,1,1]")
+    if disagreement_clip <= 0:
+        raise ValueError("disagreement_clip must be positive")
+
+    base = base_depth.float()
+    bim = bim_depth.float()
+    valid = (
+        (bim_condition[:, 1:2] > 0.5)
+        & torch.isfinite(base)
+        & torch.isfinite(bim)
+        & (base > 1e-3)
+        & (bim > 1e-3)
+    )
+    detached_log_scale = log_scale.detach().float()
+    disagreement = (
+        bim.clamp_min(1e-3).log()
+        - base.clamp_min(1e-3).log()
+        - detached_log_scale
+    ).clamp(-float(disagreement_clip), float(disagreement_clip)) / float(
+        disagreement_clip
+    )
+    disagreement = torch.where(valid, disagreement, torch.zeros_like(disagreement))
+    return torch.cat(
+        (
+            bim_condition[:, :2],
+            disagreement.to(dtype=bim_condition.dtype),
+        ),
+        dim=1,
+    )
+
+
 class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
     """One early-fusion DAv2 encoder for global scale and/or native residuals.
 
@@ -193,6 +271,8 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         calibrated_disagreement_adapter_residual_blocks: int = 0,
         calibrated_disagreement_adapter_expansion_channels: int | None = None,
         low2_decoder_hidden_channels: Sequence[int] | None = None,
+        detached_scale_second_pass_dino_adapter_enabled: bool = False,
+        detached_scale_second_pass_dino_adapter_hidden_channels: int = 64,
     ) -> None:
         super().__init__(pretrained_model)
         if regression_hidden_size < 1 or residual_hidden_channels < 1:
@@ -217,6 +297,9 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         self.max_low2_log_residual = float(max_low2_log_residual)
         self.output_max_depth_m = float(output_max_depth_m)
         self.residual_mode = str(residual_mode)
+        self.detached_scale_second_pass_dino_adapter_enabled = bool(
+            detached_scale_second_pass_dino_adapter_enabled
+        )
         self.calibrated_disagreement_adapter_enabled = bool(calibrated_disagreement_adapter_enabled)
         if self.calibrated_disagreement_adapter_enabled and self.residual_mode != "low36_only":
             raise ValueError(
@@ -254,6 +337,14 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
             if self.calibrated_disagreement_adapter_enabled
             else None
         )
+        self.detached_scale_second_pass_dino_adapter = (
+            ZeroInitDINOFeatureAdapter(
+                hidden_size,
+                hidden_channels=int(detached_scale_second_pass_dino_adapter_hidden_channels),
+            )
+            if self.detached_scale_second_pass_dino_adapter_enabled
+            else None
+        )
         if self.residual_mode in {"low36_only", "low72_only"}:
             for parameter in self.low1_head.parameters():
                 parameter.requires_grad_(False)
@@ -289,21 +380,24 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         )
         return cls(pretrained, **kwargs)
 
-    def _encoded_neck(
+    def _encode_dino(
         self,
-        rgb: torch.Tensor,
+        normalized_rgb: torch.Tensor,
         bim_condition: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        normalized = self.normalized_rgb(rgb)
-        embeddings = self._early_embeddings(normalized, bim_condition)
+        *,
+        return_feature_maps: bool,
+    ) -> tuple[torch.Tensor, tuple[torch.Tensor, ...]]:
+        embeddings = self._early_embeddings(normalized_rgb, bim_condition)
         backbone = self.dav2.backbone
         outputs = backbone.encoder(
             embeddings,
-            output_hidden_states=True,
+            output_hidden_states=return_feature_maps,
             output_attentions=False,
             return_dict=True,
         )
         final_tokens = backbone.layernorm(outputs.last_hidden_state)
+        if not return_feature_maps:
+            return final_tokens, ()
         feature_maps: tuple[torch.Tensor, ...] = ()
         for stage, hidden_state in zip(
             backbone.stage_names,
@@ -319,7 +413,17 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
             feature_maps += (hidden_state,)
         if len(feature_maps) != 4:
             raise RuntimeError(f"Expected four DINO feature maps, got {len(feature_maps)}")
-        height, width = normalized.shape[-2:]
+        return final_tokens, feature_maps
+
+    def _decode_dpt_native_features(
+        self,
+        feature_maps: tuple[torch.Tensor, ...],
+        *,
+        height: int,
+        width: int,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        if len(feature_maps) != 4:
+            raise ValueError("DPT decoding requires exactly four DINO feature maps")
         patch_height = height // self.PATCH_SIZE
         patch_width = width // self.PATCH_SIZE
         dpt_neck = self.dav2.neck
@@ -356,7 +460,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         fusion72 = dpt_neck.fusion_stage.layers[2]
         feature72 = top_down72 + fusion72.residual_layer1(projected[1])
         feature72 = fusion72.projection(fusion72.residual_layer2(feature72))
-        return final_tokens, feature18, feature36, feature72
+        return feature18, feature36, feature72
 
     def predict_log_scale(
         self,
@@ -394,7 +498,12 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         if not bool(torch.isfinite(base_depth).all()) or bool((base_depth <= 0).any()):
             raise ValueError("base_depth must be finite and positive")
 
-        tokens, feature18, feature36, feature72 = self._encoded_neck(rgb, bim_condition)
+        normalized_rgb = self.normalized_rgb(rgb)
+        tokens, first_pass_feature_maps = self._encode_dino(
+            normalized_rgb,
+            bim_condition,
+            return_feature_maps=True,
+        )
         descriptor = torch.cat((tokens[:, 0], tokens[:, 1:].mean(dim=1)), dim=1)
         log_scale = (
             descriptor.new_zeros((descriptor.shape[0], 1, 1, 1))
@@ -403,6 +512,58 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         )
         scale = log_scale.exp()
         scaled_depth = base_depth.float() * scale
+
+        second_pass_condition = None
+        second_pass_adapter_deltas: tuple[torch.Tensor, ...] = ()
+        if self.detached_scale_second_pass_dino_adapter is not None:
+            if bim_depth is None:
+                raise ValueError(
+                    "Detached-scale second-pass DINO adapter requires BIM depth"
+                )
+            second_pass_condition = rebuild_bim_condition_with_scaled_prediction(
+                bim_condition,
+                base_depth,
+                bim_depth,
+                log_scale,
+            )
+            # Pass 2 deliberately reuses the same trainable RGB+BIM
+            # early-fusion encoder. Its feature graph is fully detached; only
+            # the zero-init adapter learns how much calibrated information to
+            # add to the original shortcut tokens.
+            with torch.no_grad():
+                _, second_pass_feature_maps = self._encode_dino(
+                    normalized_rgb,
+                    second_pass_condition,
+                    return_feature_maps=True,
+                )
+            adapter_dtype = (
+                self.detached_scale_second_pass_dino_adapter.input_projection.weight.dtype
+            )
+            second_pass_adapter_deltas = tuple(
+                self.detached_scale_second_pass_dino_adapter(
+                    second_feature.detach().to(dtype=adapter_dtype)
+                ).to(dtype=first_feature.dtype)
+                for first_feature, second_feature in zip(
+                    first_pass_feature_maps,
+                    second_pass_feature_maps,
+                    strict=True,
+                )
+            )
+            dpt_feature_maps = tuple(
+                first_feature + delta
+                for first_feature, delta in zip(
+                    first_pass_feature_maps,
+                    second_pass_adapter_deltas,
+                    strict=True,
+                )
+            )
+        else:
+            dpt_feature_maps = first_pass_feature_maps
+        feature18, feature36, feature72 = self._decode_dpt_native_features(
+            dpt_feature_maps,
+            height=normalized_rgb.shape[-2],
+            width=normalized_rgb.shape[-1],
+        )
 
         low1_native = (
             self.max_low1_log_residual * torch.tanh(self.low1_head(feature18))
@@ -471,6 +632,11 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
             assert calibrated_condition is not None and calibrated_delta is not None
             result["calibrated_disagreement_condition_native"] = calibrated_condition
             result["calibrated_disagreement_adapter_delta_native"] = calibrated_delta
+        if second_pass_condition is not None:
+            result["second_pass_bim_condition"] = second_pass_condition
+            result["second_pass_adapter_delta_mean_abs"] = torch.stack(
+                [delta.float().abs().mean() for delta in second_pass_adapter_deltas]
+            )
         return result
 
     def optimizer_parameter_groups(
@@ -522,6 +688,16 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 {
                     "name": "calibrated_disagreement_adapter",
                     "params": trainable(self.calibrated_disagreement_adapter.parameters()),
+                    "lr": residual_head_lr,
+                }
+            )
+        if self.detached_scale_second_pass_dino_adapter is not None:
+            groups.append(
+                {
+                    "name": "detached_scale_second_pass_dino_adapter",
+                    "params": trainable(
+                        self.detached_scale_second_pass_dino_adapter.parameters()
+                    ),
                     "lr": residual_head_lr,
                 }
             )
@@ -583,6 +759,19 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                     == 0
                 )
             ),
+            "detached_scale_second_pass_dino_adapter_zero": bool(
+                self.detached_scale_second_pass_dino_adapter is None
+                or (
+                    torch.count_nonzero(
+                        self.detached_scale_second_pass_dino_adapter.output_projection.weight
+                    ).item()
+                    == 0
+                    and torch.count_nonzero(
+                        self.detached_scale_second_pass_dino_adapter.output_projection.bias
+                    ).item()
+                    == 0
+                )
+            ),
         }
         result["all_pass"] = all(
             bool(result[key])
@@ -592,6 +781,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 "low1_output_zero",
                 "low2_output_zero",
                 "calibrated_disagreement_adapter_zero",
+                "detached_scale_second_pass_dino_adapter_zero",
             )
         )
         return result

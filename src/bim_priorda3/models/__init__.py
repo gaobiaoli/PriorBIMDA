@@ -10,10 +10,12 @@ from .dav2_joint_scale_low import (
     AdapterResidualBlock,
     BIMEarlyFusionDAv2JointScaleLow,
     CalibratedDisagreementAdapter,
+    ZeroInitDINOFeatureAdapter,
     build_calibrated_disagreement_condition,
     build_native_residual_head,
     joint_scale_low_loss,
     masked_area_downsample,
+    rebuild_bim_condition_with_scaled_prediction,
 )
 from .frozen_huber_dav2_low_refiner import (
     BIMEarlyFusionDAv2LowRefiner,
@@ -37,6 +39,7 @@ __all__ = [
     "CalibratedDisagreementAdapter",
     "FrozenHuberDAv2LowRefiner",
     "FrozenHuberPriorDAV11BIM",
+    "ZeroInitDINOFeatureAdapter",
     "build_bim_condition",
     "build_calibrated_disagreement_condition",
     "build_native_residual_head",
@@ -45,5 +48,6 @@ __all__ = [
     "joint_scale_low_loss",
     "local_huber_log_scale_field",
     "masked_area_downsample",
+    "rebuild_bim_condition_with_scaled_prediction",
     "scale_regression_loss",
 ]

@@ -631,8 +631,14 @@ def build_summary(
                         if model.residual_mode == "low72_only"
                         else (
                             (
-                                "single early-fusion DAv2 global scale + native 36x36 "
-                                "r_low + calibrated-disagreement adapter"
+                                (
+                                    "single early-fusion DAv2 global scale + native 36x36 "
+                                    "r_low + calibrated-disagreement adapter + detached "
+                                    "second-pass DINO feature adapter"
+                                    if model.detached_scale_second_pass_dino_adapter_enabled
+                                    else "single early-fusion DAv2 global scale + native 36x36 "
+                                    "r_low + calibrated-disagreement adapter"
+                                )
                                 if model.calibrated_disagreement_adapter_enabled
                                 else "single early-fusion DAv2 global scale + native 36x36 r_low"
                             )
@@ -840,6 +846,7 @@ def _load_joint_dav2_scale_low_model(
         "dav2_early_fusion_joint_global_scale_laplacian_low18_low36",
         "dav2_early_fusion_joint_global_scale_low36",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter",
+        "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_detached_second_pass_dino_adapter",
         "dav2_early_fusion_joint_global_scale_low72",
         "dav2_early_fusion_direct_low18_no_global_scale",
     }
@@ -873,6 +880,14 @@ def _load_joint_dav2_scale_low_model(
             else None
         ),
         low2_decoder_hidden_channels=joint.get("low2_decoder_hidden_channels"),
+        detached_scale_second_pass_dino_adapter_enabled=bool(
+            joint.get("detached_scale_second_pass_dino_adapter", {}).get("enabled", False)
+        ),
+        detached_scale_second_pass_dino_adapter_hidden_channels=int(
+            joint.get("detached_scale_second_pass_dino_adapter", {}).get(
+                "hidden_channels", 64
+            )
+        ),
     )
     model.load_state_dict(checkpoint["model"], strict=True)
     return model

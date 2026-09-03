@@ -262,6 +262,14 @@ def main() -> None:
             else None
         ),
         low2_decoder_hidden_channels=joint.get("low2_decoder_hidden_channels"),
+        detached_scale_second_pass_dino_adapter_enabled=bool(
+            joint.get("detached_scale_second_pass_dino_adapter", {}).get("enabled", False)
+        ),
+        detached_scale_second_pass_dino_adapter_hidden_channels=int(
+            joint.get("detached_scale_second_pass_dino_adapter", {}).get(
+                "hidden_channels", 64
+            )
+        ),
     ).to(device)
     initialization = model.initialization_audit(official_path)
     if bool(cfg.train.gradient_checkpointing):
@@ -605,25 +613,26 @@ def main() -> None:
         if improved:
             best_abs_rel = float(learned["abs_rel"])
             best_epoch = epoch
+        if model.residual_mode == "direct_low18":
+            architecture = "dav2_early_fusion_direct_low18_no_global_scale"
+        elif model.residual_mode == "low72_only":
+            architecture = "dav2_early_fusion_joint_global_scale_low72"
+        elif model.residual_mode != "low36_only":
+            architecture = "dav2_early_fusion_joint_global_scale_laplacian_low18_low36"
+        elif model.detached_scale_second_pass_dino_adapter_enabled:
+            architecture = (
+                "dav2_early_fusion_joint_global_scale_low36_"
+                "calibrated_disagreement_adapter_detached_second_pass_dino_adapter"
+            )
+        elif model.calibrated_disagreement_adapter_enabled:
+            architecture = (
+                "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter"
+            )
+        else:
+            architecture = "dav2_early_fusion_joint_global_scale_low36"
         payload = {
             "schema_version": 1,
-            "architecture": (
-                "dav2_early_fusion_direct_low18_no_global_scale"
-                if model.residual_mode == "direct_low18"
-                else (
-                    "dav2_early_fusion_joint_global_scale_low72"
-                    if model.residual_mode == "low72_only"
-                    else (
-                        (
-                            "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter"
-                            if model.calibrated_disagreement_adapter_enabled
-                            else "dav2_early_fusion_joint_global_scale_low36"
-                        )
-                        if model.residual_mode == "low36_only"
-                        else "dav2_early_fusion_joint_global_scale_laplacian_low18_low36"
-                    )
-                )
-            ),
+            "architecture": architecture,
             "model": model.state_dict(),
             "optimizer": optimizer.state_dict(),
             "scheduler": scheduler.state_dict(),

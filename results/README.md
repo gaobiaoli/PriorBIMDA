@@ -1,5 +1,11 @@
 # Results
 
+当前连续 6-epoch `scale+r36` 系列的本机训练、Area_1 validation/test 与 Matterport3D
+三场景 zero-shot 对照，集中记录在
+[`scale_r36_experiment_log.md`](scale_r36_experiment_log.md)。后续结构实验应以其中冻结的
+`32-64-128 adapter + 128-64-32 decoder` checkpoint 为当前锚点，并保持同一数据划分、
+full-depth metric-DA3 协议与三场景 frame set。
+
 这里只保留统一尺度协议的正式小型产物和能够解释当前结论的关键诊断产物：
 
 - `metrics.json`：论文/README 主表的紧凑机器可读版本；

@@ -8,8 +8,10 @@ from bim_priorda3.config import load_config
 from bim_priorda3.models import (
     AdapterResidualBlock,
     CalibratedDisagreementAdapter,
+    ZeroInitDINOFeatureAdapter,
     build_calibrated_disagreement_condition,
     build_native_residual_head,
+    rebuild_bim_condition_with_scaled_prediction,
 )
 
 
@@ -94,6 +96,40 @@ def test_calibrated_condition_stops_residual_gradient_into_global_scale() -> Non
     assert scale_gradient is None
 
 
+def test_second_pass_condition_uses_detached_scaled_prediction() -> None:
+    base = torch.tensor([[[[1.0, 2.0], [4.0, 8.0]]]])
+    bim = torch.tensor([[[[2.0, 2.0], [8.0, 8.0]]]], requires_grad=True)
+    first_condition = torch.cat(
+        (
+            torch.full_like(base, 0.25),
+            torch.tensor([[[[1.0, 1.0], [1.0, 0.0]]]]),
+            torch.full_like(base, 0.75),
+        ),
+        dim=1,
+    )
+    log_scale = torch.full((1, 1, 1, 1), math.log(2.0), requires_grad=True)
+
+    second_condition = rebuild_bim_condition_with_scaled_prediction(
+        first_condition,
+        base,
+        bim,
+        log_scale,
+    )
+
+    torch.testing.assert_close(second_condition[:, :2], first_condition[:, :2])
+    torch.testing.assert_close(
+        second_condition[:, 2:3],
+        torch.tensor([[[[0.0, -math.log(2.0) / 1.5], [0.0, 0.0]]]]),
+    )
+    bim_gradient, scale_gradient = torch.autograd.grad(
+        second_condition[:, 2:].sum(),
+        (bim, log_scale),
+        allow_unused=True,
+    )
+    assert bim_gradient is not None
+    assert scale_gradient is None
+
+
 def test_zero_initialized_adapter_preserves_f36_exactly() -> None:
     torch.manual_seed(11)
     adapter = CalibratedDisagreementAdapter(128, hidden_channels=32)
@@ -159,6 +195,22 @@ def test_deeper_r36_decoder_uses_128_64_32_1_channels_and_stays_zero() -> None:
     assert sum(parameter.numel() for parameter in decoder.parameters()) == 92_289
 
 
+def test_shared_second_pass_dino_adapter_is_zero_initialized() -> None:
+    adapter = ZeroInitDINOFeatureAdapter(768, hidden_channels=64)
+    second_pass_tokens = torch.randn(2, 97, 768, requires_grad=True)
+    original_tokens = torch.randn_like(second_pass_tokens)
+
+    delta = adapter(second_pass_tokens.detach())
+
+    assert adapter.input_projection.weight.shape == (64, 768)
+    assert adapter.output_projection.weight.shape == (768, 64)
+    assert torch.count_nonzero(delta) == 0
+    assert torch.equal(original_tokens + delta, original_tokens)
+    delta.sum().backward()
+    assert second_pass_tokens.grad is None
+    assert adapter.output_projection.weight.grad is not None
+
+
 def test_adapter_experiment_keeps_only_the_requested_three_channels() -> None:
     cfg = load_config(
         "configs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_"
@@ -198,3 +250,20 @@ def test_progressive_adapter_and_decoder_experiment_channels() -> None:
     assert adapter.expansion_channels == 64
     assert adapter.residual_blocks == 3
     assert list(joint.low2_decoder_hidden_channels) == [64, 32]
+
+
+def test_second_pass_adapter_experiment_changes_only_the_requested_switch() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_"
+        "continuous_calibrated_disagreement_adapter_32_64_128_decoder_"
+        "128_64_32_detached_second_pass_dino_adapter_full_depth_metric_da3.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    assert joint.detached_scale_second_pass_dino_adapter.enabled is True
+    assert joint.detached_scale_second_pass_dino_adapter.hidden_channels == 64
+    assert list(joint.low2_decoder_hidden_channels) == [64, 32]
+    assert joint.calibrated_disagreement_adapter.hidden_channels == 32
+    assert joint.calibrated_disagreement_adapter.expansion_channels == 64
+    assert joint.calibrated_disagreement_adapter.residual_blocks == 3
+    assert cfg.train.epochs == 6
