@@ -1,0 +1,18 @@
+extends: stanford_area1_dav2_early_fusion_scale_iterative_geometry_r18_r36_6epoch_continuous_full_depth_metric_da3.yaml
+
+# Share the fully convolutional 3->32->3xResBlock->64 geometry trunk across
+# the sequential r18 and r36 conditions. Resolution/frequency specialization
+# remains in two independent zero-init 1x1 Conv(64->128) stage heads.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_heads_6epoch_continuous
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_heads_6epoch_continuous
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_heads_6epoch_continuous
+
+model:
+  dav2_joint_scale_low:
+    iterative_geometry_adapters:
+      enabled: true
+      hidden_channels: 32
+      residual_blocks: 3
+      expansion_channels: 64
+      weight_sharing: shared_trunk_separate_heads

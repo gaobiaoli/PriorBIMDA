@@ -8,6 +8,7 @@ from bim_priorda3.config import load_config
 from bim_priorda3.models import (
     AdapterResidualBlock,
     CalibratedDisagreementAdapter,
+    SharedGeometryAdapterWithStageHeads,
     ZeroInitDINOFeatureAdapter,
     ZeroInitDPTShortcutAdapter,
     build_calibrated_disagreement_condition,
@@ -245,6 +246,29 @@ def test_rgb6_progressive_adapter_changes_only_the_input_projection() -> None:
     assert sum(parameter.numel() for parameter in adapter.parameters()) == 84_064
 
 
+def test_shared_geometry_trunk_has_independent_zero_init_stage_heads() -> None:
+    adapter = SharedGeometryAdapterWithStageHeads(
+        128,
+        hidden_channels=32,
+        residual_blocks=3,
+        expansion_channels=64,
+    )
+
+    delta18 = adapter(torch.randn(2, 3, 18, 18), stage="r18")
+    delta36 = adapter(torch.randn(2, 3, 36, 36), stage="r36")
+
+    assert adapter.input_projection.weight.shape == (32, 3, 3, 3)
+    assert len(adapter.residual_blocks) == 3
+    assert adapter.expansion_projection is not None
+    assert adapter.expansion_projection.weight.shape == (64, 32, 3, 3)
+    assert adapter.stage_heads["r18"] is not adapter.stage_heads["r36"]
+    assert adapter.stage_heads["r18"].weight.shape == (128, 64, 1, 1)
+    assert adapter.stage_heads["r36"].weight.shape == (128, 64, 1, 1)
+    assert torch.count_nonzero(delta18) == 0
+    assert torch.count_nonzero(delta36) == 0
+    assert sum(parameter.numel() for parameter in adapter.parameters()) == 91_520
+
+
 def test_deeper_r36_decoder_uses_128_64_32_1_channels_and_stays_zero() -> None:
     decoder = build_native_residual_head(128, (64, 32))
     feature36 = torch.randn(2, 128, 36, 36)
@@ -406,6 +430,24 @@ def test_iterative_geometry_experiment_has_two_three_channel_stages() -> None:
     assert geometry18.input_projection.weight.data_ptr() != geometry36.input_projection.weight.data_ptr()
     assert geometry18.input_projection.in_channels == 3
     assert geometry36.input_projection.in_channels == 3
+
+
+def test_shared_iterative_geometry_experiment_shares_only_the_trunk() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_dav2_early_fusion_scale_iterative_shared_"
+        "geometry_r18_r36_heads_6epoch_continuous_full_depth_metric_da3.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    geometry = joint.iterative_geometry_adapters
+    assert geometry.weight_sharing == "shared_trunk_separate_heads"
+    assert geometry.hidden_channels == 32
+    assert geometry.expansion_channels == 64
+    assert geometry.residual_blocks == 3
+    assert joint.residual_mode == "low18_low36"
+    assert list(joint.low1_decoder_hidden_channels) == [64, 32]
+    assert list(joint.low2_decoder_hidden_channels) == [64, 32]
+    assert cfg.train.epochs == 6
 
 
 def test_second_pass_adapter_experiment_changes_only_the_requested_switch() -> None:

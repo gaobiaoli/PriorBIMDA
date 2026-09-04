@@ -95,6 +95,76 @@ class CalibratedDisagreementAdapter(nn.Module):
         return self.output_projection(values)
 
 
+class SharedGeometryAdapterWithStageHeads(nn.Module):
+    """Shared convolutional geometry trunk with zero-init r18/r36 heads."""
+
+    STAGES = ("r18", "r36")
+
+    def __init__(
+        self,
+        output_channels: int,
+        *,
+        input_channels: int = 3,
+        hidden_channels: int = 32,
+        residual_blocks: int = 0,
+        expansion_channels: int | None = None,
+    ) -> None:
+        super().__init__()
+        if (
+            output_channels < 1
+            or input_channels < 1
+            or hidden_channels < 1
+            or residual_blocks < 0
+            or (expansion_channels is not None and expansion_channels < 1)
+        ):
+            raise ValueError("Shared geometry adapter channel counts must be positive")
+        self.input_projection = nn.Conv2d(
+            input_channels,
+            hidden_channels,
+            kernel_size=3,
+            padding=1,
+        )
+        self.activation = nn.GELU()
+        self.residual_blocks = nn.ModuleList(
+            AdapterResidualBlock(hidden_channels) for _ in range(residual_blocks)
+        )
+        self.expansion_projection = (
+            nn.Conv2d(hidden_channels, expansion_channels, kernel_size=3, padding=1)
+            if expansion_channels is not None
+            else None
+        )
+        self.expansion_activation = nn.GELU()
+        head_input_channels = (
+            int(expansion_channels) if expansion_channels is not None else hidden_channels
+        )
+        self.stage_heads = nn.ModuleDict(
+            {
+                stage: nn.Conv2d(head_input_channels, output_channels, kernel_size=1)
+                for stage in self.STAGES
+            }
+        )
+        nn.init.kaiming_normal_(self.input_projection.weight, nonlinearity="relu")
+        nn.init.zeros_(self.input_projection.bias)
+        if self.expansion_projection is not None:
+            nn.init.kaiming_normal_(self.expansion_projection.weight, nonlinearity="relu")
+            nn.init.zeros_(self.expansion_projection.bias)
+        for head in self.stage_heads.values():
+            nn.init.zeros_(head.weight)
+            nn.init.zeros_(head.bias)
+
+    def forward(self, condition: torch.Tensor, *, stage: str) -> torch.Tensor:
+        if stage not in self.stage_heads:
+            raise ValueError(f"Unsupported iterative geometry stage: {stage}")
+        if condition.ndim != 4 or condition.shape[1] != self.input_projection.in_channels:
+            raise ValueError("Iterative geometry condition channel count changed")
+        values = self.activation(self.input_projection(condition))
+        for block in self.residual_blocks:
+            values = block(values)
+        if self.expansion_projection is not None:
+            values = self.expansion_activation(self.expansion_projection(values))
+        return self.stage_heads[stage](values)
+
+
 class ZeroInitDINOFeatureAdapter(nn.Module):
     """Shared bottleneck adapter for detached second-pass DINO tokens."""
 
@@ -329,6 +399,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         iterative_geometry_adapters_hidden_channels: int = 32,
         iterative_geometry_adapters_residual_blocks: int = 0,
         iterative_geometry_adapters_expansion_channels: int | None = None,
+        iterative_geometry_adapters_weight_sharing: str = "independent",
         low1_decoder_hidden_channels: Sequence[int] | None = None,
         low2_decoder_hidden_channels: Sequence[int] | None = None,
         detached_scale_second_pass_dino_adapter_enabled: bool = False,
@@ -379,6 +450,14 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         self.iterative_geometry_adapters_enabled = bool(
             iterative_geometry_adapters_enabled
         )
+        self.iterative_geometry_adapters_weight_sharing = str(
+            iterative_geometry_adapters_weight_sharing
+        )
+        if self.iterative_geometry_adapters_weight_sharing not in {
+            "independent",
+            "shared_trunk_separate_heads",
+        }:
+            raise ValueError("Unsupported iterative geometry weight-sharing mode")
         if self.calibrated_disagreement_adapter_injection not in {
             "fused_f36",
             "projected_p36",
@@ -437,6 +516,21 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
             if self.calibrated_disagreement_adapter_enabled
             else None
         )
+        shared_iterative_geometry = (
+            self.iterative_geometry_adapters_enabled
+            and self.iterative_geometry_adapters_weight_sharing
+            == "shared_trunk_separate_heads"
+        )
+        self.shared_iterative_geometry_adapter = (
+            SharedGeometryAdapterWithStageHeads(
+                fusion_channels,
+                hidden_channels=int(iterative_geometry_adapters_hidden_channels),
+                residual_blocks=int(iterative_geometry_adapters_residual_blocks),
+                expansion_channels=iterative_geometry_adapters_expansion_channels,
+            )
+            if shared_iterative_geometry
+            else None
+        )
         self.iterative_geometry18_adapter = (
             CalibratedDisagreementAdapter(
                 fusion_channels,
@@ -444,7 +538,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 residual_blocks=int(iterative_geometry_adapters_residual_blocks),
                 expansion_channels=iterative_geometry_adapters_expansion_channels,
             )
-            if self.iterative_geometry_adapters_enabled
+            if self.iterative_geometry_adapters_enabled and not shared_iterative_geometry
             else None
         )
         self.iterative_geometry36_adapter = (
@@ -454,7 +548,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 residual_blocks=int(iterative_geometry_adapters_residual_blocks),
                 expansion_channels=iterative_geometry_adapters_expansion_channels,
             )
-            if self.iterative_geometry_adapters_enabled
+            if self.iterative_geometry_adapters_enabled and not shared_iterative_geometry
             else None
         )
         if not self.detached_scale_second_pass_dino_adapter_enabled:
@@ -646,6 +740,26 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         descriptor = torch.cat((tokens[:, 0], tokens[:, 1:].mean(dim=1)), dim=1)
         return self.scale_head(descriptor.float()).view(-1, 1, 1, 1)
 
+    def _iterative_geometry_delta(
+        self,
+        condition: torch.Tensor,
+        *,
+        stage: str,
+    ) -> torch.Tensor:
+        if self.shared_iterative_geometry_adapter is not None:
+            adapter = self.shared_iterative_geometry_adapter
+            dtype = adapter.input_projection.weight.dtype
+            return adapter(condition.to(dtype=dtype), stage=stage)
+        adapter = (
+            self.iterative_geometry18_adapter
+            if stage == "r18"
+            else self.iterative_geometry36_adapter
+        )
+        if adapter is None:
+            raise RuntimeError("Iterative geometry adapter is disabled")
+        dtype = adapter.input_projection.weight.dtype
+        return adapter(condition.to(dtype=dtype))
+
     def forward(
         self,
         rgb: torch.Tensor,
@@ -777,12 +891,8 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         iterative_delta18 = None
         iterative_delta36 = None
         low1_feature = feature18
-        if self.iterative_geometry18_adapter is not None:
-            if (
-                bim_depth is None
-                or bim_valid is None
-                or self.iterative_geometry36_adapter is None
-            ):
+        if self.iterative_geometry_adapters_enabled:
+            if bim_depth is None or bim_valid is None:
                 raise ValueError(
                     "Iterative geometry adapters require BIM depth and BIM mask"
                 )
@@ -793,11 +903,9 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 log_scale,
                 tuple(feature18.shape[-2:]),
             )
-            geometry18_dtype = (
-                self.iterative_geometry18_adapter.input_projection.weight.dtype
-            )
-            iterative_delta18 = self.iterative_geometry18_adapter(
-                iterative_condition18.to(dtype=geometry18_dtype)
+            iterative_delta18 = self._iterative_geometry_delta(
+                iterative_condition18,
+                stage="r18",
             )
             low1_feature = feature18 + iterative_delta18.to(dtype=feature18.dtype)
 
@@ -816,7 +924,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
             low2_native = torch.zeros_like(low1_native)
         else:
             low2_feature = feature72 if self.residual_mode == "low72_only" else feature36
-            if self.iterative_geometry36_adapter is not None:
+            if self.iterative_geometry_adapters_enabled:
                 assert bim_depth is not None and bim_valid is not None
                 # Stage 2 observes the prediction already corrected by r18.
                 # Stop-gradient preserves the explicit coarse/fine decomposition:
@@ -830,11 +938,9 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                     tuple(feature36.shape[-2:]),
                     log_residual=low1_full,
                 )
-                geometry36_dtype = (
-                    self.iterative_geometry36_adapter.input_projection.weight.dtype
-                )
-                iterative_delta36 = self.iterative_geometry36_adapter(
-                    iterative_condition36.to(dtype=geometry36_dtype)
+                iterative_delta36 = self._iterative_geometry_delta(
+                    iterative_condition36,
+                    stage="r36",
                 )
                 low2_feature = feature36 + iterative_delta36.to(dtype=feature36.dtype)
             if (
@@ -875,7 +981,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
             assert calibrated_condition is not None and calibrated_delta is not None
             result["calibrated_disagreement_condition_native"] = calibrated_condition
             result["calibrated_disagreement_adapter_delta_native"] = calibrated_delta
-        if self.iterative_geometry18_adapter is not None:
+        if self.iterative_geometry_adapters_enabled:
             assert (
                 iterative_condition18 is not None
                 and iterative_condition36 is not None
@@ -945,7 +1051,17 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                     "lr": residual_head_lr,
                 }
             )
-        if self.iterative_geometry18_adapter is not None:
+        if self.shared_iterative_geometry_adapter is not None:
+            groups.append(
+                {
+                    "name": "shared_iterative_geometry_adapter",
+                    "params": trainable(
+                        self.shared_iterative_geometry_adapter.parameters()
+                    ),
+                    "lr": residual_head_lr,
+                }
+            )
+        elif self.iterative_geometry18_adapter is not None:
             assert self.iterative_geometry36_adapter is not None
             groups.append(
                 {
@@ -996,6 +1112,27 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                         float(difference.max()) if difference.numel() else 0.0,
                     )
                     checked_values += actual.numel()
+        if self.shared_iterative_geometry_adapter is not None:
+            iterative_geometry_adapters_zero = all(
+                torch.count_nonzero(parameter).item() == 0
+                for head in self.shared_iterative_geometry_adapter.stage_heads.values()
+                for parameter in (head.weight, head.bias)
+            )
+        elif self.iterative_geometry18_adapter is not None:
+            assert self.iterative_geometry36_adapter is not None
+            iterative_geometry_adapters_zero = all(
+                torch.count_nonzero(parameter).item() == 0
+                for adapter in (
+                    self.iterative_geometry18_adapter,
+                    self.iterative_geometry36_adapter,
+                )
+                for parameter in (
+                    adapter.output_projection.weight,
+                    adapter.output_projection.bias,
+                )
+            )
+        else:
+            iterative_geometry_adapters_zero = True
         result = {
             "official_encoder_dpt_exact": maximum_difference == 0.0,
             "official_parameter_values": checked_values,
@@ -1025,28 +1162,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                     == 0
                 )
             ),
-            "iterative_geometry_adapters_zero": bool(
-                self.iterative_geometry18_adapter is None
-                or (
-                    self.iterative_geometry36_adapter is not None
-                    and torch.count_nonzero(
-                        self.iterative_geometry18_adapter.output_projection.weight
-                    ).item()
-                    == 0
-                    and torch.count_nonzero(
-                        self.iterative_geometry18_adapter.output_projection.bias
-                    ).item()
-                    == 0
-                    and torch.count_nonzero(
-                        self.iterative_geometry36_adapter.output_projection.weight
-                    ).item()
-                    == 0
-                    and torch.count_nonzero(
-                        self.iterative_geometry36_adapter.output_projection.bias
-                    ).item()
-                    == 0
-                )
-            ),
+            "iterative_geometry_adapters_zero": iterative_geometry_adapters_zero,
             "detached_scale_second_pass_dino_adapter_zero": bool(
                 self.detached_scale_second_pass_dino_adapter is None
                 or (

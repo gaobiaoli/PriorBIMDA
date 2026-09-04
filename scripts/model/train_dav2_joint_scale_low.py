@@ -282,6 +282,9 @@ def main() -> None:
             if iterative_geometry.get("expansion_channels") is not None
             else None
         ),
+        iterative_geometry_adapters_weight_sharing=str(
+            iterative_geometry.get("weight_sharing", "independent")
+        ),
         low1_decoder_hidden_channels=joint.get("low1_decoder_hidden_channels"),
         low2_decoder_hidden_channels=joint.get("low2_decoder_hidden_channels"),
         detached_scale_second_pass_dino_adapter_enabled=bool(
@@ -645,9 +648,12 @@ def main() -> None:
         elif model.residual_mode == "low72_only":
             architecture = "dav2_early_fusion_joint_global_scale_low72"
         elif model.iterative_geometry_adapters_enabled:
-            architecture = (
-                "dav2_early_fusion_joint_global_scale_iterative_"
-                "independent_geometry18_geometry36_low18_low36"
+            architecture = "dav2_early_fusion_joint_global_scale_iterative_"
+            architecture += (
+                "shared_geometry_trunk_separate_r18_r36_heads_low18_low36"
+                if model.iterative_geometry_adapters_weight_sharing
+                == "shared_trunk_separate_heads"
+                else "independent_geometry18_geometry36_low18_low36"
             )
         elif model.residual_mode != "low36_only":
             architecture = "dav2_early_fusion_joint_global_scale_laplacian_low18_low36"

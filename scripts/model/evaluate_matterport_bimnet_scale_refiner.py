@@ -594,8 +594,14 @@ def build_summary(
                 f"Three-rule frame set changed: {frame_sha} != expected {expected_sha}"
             )
     iterative_geometry_architecture = (
-        "single early-fusion DAv2 global scale + iterative independent geometry "
-        "encoders + native 18/36 Laplacian r_low"
+        "single early-fusion DAv2 global scale + iterative geometry encoder + "
+        + (
+            "shared trunk with separate r18/r36 heads"
+            if model.iterative_geometry_adapters_weight_sharing
+            == "shared_trunk_separate_heads"
+            else "independent r18/r36 encoders"
+        )
+        + " + native 18/36 Laplacian r_low"
         if isinstance(model, BIMEarlyFusionDAv2JointScaleLow)
         and model.iterative_geometry_adapters_enabled
         else None
@@ -860,6 +866,7 @@ def _load_joint_dav2_scale_low_model(
     expected_architectures = {
         "dav2_early_fusion_joint_global_scale_laplacian_low18_low36",
         "dav2_early_fusion_joint_global_scale_iterative_independent_geometry18_geometry36_low18_low36",
+        "dav2_early_fusion_joint_global_scale_iterative_shared_geometry_trunk_separate_r18_r36_heads_low18_low36",
         "dav2_early_fusion_joint_global_scale_low36",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_rgb6",
@@ -919,6 +926,9 @@ def _load_joint_dav2_scale_low_model(
             int(iterative_geometry.expansion_channels)
             if iterative_geometry.get("expansion_channels") is not None
             else None
+        ),
+        iterative_geometry_adapters_weight_sharing=str(
+            iterative_geometry.get("weight_sharing", "independent")
         ),
         low1_decoder_hidden_channels=joint.get("low1_decoder_hidden_channels"),
         low2_decoder_hidden_channels=joint.get("low2_decoder_hidden_channels"),

@@ -283,3 +283,56 @@ MP3D aggregate RMSE 改善 0.12%，但 AbsRel 退化 3.06%、MAE 退化 1.96%、
 退化 0.29%，delta1/delta2 分别下降 0.00211/0.00034，因此仍不替代当前锚点。
 跨域 aggregate 从 scale 到 scale+r18 改善 4.89%，而 r36 仅在其上再改善 0.22%，说明该
 迭代结构的主要有效信息集中在 coarse r18，第二级 geometry/r36 的边际贡献很小。
+
+## Iterative r18/r36 共享 geometry trunk + 独立 stage heads
+
+沿用上一版的 `scale→r18→r36` 顺序、condition、stop-gradient、Laplacian teacher、两个
+`128→64→32→1` residual decoder 及全部训练协议。把两个原本独立的 geometry encoder
+重构为：
+
+`shared trunk: 3→32→3×ResBlock(32)→64`
+
+`r18 head: 1×1 Conv(64→128), zero-init`
+
+`r36 head: 1×1 Conv(64→128), zero-init`
+
+共享 trunk 完全卷积，因此可同时处理 18×18 和 36×36 condition；两个 stage head 参数
+独立，保留尺度/频段适配能力。geometry 部分参数量由独立版 166,400 降为 91,520，减少
+45.0%。
+
+- 配置：
+  `configs/stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_heads_6epoch_continuous_full_depth_metric_da3.yaml`
+- checkpoint：
+  `outputs/stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_heads_6epoch_continuous/best.pt`
+- checkpoint SHA-256：
+  `82b1d2faa74fade1c395ec298d033c6e0c4d10ee91ab2622f09614d7db85f2be`
+- best epoch：6；optimizer steps：2634；skipped steps：0；训练耗时：3726.12 s。
+- 验证：共享 trunk 只有一份参数；r18/r36 heads 参数不共享；C18/C36 分别为
+  `B×3×18×18`、`B×3×36×36`；两个 zero-init delta 均精确为零。
+
+Area_1 pixel-micro：
+
+| split | stage | AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---|---:|---:|---:|---:|---:|---:|
+| validation | scale | 0.069171 | 0.659427 | 0.224256 | 0.937552 | 0.976150 | 0.148953 |
+| validation | scale+r18 | 0.065761 | 0.638246 | 0.205845 | 0.942696 | 0.977048 | 0.145742 |
+| validation | scale+r18+r36 | 0.064382 | 0.637119 | 0.201267 | 0.942568 | 0.977198 | 0.144923 |
+| test | scale | 0.066617 | 0.417897 | 0.137854 | 0.945879 | 0.975825 | 0.167929 |
+| test | scale+r18 | 0.062683 | 0.414767 | 0.127930 | 0.946191 | 0.975816 | 0.166322 |
+| test | scale+r18+r36 | 0.061717 | 0.413520 | 0.125460 | 0.946333 | 0.975931 | 0.165779 |
+
+Matterport3D zero-shot：
+
+| scene | frames | valid pixels | scale AbsRel | scale+r18 AbsRel | final AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| hxp | 624 | 683,741,522 | 0.107191 | 0.100739 | 0.100206 | 0.264795 | 0.141013 | 0.911240 | 0.973097 | 0.168744 |
+| 759 | 518 | 595,254,869 | 0.079075 | 0.076033 | 0.075661 | 0.296992 | 0.149073 | 0.937373 | 0.990880 | 0.125229 |
+| 1px | 793 | 953,135,152 | 0.095875 | 0.090955 | 0.090884 | 0.424480 | 0.156250 | 0.928179 | 0.969210 | 0.189557 |
+| **aggregate** | **1935** | **2,232,131,543** | **0.094861** | **0.089972** | **0.089680** | **0.349198** | **0.149668** | **0.925442** | **0.976179** | **0.168070** |
+
+相对独立 encoder 迭代版，共享版 Area_1 test AbsRel 改善 1.79%，但 validation 退化
+0.81%，MP3D aggregate AbsRel 退化 1.76%。相对当前 F36 锚点，Area_1 validation/test
+AbsRel 改善 0.82%/3.03%，MP3D RMSE 改善 0.04%，但 zero-shot AbsRel 退化 4.88%、
+MAE 退化 2.82%、RMSE-log 退化 0.80%，delta1/delta2 分别下降 0.00250/0.00019。
+因此共享 trunk 提高了 Area_1 test 且显著压缩 geometry 参数，但跨域表现不如独立 encoder，
+仍不替代当前锚点。共享版中 r36 在 r18 后带来的 aggregate AbsRel 改善为 0.33%。
