@@ -55,15 +55,35 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-train-samples", type=int)
     parser.add_argument("--max-val-samples", type=int)
     parser.add_argument("--skip-test", action="store_true")
+    parser.add_argument(
+        "--deterministic",
+        action="store_true",
+        help=(
+            "Enable deterministic PyTorch/CUDA kernels and disable TF32; "
+            "warn when an operation has no deterministic CUDA implementation"
+        ),
+    )
     return parser.parse_args()
 
 
-def seed_everything(seed: int) -> None:
+def seed_everything(seed: int, *, deterministic: bool = False) -> None:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
+    # DINOv2 resizes its trainable positional embedding with bicubic CUDA
+    # interpolation. PyTorch has no deterministic backward for that operation,
+    # so warn rather than silently disabling determinism for every other op.
+    torch.use_deterministic_algorithms(deterministic, warn_only=deterministic)
+    if deterministic and torch.cuda.is_available():
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
+        torch.backends.cuda.enable_flash_sdp(False)
+        torch.backends.cuda.enable_mem_efficient_sdp(False)
+        torch.backends.cuda.enable_math_sdp(True)
+        if hasattr(torch.backends.cuda, "enable_cudnn_sdp"):
+            torch.backends.cuda.enable_cudnn_sdp(False)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
@@ -195,7 +215,7 @@ def main() -> None:
     args = parse_args()
     cfg = load_config(args.config)
     seed = int(cfg.experiment.seed)
-    seed_everything(seed)
+    seed_everything(seed, deterministic=args.deterministic)
     device = torch.device(args.device)
     if device.type == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA was requested but unavailable")
@@ -284,6 +304,9 @@ def main() -> None:
         ),
         iterative_geometry_adapters_weight_sharing=str(
             iterative_geometry.get("weight_sharing", "independent")
+        ),
+        iterative_geometry_adapters_detach_previous_prediction=bool(
+            iterative_geometry.get("detach_previous_prediction", True)
         ),
         low1_decoder_hidden_channels=joint.get("low1_decoder_hidden_channels"),
         low2_decoder_hidden_channels=joint.get("low2_decoder_hidden_channels"),
@@ -437,6 +460,24 @@ def main() -> None:
         "resume_checkpoint": str(args.resume.resolve()) if args.resume else None,
         "reset_optimizer_scheduler_on_resume": reset_training_state,
         "continuation_start_epoch": start_epoch,
+        "deterministic_algorithms": args.deterministic,
+        "deterministic_warn_only": args.deterministic,
+        "known_nondeterministic_cuda_ops": (
+            ["upsample_bicubic2d_backward_out_cuda"] if args.deterministic else []
+        ),
+        "flash_sdp_enabled": (
+            torch.backends.cuda.flash_sdp_enabled()
+            if device.type == "cuda"
+            else None
+        ),
+        "memory_efficient_sdp_enabled": (
+            torch.backends.cuda.mem_efficient_sdp_enabled()
+            if device.type == "cuda"
+            else None
+        ),
+        "seed": seed,
+        "effective_batch_size": int(cfg.train.batch_size)
+        * int(cfg.train.gradient_accumulation),
     }
     with (output_dir / "config.yaml").open("w", encoding="utf-8") as handle:
         yaml.safe_dump(materialized, handle, sort_keys=False)
@@ -470,7 +511,7 @@ def main() -> None:
     log_every = int(cfg.train.log_every)
     for epoch in range(start_epoch, epochs + 1):
         epoch_seed = (seed + (epoch - 1) * 1_000_003) % 2**32
-        seed_everything(epoch_seed)
+        seed_everything(epoch_seed, deterministic=args.deterministic)
         train_generator.manual_seed(epoch_seed)
         model.train()
         optimizer.zero_grad(set_to_none=True)
@@ -568,6 +609,12 @@ def main() -> None:
                     zero_mean_weight=float(loss_cfg.residual_zero_mean),
                     teacher_beta=float(loss_cfg.native_teacher_beta),
                     residual_mode=model.residual_mode,
+                    low2_teacher_decomposition=str(
+                        loss_cfg.get("low2_teacher_decomposition", "oracle_low18")
+                    ),
+                    spatial_teacher_mean_center=bool(
+                        loss_cfg.get("spatial_teacher_mean_center", True)
+                    ),
                     equivariance_error=equivariance_error,
                     equivariance_weight=float(loss_cfg.attention_scale_equivariance),
                 )
@@ -650,7 +697,12 @@ def main() -> None:
         elif model.iterative_geometry_adapters_enabled:
             architecture = "dav2_early_fusion_joint_global_scale_iterative_"
             architecture += (
-                "shared_geometry_trunk_separate_r18_r36_heads_low18_low36"
+                "shared_geometry_trunk_separate_r18_r36_heads_"
+                + (
+                    "detached_iteration_low18_low36"
+                    if model.iterative_geometry_adapters_detach_previous_prediction
+                    else "nondetached_iteration_low18_low36"
+                )
                 if model.iterative_geometry_adapters_weight_sharing
                 == "shared_trunk_separate_heads"
                 else "independent_geometry18_geometry36_low18_low36"
@@ -676,6 +728,13 @@ def main() -> None:
             )
         else:
             architecture = "dav2_early_fusion_joint_global_scale_low36"
+        if (
+            str(loss_cfg.get("low2_teacher_decomposition", "oracle_low18"))
+            == "predicted_low18_detached"
+        ):
+            architecture += "_predicted_r18_teacher"
+        if not bool(loss_cfg.get("spatial_teacher_mean_center", True)):
+            architecture += "_uncentered_r36_teacher"
         payload = {
             "schema_version": 1,
             "architecture": architecture,

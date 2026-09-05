@@ -1,0 +1,15 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_local_retrain_full_depth_metric_da3.yaml
+
+# Twelve-epoch, from-scratch deterministic reproduction of the local R36-only
+# baseline. Micro-batch 8 with two-step accumulation preserves effective batch
+# size 16 while reducing per-epoch launch and data-loading overhead.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low36_only_12epoch_continuous_local_retrain_deterministic_effective_batch16
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low36_only_12epoch_continuous_local_retrain_deterministic_effective_batch16
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low36_only_12epoch_continuous_local_retrain_deterministic_effective_batch16
+
+train:
+  epochs: 12
+  batch_size: 8
+  val_batch_size: 8
+  gradient_accumulation: 2

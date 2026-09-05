@@ -1,0 +1,14 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_full_depth_metric_da3.yaml
+
+# Fresh anchor retrain with stochastic CUDA kernels allowed. Random generators
+# remain seeded at 42. The largest possible micro-batch under effective batch
+# size 16 is used, with no gradient accumulation.
+experiment:
+  name: stanford_area1_f36_anchor_1c07d65_seed42_batch16_retrain
+  output_dir: outputs/stanford_area1_f36_anchor_1c07d65_seed42_batch16_retrain
+  results_dir: results/stanford_area1/f36_anchor_1c07d65_seed42_batch16_retrain
+
+train:
+  batch_size: 16
+  val_batch_size: 16
+  gradient_accumulation: 1

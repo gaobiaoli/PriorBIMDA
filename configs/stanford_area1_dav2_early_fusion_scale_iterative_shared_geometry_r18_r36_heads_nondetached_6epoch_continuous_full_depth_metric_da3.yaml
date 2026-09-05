@@ -1,0 +1,15 @@
+extends: stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_heads_6epoch_continuous_full_depth_metric_da3.yaml
+
+# Controlled gradient-path ablation of the shared-trunk iterative model.
+# C18 continues to use stop-gradient(c). Only C36 changes from
+# geometry(stopgrad(c + r18)) to geometry(c + r18), enabling the r36 loss to
+# reach the scale head and r18 branch through the second-stage condition.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_heads_nondetached_6epoch_continuous
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_heads_nondetached_6epoch_continuous
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_heads_nondetached_6epoch_continuous
+
+model:
+  dav2_joint_scale_low:
+    iterative_geometry_adapters:
+      detach_previous_prediction: false

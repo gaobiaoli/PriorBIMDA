@@ -1,0 +1,8 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_full_depth_metric_da3.yaml
+
+# Reproduce the unchanged F36 anchor configuration from commit 1c07d65
+# without overwriting the historical artifacts committed at this revision.
+experiment:
+  name: stanford_area1_f36_anchor_1c07d65_reproduction
+  output_dir: outputs/stanford_area1_f36_anchor_1c07d65_reproduction
+  results_dir: results/stanford_area1/f36_anchor_1c07d65_reproduction

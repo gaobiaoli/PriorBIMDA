@@ -1,0 +1,12 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_full_depth_metric_da3.yaml
+
+# Keep the original F36 post-fusion anchor unchanged, but retain the DC term in
+# its oracle-scale r36 teacher. The existing zero-mean soft regularizer remains
+# enabled so this experiment isolates removal of the explicit target centering.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_uncentered_r36_teacher
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_uncentered_r36_teacher
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_uncentered_r36_teacher
+
+loss:
+  spatial_teacher_mean_center: false

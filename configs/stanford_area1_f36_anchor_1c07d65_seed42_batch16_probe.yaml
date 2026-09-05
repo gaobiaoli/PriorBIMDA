@@ -1,0 +1,6 @@
+extends: stanford_area1_f36_anchor_1c07d65_seed42_batch16_retrain.yaml
+
+experiment:
+  name: stanford_area1_f36_anchor_1c07d65_seed42_batch16_probe
+  output_dir: outputs/stanford_area1_f36_anchor_1c07d65_seed42_batch16_probe
+  results_dir: results/stanford_area1/f36_anchor_1c07d65_seed42_batch16_probe

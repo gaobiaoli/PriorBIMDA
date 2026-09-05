@@ -1,6 +1,6 @@
 # Continuous scale+r36 experiment log
 
-更新日期：2026-09-03（Pacific/Auckland）
+更新日期：2026-09-04（Pacific/Auckland）
 
 ## 固定协议
 
@@ -336,3 +336,376 @@ AbsRel 改善 0.82%/3.03%，MP3D RMSE 改善 0.04%，但 zero-shot AbsRel 退化
 MAE 退化 2.82%、RMSE-log 退化 0.80%，delta1/delta2 分别下降 0.00250/0.00019。
 因此共享 trunk 提高了 Area_1 test 且显著压缩 geometry 参数，但跨域表现不如独立 encoder，
 仍不替代当前锚点。共享版中 r36 在 r18 后带来的 aggregate AbsRel 改善为 0.33%。
+
+## Shared iterative geometry：C36 中 c+r18 不 detach
+
+该实验严格继承共享 geometry trunk 版本，只改变第二阶段 iteration condition 的梯度：
+
+- C18 仍使用 `stopgrad(c)`，因此 r18 condition 不反向调整 global scale；
+- C36 从 `geometry(stopgrad(c+r18))` 改为 `geometry(c+r18)`；
+- 恢复 `L_r36 → A36(C36) → c,r18` 路径；
+- F18/F36 DPT backbone、共享 `3→32→3×ResBlock→64` trunk、两个独立
+  `64→128` stage heads、residual decoders、loss、数据和 schedule 均不变。
+
+- 配置：
+  `configs/stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_heads_nondetached_6epoch_continuous_full_depth_metric_da3.yaml`
+- checkpoint：
+  `outputs/stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_heads_nondetached_6epoch_continuous/best.pt`
+- checkpoint SHA-256：
+  `da98bb40b45708cc36acb4c9e1fd420b6774aaf6d0fd74412852fde18de521a0`
+- best epoch：5；optimizer steps：2634；skipped steps：0；训练耗时：3731.75 s。
+- 真实前向梯度审计：C18 `requires_grad=False`，C36 `requires_grad=True`；C36 signed
+  channel 对 c/r18 的梯度绝对和分别为 0.66650/0.66667；两个 adapter delta 初始仍精确为零。
+
+Area_1 pixel-micro：
+
+| split | stage | AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---|---:|---:|---:|---:|---:|---:|
+| validation | scale | 0.069353 | 0.660006 | 0.224302 | 0.938104 | 0.976437 | 0.148690 |
+| validation | scale+r18 | 0.064772 | 0.634657 | 0.202664 | 0.942848 | 0.977531 | 0.144106 |
+| validation | scale+r18+r36 | 0.063651 | 0.633403 | 0.198881 | 0.942752 | 0.977731 | 0.143376 |
+| test | scale | 0.067370 | 0.418146 | 0.139008 | 0.944619 | 0.975500 | 0.168072 |
+| test | scale+r18 | 0.063637 | 0.413813 | 0.129819 | 0.945284 | 0.975309 | 0.165433 |
+| test | scale+r18+r36 | 0.062744 | 0.412256 | 0.127183 | 0.945189 | 0.975261 | 0.164850 |
+
+Matterport3D zero-shot：
+
+| scene | frames | valid pixels | scale AbsRel | scale+r18 AbsRel | final AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| hxp | 624 | 683,741,522 | 0.109592 | 0.106721 | 0.106227 | 0.270872 | 0.151015 | 0.909533 | 0.973416 | 0.170604 |
+| 759 | 518 | 595,254,869 | 0.079635 | 0.075748 | 0.075108 | 0.294990 | 0.147965 | 0.935616 | 0.990156 | 0.125071 |
+| 1px | 793 | 953,135,152 | 0.098147 | 0.093785 | 0.093322 | 0.423201 | 0.158181 | 0.924417 | 0.969411 | 0.189398 |
+| **aggregate** | **1935** | **2,232,131,543** | **0.096716** | **0.092938** | **0.092418** | **0.349510** | **0.153261** | **0.922844** | **0.976170** | **0.168537** |
+
+相对 detach 共享版，不 detach 使 Area_1 validation AbsRel 改善 1.13%，但 test 退化
+1.66%，MP3D aggregate AbsRel 退化 3.05%。相对当前 F36 锚点，zero-shot AbsRel 退化
+8.08%、MAE 退化 5.29%、RMSE-log 退化 1.08%，delta1 下降 0.00510。虽然 r36 在
+r18 后的自身边际改善由 0.33% 增至 0.56%，额外 condition 梯度同时破坏了 global scale
+与 coarse residual 的跨域校准；因此该实验为负结果，应保留 detach。
+
+## Shared detached iteration + predicted-r18 dynamic r36 teacher
+
+回到共享 trunk、C36 对 `c+r18` detach 的版本，只修改 native r36 teacher。旧 teacher：
+
+`T_r36 = T36_GT - Up(T18_GT)`
+
+新 teacher：
+
+`T_r36 = T36_GT - Up(stopgrad(r18_pred))`
+
+因此 C36 输入状态和 native teacher 都以当前 `r18_pred` 为第一阶段状态。teacher 中的 r18
+显式 detach，low2 teacher 不会经 target 反向调整 r18；final-depth loss、r18 native teacher、
+zero-mean regularization、encoder、共享 geometry trunk/head、数据和 schedule 均保持不变。
+旧 teacher 仍是默认值，新行为由 loss 配置独立开启。
+
+- 配置：
+  `configs/stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_dynamic_teacher_6epoch_continuous_full_depth_metric_da3.yaml`
+- checkpoint：
+  `outputs/stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_dynamic_teacher_6epoch_continuous/best.pt`
+- checkpoint SHA-256：
+  `56cf01fa7b0894156b19b6bbd001c7b6b68d01548783d270ab872e9f835c8971`
+- best epoch：6；optimizer steps：2634；skipped steps：0；训练耗时：3726.71 s。
+- 数值测试确认：当 r18 prediction 偏离 T18_GT 时，新 target 精确等于预测状态后的 remainder；
+  low2 teacher 对 r18 prediction 的梯度为 None。
+
+Area_1 pixel-micro：
+
+| split | stage | AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---|---:|---:|---:|---:|---:|---:|
+| validation | scale | 0.069304 | 0.656784 | 0.222968 | 0.937876 | 0.976441 | 0.148580 |
+| validation | scale+r18 | 0.064687 | 0.637213 | 0.203538 | 0.941878 | 0.977236 | 0.145078 |
+| validation | scale+r18+r36 | 0.063159 | 0.635082 | 0.197654 | 0.942488 | 0.977151 | 0.144543 |
+| test | scale | 0.067963 | 0.417630 | 0.139772 | 0.943700 | 0.975670 | 0.168384 |
+| test | scale+r18 | 0.064911 | 0.414266 | 0.132077 | 0.943583 | 0.974865 | 0.166912 |
+| test | scale+r18+r36 | 0.062691 | 0.412317 | 0.125139 | 0.943079 | 0.974965 | 0.166186 |
+
+Matterport3D zero-shot：
+
+| scene | frames | valid pixels | scale AbsRel | scale+r18 AbsRel | final AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| hxp | 624 | 683,741,522 | 0.110813 | 0.105841 | 0.100294 | 0.264484 | 0.141384 | 0.913425 | 0.973020 | 0.167606 |
+| 759 | 518 | 595,254,869 | 0.081908 | 0.077198 | 0.076892 | 0.302070 | 0.152683 | 0.928989 | 0.989652 | 0.128773 |
+| 1px | 793 | 953,135,152 | 0.094573 | 0.090929 | 0.090023 | 0.424279 | 0.153453 | 0.924672 | 0.968854 | 0.189569 |
+| **aggregate** | **1935** | **2,232,131,543** | **0.096170** | **0.091835** | **0.089667** | **0.350182** | **0.149551** | **0.922378** | **0.975677** | **0.168441** |
+
+新 teacher 达成了预期的局部效果：MP3D 上 r36 对 scale+r18 的边际 AbsRel 改善由旧
+teacher 的 0.33% 增至 2.36%，证明理想 T18_GT decomposition 确实压制了第二阶段的补偿
+能力。但 r18 阶段本身从 0.089972 退化到 0.091835，最终 aggregate AbsRel 仅从
+0.089680 改善到 0.089667（0.014%，可视为持平），同时 RMSE 退化 0.28%、delta1 下降
+0.00306。Area_1 validation 改善 1.90%，test 退化 1.58%。相对当前 F36 锚点，MP3D
+AbsRel 仍退化 4.86%。因此假设得到验证，但固定 0.5 权重的动态 teacher 没有产生整体
+zero-shot 净收益，暂不替代当前锚点或旧共享 teacher。
+
+## F36 后融合锚点：oracle r36 teacher 不减均值
+
+回到当前 F36 后融合锚点，仅移除 oracle-scale spatial teacher 的显式中心化：
+
+`T_r36 = Pool36(log(D_GT) - log(exp(c_oracle) D_DA3))`
+
+不再执行 `T_r36 -= masked_mean(T_r36)`。本实验没有启用 predicted-scale dynamic
+teacher；原有 global-scale oracle loss、final-depth loss、r36 teacher 权重 0.5、r36
+零均值软正则权重 0.10、adapter/decoder、数据与 6-epoch schedule 均不变。实现开关默认
+仍为中心化，避免改变旧实验语义。
+
+- 配置：
+  `configs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_uncentered_r36_teacher_full_depth_metric_da3.yaml`
+- checkpoint：
+  `outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_uncentered_r36_teacher/best.pt`
+- checkpoint SHA-256：
+  `4e1d23456edc77c645dd6728dbc1c6d9d0f91c5f44cb8c2b83437470fb3acb46`
+- best epoch：5；optimizer steps：2634；skipped steps：0；训练耗时：3689.07 s。
+- 数值测试确认：未中心化 teacher 保留 oracle scale 后的 DC residual；中心化默认路径会
+  消去该常量分量。相关测试共 34 项通过。
+
+Area_1 pixel-micro：
+
+| split | stage | AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---|---:|---:|---:|---:|---:|---:|
+| validation | scale | 0.068834 | 0.652950 | 0.219829 | 0.938786 | 0.976510 | 0.147978 |
+| validation | scale+r36 | 0.062987 | 0.631518 | 0.197337 | 0.942495 | 0.977685 | 0.142931 |
+| test | scale | 0.066679 | 0.417785 | 0.137613 | 0.944633 | 0.975800 | 0.167741 |
+| test | scale+r36 | 0.062356 | 0.412484 | 0.125386 | 0.943328 | 0.975505 | 0.165206 |
+
+Matterport3D zero-shot：
+
+| scene | frames | valid pixels | scale AbsRel | final AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| hxp | 624 | 683,741,522 | 0.107430 | 0.105043 | 0.263980 | 0.148680 | 0.915353 | 0.974751 | 0.165737 |
+| 759 | 518 | 595,254,869 | 0.082806 | 0.078276 | 0.304033 | 0.156263 | 0.931290 | 0.989773 | 0.128738 |
+| 1px | 793 | 953,135,152 | 0.093552 | 0.089598 | 0.419189 | 0.154121 | 0.929116 | 0.969981 | 0.185603 |
+| **aggregate** | **1935** | **2,232,131,543** | — | **0.091310** | **0.347893** | **0.153025** | **0.925480** | **0.976720** | **0.165963** |
+
+相对原 F36 锚点，Area_1 validation/test AbsRel 分别改善 2.97%/2.03%；但 MP3D
+aggregate AbsRel 从 0.085511 退化到 0.091310（+6.78%），三个场景均退化，其中 hxp
+最明显（+12.89%）。虽然 aggregate RMSE 与 RMSE-log 小幅改善 0.41%/0.46%，AbsRel、
+MAE 和 delta1 分别退化 6.78%、5.13% 和 0.00246。预测 residual 的平均绝对均值也从
+原锚点 validation/test 的 0.00640/0.00559 增至 0.00831/0.00706。该修改提升域内结果，
+但明显损害跨域尺度稳健性，因此不替代原 F36 锚点。
+
+## 当前最优 F36 锚点复训
+
+使用当前代码从官方初始化重新训练原始最优 F36 后融合锚点。复训配置除实验名称与输出
+路径外，解析后的 model/loss/train/data 均与原锚点完全一致：seed=42、centered oracle
+teacher、r36 零均值软正则 0.10、6 epochs；没有启用 dynamic 或 uncentered teacher。
+
+- 配置：
+  `configs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_retrain_full_depth_metric_da3.yaml`
+- checkpoint：
+  `outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_retrain/best.pt`
+- checkpoint SHA-256：
+  `a2ecb04d814ff292d2a678a646d954119726e3aa9c084fd825eaedbf50ab5bd8`
+- best epoch：6；optimizer steps：2634；skipped steps：0；训练耗时：3686.14 s。
+- 官方 encoder/DPT 参数初始化逐值一致，BIM projection、r36 decoder output 与
+  calibrated-disagreement adapter 均通过 zero-init 审计。
+
+Area_1 pixel-micro：
+
+| split | stage | AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---|---:|---:|---:|---:|---:|---:|
+| validation | scale | 0.069142 | 0.656784 | 0.222085 | 0.938156 | 0.976245 | 0.148488 |
+| validation | scale+r36 | 0.064177 | 0.635679 | 0.199357 | 0.941637 | 0.977032 | 0.145483 |
+| test | scale | 0.067792 | 0.418957 | 0.140191 | 0.944661 | 0.975479 | 0.167934 |
+| test | scale+r36 | 0.063260 | 0.415709 | 0.127778 | 0.942884 | 0.975759 | 0.166933 |
+
+Matterport3D zero-shot：
+
+| scene | frames | valid pixels | scale AbsRel | final AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| hxp | 624 | 683,741,522 | 0.101341 | 0.095634 | 0.263400 | 0.136118 | 0.916106 | 0.973433 | 0.166714 |
+| 759 | 518 | 595,254,869 | 0.081117 | 0.078894 | 0.309334 | 0.155678 | 0.922078 | 0.986858 | 0.133472 |
+| 1px | 793 | 953,135,152 | 0.097156 | 0.091222 | 0.425401 | 0.157106 | 0.925500 | 0.969127 | 0.190481 |
+| **aggregate** | **1935** | **2,232,131,543** | — | **0.089285** | **0.352198** | **0.150296** | **0.921710** | **0.975175** | **0.169580** |
+
+相对第一次锚点训练，本次复训 Area_1 validation/test AbsRel 分别改善 1.14%/0.61%，
+但 MP3D aggregate AbsRel 从 0.085511 退化到 0.089285（+4.41%）；hxp、759、1px
+分别退化 2.78%、2.80%、6.59%。aggregate RMSE、MAE、RMSE-log 分别退化
+0.82%、3.25%、1.71%，delta1/delta2 分别下降 0.00623/0.00120。结果说明锚点的域内
+性能可复现，但当前只有一次训练的 zero-shot 峰值没有被本次复训重现；原 checkpoint
+仍保持所有已测版本中的最佳 MP3D zero-shot AbsRel。
+
+## 独立历史源码复现（commit cbd3cef）
+
+为排除当前源码后续修改的影响，在独立 worktree
+`/home/bgao491/PriorBIMDA_anchor_cbd3cef` 中检出历史提交
+`cbd3cefd3f5c8b91fb8cd12143d3cf6deaaaa047`，使用该提交中原始 F36 锚点配置从官方
+初始化重新训练 6 epochs。训练和评测均显式设置
+`PYTHONPATH=/home/bgao491/PriorBIMDA_anchor_cbd3cef/src`；数据目录通过软链接指向主目录的
+同一份 `data/processed`，没有复制或更换数据。
+
+- 历史源码目录：`/home/bgao491/PriorBIMDA_anchor_cbd3cef`
+- 配置：
+  `configs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_full_depth_metric_da3.yaml`
+- checkpoint：
+  `outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32/best.pt`
+- checkpoint SHA-256：
+  `61df0a082f4efe44cb7867196855f8dc782e5b5e7256b3463e56199a2d94ca3c`
+- best epoch：6；optimizer steps：2634；skipped steps：0；训练耗时：3684.15 s。
+- manifest SHA-256：
+  `f78f5cb9c61065c3278f8d93925f9eda8e5a6102787179b0b67a08806864f225`
+- split annotation SHA-256：
+  `18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59`
+
+Area_1 pixel-micro：
+
+| split | frames | stage | AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---:|---|---:|---:|---:|---:|---:|---:|
+| validation | 1673 | scale | 0.069371 | 0.656074 | 0.221315 | 0.937606 | 0.976429 | 0.148733 |
+| validation | 1673 | scale+r36 | 0.064581 | 0.639037 | 0.199921 | 0.940155 | 0.976783 | 0.146330 |
+| test | 1641 | scale | 0.067600 | 0.419747 | 0.140178 | 0.945047 | 0.975456 | 0.169714 |
+| test | 1641 | scale+r36 | 0.063207 | 0.416932 | 0.127694 | 0.943336 | 0.975196 | 0.169014 |
+
+Validation AbsRel 轨迹对比：
+
+| epoch | 原锚点 | 历史源码复训 |
+|---:|---:|---:|
+| 1 | 0.077651 | 0.067430 |
+| 2 | 0.066760 | 0.066807 |
+| 3 | 0.066897 | 0.065218 |
+| 4 | 0.068644 | 0.064820 |
+| 5 | 0.065399 | 0.064991 |
+| 6 | 0.064915 | 0.064581 |
+
+因此当前 validation 数据与评测路径一致，但训练轨迹及最终权重不一致；历史源码复训的
+最终 validation/test AbsRel 相对原锚点分别改善 0.51%/0.69%。
+
+Matterport3D zero-shot：
+
+| scene | frames | valid pixels | scale AbsRel | final AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| hxp | 624 | 683,741,522 | 0.098427 | 0.093741 | 0.264353 | 0.133811 | 0.917547 | 0.972823 | 0.169009 |
+| 759 | 518 | 595,254,869 | 0.080435 | 0.077245 | 0.301028 | 0.150839 | 0.931047 | 0.988901 | 0.129633 |
+| 1px | 793 | 953,135,152 | 0.095079 | 0.091552 | 0.428238 | 0.158205 | 0.928133 | 0.969363 | 0.190953 |
+| **aggregate** | **1935** | **2,232,131,543** | **0.092199** | **0.088407** | **0.351965** | **0.148768** | **0.925667** | **0.975633** | **0.169709** |
+
+历史源码复训相对当前源码复训的 MP3D aggregate AbsRel 由 0.089285 改善到 0.088407，
+说明后续源码差异确实贡献了一部分退化；但仍未重现原锚点的 0.085511（退化 3.39%）。
+差异主要来自 1px：0.091552 对原来的 0.085580，退化 6.98%。原 checkpoint 的 SHA-256
+为 `ca54375af20c68821f837d00949aff6abef51a3d3bb26bbef78d7b7c13e5b43a`，与本次复训不同。
+
+需要注意：原锚点训练在 2026-09-03 19:00 左右启动，而 `cbd3cef` 在 19:38 提交，处于
+该次训练过程中；checkpoint/配置没有保存启动瞬间的 Git SHA 或未提交 diff。因此
+`cbd3cef` 是能够恢复的最近历史提交，但无法证明与 19:00 已载入内存的源码逐字节相同。
+另外训练虽固定 seed 并启用 cuDNN deterministic、关闭 benchmark，但没有启用
+`torch.use_deterministic_algorithms(True)`，且使用 AMP、gradient checkpointing、GPU
+attention/backward 与多 worker augmentation，同 seed 不保证 checkpoint 位级一致。
+
+## 原锚点权重 × cbd3cef 源码交叉评测
+
+为区分历史源码与重训权重的影响，保持 `cbd3cef` worktree、历史配置、DA3
+`depth-anything/da3metric-large@4010e39f...`、process resolution 504、MP3D 数据和冻结的
+三规则帧集不变，仅将 checkpoint 换回第一次锚点训练得到的原权重：
+
+`/home/bgao491/PriorBIMDA/outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32/best.pt`
+
+checkpoint SHA-256 为
+`ca54375af20c68821f837d00949aff6abef51a3d3bb26bbef78d7b7c13e5b43a`。模型严格加载成功，
+三个场景的 frame-set SHA-256 均与原评测相同，1935 帧全部成功且 error=0。
+
+| scene | frames | valid pixels | scale AbsRel | final AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| hxp | 624 | 683,741,522 | 0.101183 | 0.093048 | 0.260583 | 0.132060 | 0.917247 | 0.972956 | 0.165727 |
+| 759 | 518 | 595,254,869 | 0.080000 | 0.076744 | 0.302759 | 0.151933 | 0.933952 | 0.989762 | 0.128805 |
+| 1px | 793 | 953,135,152 | 0.092020 | 0.085579 | 0.424084 | 0.151269 | 0.931860 | 0.970459 | 0.187189 |
+| **aggregate** | **1935** | **2,232,131,543** | **0.091618** | **0.085511** | **0.349343** | **0.145562** | **0.927941** | **0.976371** | **0.166732** |
+
+交叉评测 aggregate final AbsRel 为 `0.0855108319`，原评测记录为 `0.0855110022`，绝对差
+仅 `-1.70e-7`；逐场景 AbsRel 差异均小于 `1e-6`。这证明原权重在 `cbd3cef` 源码下可以
+恢复原 zero-shot 性能，历史与当前 evaluator 路径不是此前退化的原因。`cbd3cef` 重训权重
+的 aggregate `0.088407` 退化来自训练产生了不同 checkpoint；问题应继续定位训练轨迹的
+非确定性或原训练启动时未被提交的源码状态，而不是 MP3D 评测实现。
+
+交叉评测结果目录：
+
+- `results/matterport3d/hxp_original_weights_cbd3cef_zero_shot/`
+- `results/matterport3d/759_original_weights_cbd3cef_zero_shot/`
+- `results/matterport3d/1px_original_weights_cbd3cef_zero_shot/`
+
+## 直接后继提交 1c07d65 独立复现
+
+`cbd3cef` 在当前主线上的直接子提交是
+`1c07d652ff17a8b03306862995fb3ac7394eca9b`（commit `903-5`）。在独立 worktree
+`/home/bgao491/PriorBIMDA_anchor_1c07d65` 检出该提交，源码文件保持 Git 原样；只新增一个
+继承配置，用独立输出目录防止覆盖提交内已有实验产物：
+
+`configs/stanford_area1_f36_anchor_1c07d65_reproduction.yaml`
+
+数据仍通过 `data/processed` 软链接复用主目录的同一份缓存。训练和评测均显式设置
+`PYTHONPATH=/home/bgao491/PriorBIMDA_anchor_1c07d65/src`。
+
+### 提交差异审计
+
+- 原 F36 锚点 YAML 在 `cbd3cef` 与 `1c07d65` 中逐字节相同，SHA-256 均为
+  `89f6c48283aaca0409ead6b0f710b98ddbaef5f4da3d6c7c1c97d471f574b8b5`。
+- 新的 reproduction 配置除 experiment name/output/results path 外，解析后的 data/model/loss/
+  train 核心配置哈希与原 YAML 相同：
+  `4133bc7184b1b086df3bce0ef117e1942bc66e0f88cc58a5045f603dc6537709`。
+- manifest SHA-256 仍为
+  `f78f5cb9c61065c3278f8d93925f9eda8e5a6102787179b0b67a08806864f225`；split annotation
+  SHA-256 仍为
+  `18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59`。
+- `1c07d65` 新增可选的 detached second-pass DINO adapter，并为此将 `_encoded_neck`
+  拆为 `_encode_dino` 与 `_decode_dpt_native_features`。原锚点配置没有该字段，解析后该功能
+  为关闭；没有增加激活参数或额外 forward pass。
+- 固定 seed 的合成 batch 审计中，两个提交的初始 state、前向输出、total/各分项 loss、DPT、
+  scale head、r36 decoder 和 disagreement adapter 梯度均逐字节一致。
+- DINO backbone 梯度哈希不逐字节一致，但对同一提交重复运行时哈希同样会变化，梯度总和
+  仅在约 `1e-9` 尺度波动。因此这不能归因于源码重构，而是现有 GPU attention/backward
+  路径自身没有位级确定性。静态和数值审计均未发现原配置下有语义行为改变。
+- 相关单元测试 18 项全部通过。
+
+### 训练与 Area_1
+
+训练从相同官方 DAv2 初始化开始，初始化审计全部通过。第一次进程在 epoch 2 checkpoint
+写入时被外部终止，随后从完整的 epoch 1 `latest.pt` 恢复；optimizer、scheduler 与 AMP
+scaler 均恢复，epoch 2 按固定 epoch seed 重新完整执行。脚本不保存 DataLoader worker/RNG
+快照，因此该恢复不承诺逐 batch 位级重放，但没有缺失或重复 optimizer step。
+
+- checkpoint：`outputs/stanford_area1_f36_anchor_1c07d65_reproduction/best.pt`
+- checkpoint SHA-256：
+  `77028caab5ed5ce9c2f549ed93b87777db586fa5e68ea1cb0812c4ac4ccca7f6`
+- best epoch：6；optimizer steps：2634；skipped steps：0。
+- 六个 epoch 的计算时间之和：3610.94 s。
+
+Validation AbsRel 轨迹：
+
+| epoch | 原锚点 | cbd3cef 重训 | 1c07d65 重训 |
+|---:|---:|---:|---:|
+| 1 | 0.077651 | 0.067430 | 0.077727 |
+| 2 | 0.066760 | 0.066807 | 0.068142 |
+| 3 | 0.066897 | 0.065218 | 0.065957 |
+| 4 | 0.068644 | 0.064820 | 0.064129 |
+| 5 | 0.065399 | 0.064991 | 0.064019 |
+| 6 | 0.064915 | 0.064581 | 0.063933 |
+
+Area_1 pixel-micro：
+
+| split | frames | stage | AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---:|---|---:|---:|---:|---:|---:|---:|
+| validation | 1673 | scale | 0.069159 | 0.656422 | 0.222387 | 0.938910 | 0.976365 | 0.148201 |
+| validation | 1673 | scale+r36 | 0.063933 | 0.636674 | 0.200671 | 0.943269 | 0.977266 | 0.144074 |
+| test | 1641 | scale | 0.067597 | 0.418971 | 0.139575 | 0.943317 | 0.975719 | 0.169012 |
+| test | 1641 | scale+r36 | 0.063032 | 0.413559 | 0.126312 | 0.943000 | 0.975258 | 0.167054 |
+
+相对原锚点，validation/test AbsRel 分别改善 1.51%/0.96%；相对 `cbd3cef` 重训分别改善
+1.00%/0.28%。
+
+### Matterport3D zero-shot
+
+| scene | frames | valid pixels | scale AbsRel | final AbsRel | RMSE | MAE | delta1 | delta2 | RMSE-log |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| hxp | 624 | 683,741,522 | 0.104122 | 0.098790 | 0.262697 | 0.139275 | 0.914195 | 0.973862 | 0.166945 |
+| 759 | 518 | 595,254,869 | 0.079848 | 0.075081 | 0.300946 | 0.150846 | 0.934759 | 0.990257 | 0.125872 |
+| 1px | 793 | 953,135,152 | 0.094705 | 0.090362 | 0.423712 | 0.154712 | 0.925265 | 0.969618 | 0.189571 |
+| **aggregate** | **1935** | **2,232,131,543** | **0.093628** | **0.088869** | **0.349217** | **0.148953** | **0.924406** | **0.976422** | **0.167654** |
+
+r36 将 aggregate AbsRel 从 `0.093628` 改善至 `0.088869`，相对改善 5.08%。但相对原锚点
+`0.085511` 仍退化 3.93%；其中 hxp/1px 分别退化 6.17%/5.59%，759 则改善 2.17%。相对
+`cbd3cef` 重训的 `0.088407`，本次 aggregate 再退化 0.52%。因此 `1c07d65` 能得到更好的
+Area_1 val/test，却仍未恢复第一次锚点的 MP3D zero-shot 峰值；该结果继续支持“训练轨迹/
+checkpoint 差异导致跨域波动”，而不是 evaluator 或原配置被改动。
+
+结果目录：
+
+- `results/matterport3d/hxp_f36_anchor_1c07d65_reproduction_zero_shot/`
+- `results/matterport3d/759_f36_anchor_1c07d65_reproduction_zero_shot/`
+- `results/matterport3d/1px_f36_anchor_1c07d65_reproduction_zero_shot/`

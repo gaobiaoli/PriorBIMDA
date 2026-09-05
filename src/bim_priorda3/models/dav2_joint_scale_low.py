@@ -245,12 +245,15 @@ def build_calibrated_disagreement_condition(
     *,
     rgb: torch.Tensor | None = None,
     log_residual: torch.Tensor | None = None,
+    detach_calibration: bool = True,
 ) -> torch.Tensor:
     """Build C=[z_s, |z_s|, M, optional RGB] at a DPT feature resolution.
 
-    ``z_s = log(D_BIM) - log(D_DA3) - stop_gradient(c + r)`` is evaluated at
-    full image resolution, where optional ``r`` is the preceding iterative
-    residual. Before mask-aware area pooling, signed disagreement is
+    ``z_s = log(D_BIM) - log(D_DA3) - (c + r)`` is evaluated at full image
+    resolution, where optional ``r`` is the preceding iterative residual.
+    Calibration is stop-gradient by default and can be left differentiable for
+    a controlled iteration-gradient ablation. Before mask-aware area pooling,
+    signed disagreement is
     normalized by 1.5 and clipped to [-1,1], while its magnitude is normalized
     by 1.5 and clipped to [0,1]. The mask channel is the BIM hit fraction in
     each output cell, rather than a nearest-neighbour binary mask.
@@ -277,10 +280,17 @@ def build_calibrated_disagreement_condition(
         & (bim > 1e-3)
     )
     support = valid.float()
-    calibrated_log_scale = log_scale.detach().float()
+    calibrated_log_scale = (
+        log_scale.detach().float() if detach_calibration else log_scale.float()
+    )
     disagreement = bim.clamp_min(1e-3).log() - base.clamp_min(1e-3).log() - calibrated_log_scale
     if log_residual is not None:
-        disagreement = disagreement - log_residual.detach().float()
+        calibrated_log_residual = (
+            log_residual.detach().float()
+            if detach_calibration
+            else log_residual.float()
+        )
+        disagreement = disagreement - calibrated_log_residual
     normalized_disagreement = (disagreement / 1.5).clamp(-1.0, 1.0)
     normalized_magnitude = (disagreement.abs() / 1.5).clamp(0.0, 1.0)
     pooled_support = functional.adaptive_avg_pool2d(support, output_size)
@@ -400,6 +410,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         iterative_geometry_adapters_residual_blocks: int = 0,
         iterative_geometry_adapters_expansion_channels: int | None = None,
         iterative_geometry_adapters_weight_sharing: str = "independent",
+        iterative_geometry_adapters_detach_previous_prediction: bool = True,
         low1_decoder_hidden_channels: Sequence[int] | None = None,
         low2_decoder_hidden_channels: Sequence[int] | None = None,
         detached_scale_second_pass_dino_adapter_enabled: bool = False,
@@ -452,6 +463,9 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         )
         self.iterative_geometry_adapters_weight_sharing = str(
             iterative_geometry_adapters_weight_sharing
+        )
+        self.iterative_geometry_adapters_detach_previous_prediction = bool(
+            iterative_geometry_adapters_detach_previous_prediction
         )
         if self.iterative_geometry_adapters_weight_sharing not in {
             "independent",
@@ -937,6 +951,9 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                     log_scale,
                     tuple(feature36.shape[-2:]),
                     log_residual=low1_full,
+                    detach_calibration=(
+                        self.iterative_geometry_adapters_detach_previous_prediction
+                    ),
                 )
                 iterative_delta36 = self._iterative_geometry_delta(
                     iterative_condition36,
@@ -1229,9 +1246,16 @@ def joint_scale_low_loss(
     zero_mean_weight: float,
     teacher_beta: float,
     residual_mode: str = "low18_low36",
+    low2_teacher_decomposition: str = "oracle_low18",
+    spatial_teacher_mean_center: bool = True,
     equivariance_error: torch.Tensor | None = None,
     equivariance_weight: float = 0.0,
 ) -> dict[str, torch.Tensor]:
+    if low2_teacher_decomposition not in {
+        "oracle_low18",
+        "predicted_low18_detached",
+    }:
+        raise ValueError("Unsupported low2 teacher decomposition")
     target = batch["gt_depth"].float()
     prediction = output["depth"].float()
     valid = (
@@ -1276,11 +1300,12 @@ def joint_scale_low_loss(
             batch["base_depth"].detach().float() * oracle_log_scale.detach().float().exp()
         )
         spatial_target = target.clamp_min(1e-6).log() - oracle_scaled.clamp_min(1e-6).log()
-        dimensions = tuple(range(1, spatial_target.ndim))
-        target_mean = (spatial_target * valid).sum(dim=dimensions) / valid.sum(
-            dim=dimensions
-        ).clamp_min(1)
-        spatial_target = spatial_target - target_mean.view(-1, 1, 1, 1)
+        if spatial_teacher_mean_center:
+            dimensions = tuple(range(1, spatial_target.ndim))
+            target_mean = (spatial_target * valid).sum(dim=dimensions) / valid.sum(
+                dim=dimensions
+            ).clamp_min(1)
+            spatial_target = spatial_target - target_mean.view(-1, 1, 1, 1)
 
     low1 = output["low1_log_residual_native"].float()
     low2 = output["low2_log_residual_native"].float()
@@ -1295,8 +1320,13 @@ def joint_scale_low_loss(
         tuple(low2.shape[-2:]),
     )
     if residual_mode == "low18_low36":
+        low2_coarse_state = (
+            low1.detach()
+            if low2_teacher_decomposition == "predicted_low18_detached"
+            else target18
+        )
         target_low2 = target36 - functional.interpolate(
-            target18,
+            low2_coarse_state,
             size=target36.shape[-2:],
             mode="bilinear",
             align_corners=False,

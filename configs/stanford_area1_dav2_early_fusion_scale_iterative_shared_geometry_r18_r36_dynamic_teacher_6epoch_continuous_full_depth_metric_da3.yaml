@@ -1,0 +1,14 @@
+extends: stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_heads_6epoch_continuous_full_depth_metric_da3.yaml
+
+# Keep the shared-trunk iterative model and detached C36 state unchanged. Only
+# replace the ideal Laplacian r36 teacher
+#   T36_GT - Up(T18_GT)
+# with the state-aware remainder
+#   T36_GT - Up(stopgrad(r18_pred)).
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_dynamic_teacher_6epoch_continuous
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_dynamic_teacher_6epoch_continuous
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_iterative_shared_geometry_r18_r36_dynamic_teacher_6epoch_continuous
+
+loss:
+  low2_teacher_decomposition: predicted_low18_detached

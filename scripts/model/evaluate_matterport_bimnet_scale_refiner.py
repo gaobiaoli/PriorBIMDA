@@ -601,6 +601,11 @@ def build_summary(
             == "shared_trunk_separate_heads"
             else "independent r18/r36 encoders"
         )
+        + (
+            " and detached c+r18 iteration"
+            if model.iterative_geometry_adapters_detach_previous_prediction
+            else " and differentiable c+r18 iteration"
+        )
         + " + native 18/36 Laplacian r_low"
         if isinstance(model, BIMEarlyFusionDAv2JointScaleLow)
         and model.iterative_geometry_adapters_enabled
@@ -867,8 +872,12 @@ def _load_joint_dav2_scale_low_model(
         "dav2_early_fusion_joint_global_scale_laplacian_low18_low36",
         "dav2_early_fusion_joint_global_scale_iterative_independent_geometry18_geometry36_low18_low36",
         "dav2_early_fusion_joint_global_scale_iterative_shared_geometry_trunk_separate_r18_r36_heads_low18_low36",
+        "dav2_early_fusion_joint_global_scale_iterative_shared_geometry_trunk_separate_r18_r36_heads_detached_iteration_low18_low36",
+        "dav2_early_fusion_joint_global_scale_iterative_shared_geometry_trunk_separate_r18_r36_heads_nondetached_iteration_low18_low36",
+        "dav2_early_fusion_joint_global_scale_iterative_shared_geometry_trunk_separate_r18_r36_heads_detached_iteration_low18_low36_predicted_r18_teacher",
         "dav2_early_fusion_joint_global_scale_low36",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter",
+        "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_uncentered_r36_teacher",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_rgb6",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_projected_p36",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_detached_second_pass_dino_adapter",
@@ -929,6 +938,9 @@ def _load_joint_dav2_scale_low_model(
         ),
         iterative_geometry_adapters_weight_sharing=str(
             iterative_geometry.get("weight_sharing", "independent")
+        ),
+        iterative_geometry_adapters_detach_previous_prediction=bool(
+            iterative_geometry.get("detach_previous_prediction", True)
         ),
         low1_decoder_hidden_channels=joint.get("low1_decoder_hidden_channels"),
         low2_decoder_hidden_channels=joint.get("low2_decoder_hidden_channels"),

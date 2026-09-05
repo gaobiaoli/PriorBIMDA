@@ -143,6 +143,30 @@ def test_iterative_r36_condition_uses_and_detaches_r18_prediction() -> None:
     assert r18.grad is None
 
 
+def test_iterative_r36_condition_can_backpropagate_into_scale_and_r18() -> None:
+    base = torch.ones((1, 1, 2, 2))
+    bim = torch.full_like(base, 2.0)
+    log_scale = torch.full((1, 1, 1, 1), math.log(1.5), requires_grad=True)
+    r18 = torch.zeros_like(base, requires_grad=True)
+
+    condition = build_calibrated_disagreement_condition(
+        base,
+        bim,
+        torch.ones_like(base),
+        log_scale,
+        (2, 2),
+        log_residual=r18,
+        detach_calibration=False,
+    )
+    scale_gradient, r18_gradient = torch.autograd.grad(
+        condition[:, :1].sum(),
+        (log_scale, r18),
+    )
+
+    assert torch.count_nonzero(scale_gradient) > 0
+    assert torch.count_nonzero(r18_gradient) > 0
+
+
 def test_second_pass_condition_uses_detached_scaled_prediction() -> None:
     base = torch.tensor([[[[1.0, 2.0], [4.0, 8.0]]]])
     bim = torch.tensor([[[[2.0, 2.0], [8.0, 8.0]]]], requires_grad=True)
@@ -441,6 +465,26 @@ def test_shared_iterative_geometry_experiment_shares_only_the_trunk() -> None:
     joint = cfg.model.dav2_joint_scale_low
     geometry = joint.iterative_geometry_adapters
     assert geometry.weight_sharing == "shared_trunk_separate_heads"
+    assert geometry.hidden_channels == 32
+    assert geometry.expansion_channels == 64
+    assert geometry.residual_blocks == 3
+    assert joint.residual_mode == "low18_low36"
+    assert list(joint.low1_decoder_hidden_channels) == [64, 32]
+    assert list(joint.low2_decoder_hidden_channels) == [64, 32]
+    assert cfg.train.epochs == 6
+
+
+def test_shared_iterative_nondetached_experiment_changes_only_iteration_gradient() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_dav2_early_fusion_scale_iterative_shared_"
+        "geometry_r18_r36_heads_nondetached_6epoch_continuous_"
+        "full_depth_metric_da3.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    geometry = joint.iterative_geometry_adapters
+    assert geometry.weight_sharing == "shared_trunk_separate_heads"
+    assert geometry.detach_previous_prediction is False
     assert geometry.hidden_channels == 32
     assert geometry.expansion_channels == 64
     assert geometry.residual_blocks == 3

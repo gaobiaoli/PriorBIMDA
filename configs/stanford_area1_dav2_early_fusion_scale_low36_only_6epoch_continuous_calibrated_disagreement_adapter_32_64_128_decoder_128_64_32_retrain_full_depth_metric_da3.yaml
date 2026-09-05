@@ -1,0 +1,9 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_full_depth_metric_da3.yaml
+
+# Exact rerun of the best F36 post-fusion anchor. Only artifact paths differ;
+# model, centered oracle teacher, losses, data, seed, and six-epoch schedule are
+# inherited unchanged.
+experiment:
+  name: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_retrain
+  output_dir: outputs/stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_retrain
+  results_dir: results/stanford_area1/dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_retrain
