@@ -1,0 +1,36 @@
+extends: stanford_area1_priorbimda_stage2_dav2_relative_minmax_augmented.yaml
+
+# Relative-DAv2 correction after the failed absolute-disparity experiment:
+# (1) use the union of dense Stage-1 and BIM ranges so BIM cannot impose a
+#     furniture-invalid hard minimum by itself;
+# (2) optimize the de-normalized metric prediction with ZoeDepth SILog, as
+#     specified by PriorDA, instead of fitting singular absolute disparities.
+experiment:
+  name: stanford_area1_priorbimda_stage2_dav2_relative_union_silog_augmented
+  output_dir: outputs/stanford_area1_priorbimda_stage2_dav2_relative_union_silog_augmented
+  results_dir: results/stanford_area1/priorbimda_stage2_dav2_relative_union_silog_augmented
+
+model:
+  priorbimda_condition:
+    channels:
+      - stage1_bim_union_minmax_normalized_scaled_da3
+      - per_frame_max_normalized_effective_reliability
+      - zero_one_bim_scaled_da3_log_disagreement
+    normalization: per_frame_stage1_bim_union_minmax_0_1
+    normalization_metric_anchor: union_of_frozen_stage1_and_valid_bim_minimum_and_range
+    normalization_fallback: frozen_stage1_scaled_depth
+    denormalization: inverse_disparity_times_stage1_bim_union_range_plus_union_minimum
+
+train:
+  epoch1_loss_trend_gate:
+    enabled: true
+    comparison_fraction: 0.25
+    minimum_relative_decrease: 0.05
+
+loss:
+  silog: 1.0
+  silog_beta: 0.15
+  normalized_disparity: 0.0
+  robust_log_depth: 0.0
+  depth: 0.0
+  gradient: 0.0

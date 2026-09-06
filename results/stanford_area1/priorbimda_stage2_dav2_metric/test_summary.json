@@ -1,0 +1,37 @@
+{
+  "alignment": "none",
+  "best_epoch": 9,
+  "frames": 1641,
+  "frozen_stage1_scale": {
+    "abs_rel": 0.06671129024237109,
+    "count": 404367334,
+    "delta1": 0.9472444651031084,
+    "delta2": 0.9774280308211049,
+    "mae": 0.12412329331256407,
+    "rmse": 0.3128863775012914,
+    "rmse_log": 0.1578742726587424
+  },
+  "inference_seconds": 29.72948864195496,
+  "mean_normalized_effective_reliability": 0.9521882812357302,
+  "priorbimda_two_stage": {
+    "abs_rel": 0.06083122932447087,
+    "count": 404367334,
+    "delta1": 0.949144826322692,
+    "delta2": 0.9793962610243883,
+    "mae": 0.11635307203621,
+    "rmse": 0.2811186290211047,
+    "rmse_log": 0.1480509528360287
+  },
+  "raw_da3_focal_corrected": {
+    "abs_rel": 0.08440634670708837,
+    "count": 404367334,
+    "delta1": 0.9406275903582261,
+    "delta2": 0.977522279284805,
+    "mae": 0.16101586456713823,
+    "rmse": 0.33612447217255037,
+    "rmse_log": 0.16736493120206913
+  },
+  "relative_improvement_over_stage1": 0.08814191565681265,
+  "selected_checkpoint": "best.pt",
+  "support": "fixed GT support 0.2-5 m"
+}

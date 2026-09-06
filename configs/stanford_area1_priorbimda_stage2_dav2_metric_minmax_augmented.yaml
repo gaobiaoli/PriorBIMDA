@@ -1,0 +1,39 @@
+extends: stanford_area1_priorbimda_stage2_dav2_metric.yaml
+
+# Generalization-oriented PriorBIMDA Stage 2.  This keeps the completed legacy
+# run reproducible while replacing Area_1-wide condition statistics with the
+# reversible per-frame normalization used by PriorDA and restoring the exact
+# BIM augmentation probabilities of the registered F36 anchor baseline.
+experiment:
+  name: stanford_area1_priorbimda_stage2_dav2_metric_minmax_augmented
+  output_dir: outputs/stanford_area1_priorbimda_stage2_dav2_metric_minmax_augmented
+  results_dir: results/stanford_area1/priorbimda_stage2_dav2_metric_minmax_augmented
+
+model:
+  priorbimda_condition:
+    channels:
+      - bim_minmax_normalized_scaled_da3
+      - per_frame_max_normalized_effective_reliability
+      - zero_one_bim_scaled_da3_log_disagreement
+    normalization: per_frame_bim_minmax_0_1
+    normalization_metric_anchor: valid_bim_minimum_and_range
+    normalization_fallback: frozen_stage1_scaled_depth
+    output_domain: dav2_metric_output_divided_by_20m_clamped_0_1
+    denormalization: normalized_depth_times_bim_range_plus_bim_minimum
+    train_statistics: null
+
+train:
+  augment:
+    horizontal_flip_probability: 0.5
+    color_jitter: 0.10
+    bim_shift_probability: 0.20
+    bim_shift_pixels: 4
+    bim_dropout_probability: 0.15
+    bim_dropout_fraction: 0.12
+    bim_full_dropout_probability: 0.03
+    bim_depth_noise_probability: 0.20
+    bim_depth_noise_log_std: 0.02
+    bim_edge_dilation_probability: 0.15
+    bim_edge_dilation_pixels: 3
+    crop_height: 504
+    crop_width: 504

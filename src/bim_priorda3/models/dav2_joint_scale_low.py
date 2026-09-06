@@ -405,6 +405,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         calibrated_disagreement_adapter_expansion_channels: int | None = None,
         calibrated_disagreement_adapter_injection: str = "fused_f36",
         calibrated_disagreement_adapter_include_rgb: bool = False,
+        calibrated_disagreement_adapter_detach_scale: bool = True,
         iterative_geometry_adapters_enabled: bool = False,
         iterative_geometry_adapters_hidden_channels: int = 32,
         iterative_geometry_adapters_residual_blocks: int = 0,
@@ -457,6 +458,9 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         )
         self.calibrated_disagreement_adapter_include_rgb = bool(
             calibrated_disagreement_adapter_include_rgb
+        )
+        self.calibrated_disagreement_adapter_detach_scale = bool(
+            calibrated_disagreement_adapter_detach_scale
         )
         self.iterative_geometry_adapters_enabled = bool(
             iterative_geometry_adapters_enabled
@@ -882,6 +886,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 log_scale,
                 native36_size,
                 rgb=(rgb if self.calibrated_disagreement_adapter_include_rgb else None),
+                detach_calibration=self.calibrated_disagreement_adapter_detach_scale,
             )
             adapter_dtype = self.calibrated_disagreement_adapter.input_projection.weight.dtype
             calibrated_delta = self.calibrated_disagreement_adapter(
@@ -1246,11 +1251,14 @@ def joint_scale_low_loss(
     zero_mean_weight: float,
     teacher_beta: float,
     residual_mode: str = "low18_low36",
+    scale_teacher_mode: str = "oracle_log_scale",
     low2_teacher_decomposition: str = "oracle_low18",
     spatial_teacher_mean_center: bool = True,
     equivariance_error: torch.Tensor | None = None,
     equivariance_weight: float = 0.0,
 ) -> dict[str, torch.Tensor]:
+    if scale_teacher_mode not in {"oracle_log_scale", "dense_log_l1"}:
+        raise ValueError(f"Unsupported scale teacher mode: {scale_teacher_mode}")
     if low2_teacher_decomposition not in {
         "oracle_low18",
         "predicted_low18_detached",
@@ -1285,17 +1293,44 @@ def joint_scale_low_loss(
     else:
         predicted_scale = output["log_scale"].float().flatten(1).mean(dim=1)
         oracle_scale = oracle_log_scale.detach().float().flatten(1).mean(dim=1)
-        scale_raw = functional.smooth_l1_loss(
-            predicted_scale,
-            oracle_scale,
-            reduction="none",
-            beta=float(teacher_beta),
-        )
-        scale_teacher = (
-            scale_raw[oracle_supported.bool()].mean()
-            if bool(oracle_supported.any())
-            else prediction.sum() * 0.0
-        )
+        if scale_teacher_mode == "oracle_log_scale":
+            scale_raw = functional.smooth_l1_loss(
+                predicted_scale,
+                oracle_scale,
+                reduction="none",
+                beta=float(teacher_beta),
+            )
+            scale_teacher = (
+                scale_raw[oracle_supported.bool()].mean()
+                if bool(oracle_supported.any())
+                else prediction.sum() * 0.0
+            )
+        else:
+            scale_prediction = output["scaled_depth"].float()
+            scale_valid = (
+                (batch["gt_valid"] > 0)
+                & torch.isfinite(target)
+                & torch.isfinite(scale_prediction)
+                & (target > 0)
+                & (scale_prediction > 0)
+            )
+            scale_effective = scale_valid.float() * pixel_weight.float()
+            scale_log_error = (
+                scale_prediction.clamp_min(1e-6).log()
+                - target.clamp_min(1e-6).log()
+            ).abs()
+            scale_pixel_micro = (
+                (scale_log_error * scale_effective).sum()
+                / scale_effective.sum().clamp_min(1.0)
+            )
+            scale_per_denominator = scale_effective.flatten(1).sum(dim=1)
+            scale_per_numerator = (scale_log_error * scale_effective).flatten(1).sum(dim=1)
+            scale_available = scale_per_denominator > 0
+            scale_frame_macro = (
+                scale_per_numerator[scale_available]
+                / scale_per_denominator[scale_available]
+            ).mean()
+            scale_teacher = 0.5 * (scale_pixel_micro + scale_frame_macro)
         oracle_scaled = (
             batch["base_depth"].detach().float() * oracle_log_scale.detach().float().exp()
         )

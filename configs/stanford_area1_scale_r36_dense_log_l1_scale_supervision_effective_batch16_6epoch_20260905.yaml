@@ -1,0 +1,14 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_local_retrain_full_depth_metric_da3.yaml
+
+# Original scale+r36 baseline without a post-scale adapter. Replace the scalar
+# oracle-log-scale teacher with the same masked, weighted dense log-L1 depth
+# formulation used by the final composed prediction. Its 0.5 weight and all
+# other baseline losses, augmentations, optimizer settings, and effective
+# batch size remain unchanged.
+experiment:
+  name: stanford_area1_scale_r36_dense_log_l1_scale_supervision_effective_batch16_6epoch_20260905
+  output_dir: outputs/stanford_area1_scale_r36_dense_log_l1_scale_supervision_effective_batch16_6epoch_20260905
+  results_dir: results/stanford_area1/scale_r36_dense_log_l1_scale_supervision_effective_batch16_6epoch_20260905
+
+loss:
+  scale_teacher_mode: dense_log_l1

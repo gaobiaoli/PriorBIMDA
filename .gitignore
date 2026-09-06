@@ -12,7 +12,17 @@ outputs/*
 !outputs/.gitkeep
 configs/local/
 checkpoints/
+
+# Model weights and checkpoints stay local.
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
 wandb/
+
+# Temporary working data, logs, smoke-test outputs, and source-audit clones.
+tmp/
 
 # Generated from licensed 2D-3D-S pixels; keep local and reproduce under the
 # dataset terms instead of redistributing RGB/GT/derived dense arrays.
@@ -20,8 +30,7 @@ docs/assets/paper_evaluation/qualitative/
 docs/assets/pano_evaluation/qualitative/
 
 
-results/matterport3d/raw_da3_metric_504/matterport3d_raw_da3_per_frame.xlsx
-
 # Per-frame evaluation records are reproducible and can be large. Keep only
 # aggregate summaries under version control.
-results/**/per_frame.csv
+results/**/*per_frame*
+results/**/*per-frame*

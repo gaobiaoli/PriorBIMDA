@@ -1,0 +1,11 @@
+{
+  "comparison_fraction": 0.25,
+  "finite_batches": 3506,
+  "first_window_mean": 1.7114753199222426,
+  "last_window_mean": 1.2859188851360317,
+  "least_squares_slope_per_batch": -0.0001757218106261212,
+  "minimum_relative_decrease": 0.05,
+  "pass": true,
+  "relative_decrease": 0.2486488877943885,
+  "window_batches": 876
+}

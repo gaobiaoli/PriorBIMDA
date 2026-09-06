@@ -77,6 +77,75 @@ def absrel_optimal_log_scale(
     return log_scale.view(-1, 1, 1, 1), supported
 
 
+@torch.no_grad()
+def log_l1_optimal_log_scale(
+    base_depth: torch.Tensor,
+    gt_depth: torch.Tensor,
+    gt_valid: torch.Tensor,
+    *,
+    pixel_weight: torch.Tensor | None = None,
+    min_support: int = 1,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return the exact per-sample log-scale minimizing weighted log-L1.
+
+    For ``r = log(G) - log(D)``, minimizing
+    ``sum(w * abs(log(s) - r))`` is a weighted-median problem over ``r``.
+    The returned target is detached, deterministic, and used only for
+    supervision; it is never required at inference time.
+    """
+
+    if base_depth.shape != gt_depth.shape or gt_valid.shape != gt_depth.shape:
+        raise ValueError(
+            "Oracle-scale tensors must have identical shapes: "
+            f"base={tuple(base_depth.shape)}, gt={tuple(gt_depth.shape)}, "
+            f"valid={tuple(gt_valid.shape)}"
+        )
+    if base_depth.ndim != 4 or base_depth.shape[1] != 1:
+        raise ValueError("Oracle-scale tensors must have shape [B,1,H,W]")
+    if pixel_weight is not None and pixel_weight.shape != gt_depth.shape:
+        raise ValueError("pixel_weight must match the oracle-scale tensor shape")
+    if isinstance(min_support, bool) or not isinstance(min_support, int) or min_support < 1:
+        raise ValueError("min_support must be a positive integer")
+
+    base = base_depth.detach().float()
+    target = gt_depth.detach().float()
+    weights = (
+        torch.ones_like(base)
+        if pixel_weight is None
+        else pixel_weight.detach().float()
+    )
+    valid = (
+        (gt_valid.detach() > 0)
+        & torch.isfinite(base)
+        & torch.isfinite(target)
+        & torch.isfinite(weights)
+        & (base > 0)
+        & (target > 0)
+        & (weights > 0)
+    )
+    support = valid.flatten(1).sum(dim=1)
+    supported = support >= min_support
+
+    log_ratios = torch.where(
+        valid,
+        target.clamp_min(1e-8).log() - base.clamp_min(1e-8).log(),
+        torch.full_like(base, torch.inf),
+    ).flatten(1)
+    effective_weights = torch.where(valid, weights, torch.zeros_like(weights)).flatten(1)
+    sorted_log_ratios, order = torch.sort(log_ratios, dim=1)
+    sorted_weights = torch.gather(effective_weights, 1, order)
+    cumulative = sorted_weights.cumsum(dim=1)
+    total_weight = sorted_weights.sum(dim=1, keepdim=True)
+    median_index = (cumulative >= 0.5 * total_weight).to(torch.int8).argmax(
+        dim=1,
+        keepdim=True,
+    )
+    log_scale = torch.gather(sorted_log_ratios, 1, median_index).squeeze(1)
+    supported = supported & (total_weight.squeeze(1) > 0) & torch.isfinite(log_scale)
+    log_scale = torch.where(supported, log_scale, torch.zeros_like(log_scale))
+    return log_scale.view(-1, 1, 1, 1), supported
+
+
 def attention_scale_distribution_target_loss(
     output: dict[str, torch.Tensor],
     batch: dict[str, torch.Tensor],
@@ -378,7 +447,8 @@ class BIMPriorLoss(nn.Module):
             resolve_scale_estimator_config(cfg.model.get("scale_estimator"))["name"]
             == ROBUST_LOG_CAP_SCALE_ESTIMATOR
         )
-        self.joint_loss_mode = str(cfg.train.get("joint_loss_mode", "default"))
+        train_cfg = cfg.get("train", {})
+        self.joint_loss_mode = str(train_cfg.get("joint_loss_mode", "default"))
         if self.joint_loss_mode not in {
             "default",
             "final_depth_only",

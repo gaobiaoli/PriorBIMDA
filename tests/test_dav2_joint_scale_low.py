@@ -19,6 +19,81 @@ def test_masked_area_downsample_uses_only_valid_values() -> None:
     assert bool(support.item())
 
 
+def test_dense_scale_teacher_matches_final_log_l1_formulation() -> None:
+    shape = (2, 1, 2, 2)
+    base = torch.ones(shape)
+    log_scale = torch.tensor([0.2, -0.1]).reshape(2, 1, 1, 1).requires_grad_()
+    scaled = base * log_scale.exp()
+    output = {
+        "depth": scaled,
+        "scaled_depth": scaled,
+        "log_scale": log_scale,
+        "low1_log_residual_native": torch.zeros((2, 1, 1, 1)),
+        "low2_log_residual_native": torch.zeros((2, 1, 2, 2)),
+    }
+    batch = {
+        "gt_depth": torch.tensor(
+            [[[[2.0, 2.5], [1.5, 3.0]]], [[[1.0, 1.2], [2.5, 1.1]]]]
+        ),
+        "gt_valid": torch.ones(shape, dtype=torch.bool),
+        "base_depth": base,
+    }
+    losses = joint_scale_low_loss(
+        output,
+        batch,
+        pixel_weight=torch.ones(shape),
+        oracle_log_scale=torch.full((2, 1, 1, 1), 9.0),
+        oracle_supported=torch.zeros(2, dtype=torch.bool),
+        depth_weight=1.0,
+        scale_teacher_weight=1.0,
+        low1_teacher_weight=0.0,
+        low2_teacher_weight=0.0,
+        zero_mean_weight=0.0,
+        teacher_beta=0.02,
+        residual_mode="low36_only",
+        scale_teacher_mode="dense_log_l1",
+    )
+
+    torch.testing.assert_close(losses["scale_teacher"], losses["depth"])
+    gradient = torch.autograd.grad(losses["scale_teacher"], log_scale)[0]
+    assert torch.count_nonzero(gradient) == 2
+
+
+def test_dense_scale_teacher_config_preserves_original_scale_r36_baseline() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_scale_r36_dense_log_l1_scale_supervision_"
+        "effective_batch16_6epoch_20260905.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    assert joint.residual_mode == "low36_only"
+    assert not bool(joint.get("calibrated_disagreement_adapter", {}).get("enabled", False))
+    assert cfg.loss.scale_teacher_mode == "dense_log_l1"
+    assert cfg.loss.attention_scale_oracle == 0.5
+    assert cfg.loss.attention_scale_equivariance == 0.1
+    assert cfg.loss.low2_residual_teacher == 0.5
+    assert cfg.loss.residual_zero_mean == 0.1
+    assert cfg.train.batch_size * cfg.train.gradient_accumulation == 16
+
+
+def test_log_l1_oracle_config_preserves_original_scale_r36_baseline() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_scale_r36_log_l1_optimal_oracle_"
+        "effective_batch16_6epoch_20260905.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    assert joint.residual_mode == "low36_only"
+    assert not bool(joint.get("calibrated_disagreement_adapter", {}).get("enabled", False))
+    assert cfg.loss.oracle_scale_estimator == "log_l1_optimal"
+    assert cfg.loss.get("scale_teacher_mode", "oracle_log_scale") == "oracle_log_scale"
+    assert cfg.loss.attention_scale_oracle == 0.5
+    assert cfg.loss.attention_scale_equivariance == 0.1
+    assert cfg.loss.low2_residual_teacher == 0.5
+    assert cfg.loss.residual_zero_mean == 0.1
+    assert cfg.train.batch_size * cfg.train.gradient_accumulation == 16
+
+
 def test_two_level_target_is_laplacian_not_duplicated() -> None:
     target18 = torch.randn(2, 1, 18, 18)
     target36 = torch.nn.functional.interpolate(

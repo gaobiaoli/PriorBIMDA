@@ -1,0 +1,39 @@
+extends: stanford_area1_priorbimda_stage2_dav2_metric_minmax_augmented.yaml
+
+# Controlled replacement of the metric-depth DAv2 checkpoint with the
+# official relative-depth ViT-B checkpoint. The three condition channels,
+# per-frame BIM normalization, Stage-1 anchor, and BIM augmentations remain
+# unchanged so the experiment isolates the pretrained output semantics.
+experiment:
+  name: stanford_area1_priorbimda_stage2_dav2_relative_minmax_augmented
+  output_dir: outputs/stanford_area1_priorbimda_stage2_dav2_relative_minmax_augmented
+  results_dir: results/stanford_area1/priorbimda_stage2_dav2_relative_minmax_augmented
+
+model:
+  dav2:
+    model_id: depth-anything/Depth-Anything-V2-Base-hf
+    revision: b1958afc87fb45a9e3746cb387596094de553ed8
+    checkpoint_sha256: 9996d15c334d264cfcc29f4318d7d3789a006ecc444782c2fb82f7eaa1acb8bf
+    local_files_only: true
+    encoder: vitb
+    patch_size: 14
+    hidden_size: 768
+    output_domain: relative_disparity
+    # This is the external metric-depth clamp after inverse and de-normalization,
+    # not a property of the relative checkpoint.
+    max_depth_m: 20.0
+  priorbimda_condition:
+    output_domain: dav2_relative_disparity
+    denormalization: inverse_disparity_times_bim_range_plus_bim_minimum
+
+train:
+  # Native disparity supervision prevents early reciprocal-depth overflow.
+  amp_initial_scale: 16.0
+
+loss:
+  normalized_disparity: 1.0
+  normalized_disparity_beta: 0.02
+  normalized_disparity_max: 1000.0
+  robust_log_depth: 0.0
+  depth: 0.1
+  gradient: 0.02

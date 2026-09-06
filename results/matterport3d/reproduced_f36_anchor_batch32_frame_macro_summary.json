@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "model": "reproduced F36 calibrated-disagreement anchor, TF32 fast-SDP batch32",
+  "checkpoint_sha256": "061fca9b5dd82a6c46508e43b8f2d9642e06459d8940fa303e8e3dbe462d8f68",
+  "protocol": {
+    "frame_selection": "frozen Matterport3D three-rule frame set",
+    "aggregation": "compute each metric within each frame, then take the arithmetic mean across all 1935 frames",
+    "frame_weighting": "equal",
+    "alignment": "none",
+    "note": "Recomputed independently from the saved per_frame.csv files; no inference was rerun."
+  },
+  "previous_pixel_micro_abs_rel": {
+    "raw": 0.12738141975370615,
+    "scale": 0.09456461451502511,
+    "final": 0.08863426099401799
+  },
+  "frame_macro": {
+    "hxp": {
+      "frames": 624,
+      "raw_abs_rel": 0.17373224086746528,
+      "scale_abs_rel": 0.11296288513053078,
+      "final_abs_rel": 0.10429677652109266,
+      "final_rmse_m": 0.21577934730977325,
+      "final_mae_m": 0.14650582119226316,
+      "final_delta1": 0.904435538304856,
+      "final_delta2": 0.9681053072929305,
+      "final_rmse_log": 0.1381594598992131
+    },
+    "759": {
+      "frames": 518,
+      "raw_abs_rel": 0.10713848858794499,
+      "scale_abs_rel": 0.08530822158906261,
+      "final_abs_rel": 0.08123007007274109,
+      "final_rmse_m": 0.24066627505914667,
+      "final_mae_m": 0.15697631385384897,
+      "final_delta1": 0.928291139012429,
+      "final_delta2": 0.9903894936588582,
+      "final_rmse_log": 0.11246255094758499
+    },
+    "1px": {
+      "frames": 793,
+      "raw_abs_rel": 0.11999883594633308,
+      "scale_abs_rel": 0.0993318139822422,
+      "final_abs_rel": 0.09457378894150084,
+      "final_rmse_m": 0.29004126601601693,
+      "final_mae_m": 0.1583824548486142,
+      "final_delta1": 0.9186598938351044,
+      "final_delta2": 0.9667788942089925,
+      "final_rmse_log": 0.14346233538218242
+    },
+    "aggregate": {
+      "frames": 1935,
+      "raw_abs_rel": 0.1338840993774143,
+      "scale_abs_rel": 0.09997345095219805,
+      "final_abs_rel": 0.094137147016771,
+      "final_rmse_m": 0.25287553858017503,
+      "final_mae_m": 0.1541760463541172,
+      "final_delta1": 0.9166511016650672,
+      "final_delta2": 0.973527200296542,
+      "final_rmse_log": 0.1334536105044075
+    }
+  }
+}

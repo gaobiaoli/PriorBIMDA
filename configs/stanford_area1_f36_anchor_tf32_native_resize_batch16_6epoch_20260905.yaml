@@ -1,0 +1,13 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_32_64_128_decoder_128_64_32_full_depth_metric_da3.yaml
+
+# Seeded warning-mode run with native CUDA resize and explicitly enabled TF32.
+experiment:
+  name: stanford_area1_f36_anchor_tf32_native_resize_batch16_6epoch_20260905
+  output_dir: outputs/stanford_area1_f36_anchor_tf32_native_resize_batch16_6epoch_20260905
+  results_dir: results/stanford_area1/f36_anchor_tf32_native_resize_batch16_6epoch_20260905
+
+train:
+  batch_size: 16
+  val_batch_size: 16
+  gradient_accumulation: 1
+  log_every: 20

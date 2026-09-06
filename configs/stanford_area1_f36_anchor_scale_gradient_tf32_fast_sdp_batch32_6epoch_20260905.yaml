@@ -1,0 +1,22 @@
+extends: stanford_area1_f36_anchor_tf32_fast_sdp_batch32_6epoch_20260905.yaml
+
+# Controlled ablation of the anchor: allow the r36 disagreement branch to
+# backpropagate through z_s into the global log-scale head. Everything else,
+# including batch size, optimizer, schedule, TF32/SDP runtime, and seed, is
+# inherited from the completed batch32 anchor run.
+experiment:
+  name: stanford_area1_f36_anchor_scale_gradient_tf32_fast_sdp_batch32_6epoch_20260905
+  output_dir: outputs/stanford_area1_f36_anchor_scale_gradient_tf32_fast_sdp_batch32_6epoch_20260905
+  results_dir: results/stanford_area1/f36_anchor_scale_gradient_tf32_fast_sdp_batch32_6epoch_20260905
+
+model:
+  dav2_joint_scale_low:
+    calibrated_disagreement_adapter:
+      detach_scale: false
+
+train:
+  checkpoint_epochs:
+    - 3
+    - 4
+    - 5
+    - 6

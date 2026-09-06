@@ -34,7 +34,11 @@ from bim_priorda3.data import (
 )
 from bim_priorda3.early_fusion import DenseDepthMetricAccumulator
 from bim_priorda3.engine import build_loader
-from bim_priorda3.losses import absrel_optimal_log_scale, build_depth_supervision_weight
+from bim_priorda3.losses import (
+    absrel_optimal_log_scale,
+    build_depth_supervision_weight,
+    log_l1_optimal_log_scale,
+)
 from bim_priorda3.models import (
     BIMEarlyFusionDAv2JointScaleLow,
     build_bim_condition,
@@ -59,14 +63,30 @@ def parse_args() -> argparse.Namespace:
         "--deterministic",
         action="store_true",
         help=(
-            "Enable deterministic PyTorch/CUDA kernels and disable TF32; "
+            "Enable deterministic PyTorch/CUDA kernels and disable TF32 by default; "
             "warn when an operation has no deterministic CUDA implementation"
         ),
+    )
+    parser.add_argument(
+        "--allow-tf32",
+        action="store_true",
+        help="Allow TF32 matmul/cuDNN kernels, including in deterministic warning mode.",
+    )
+    parser.add_argument(
+        "--allow-fast-sdp",
+        action="store_true",
+        help="Enable Flash, memory-efficient, and cuDNN scaled-dot-product attention.",
     )
     return parser.parse_args()
 
 
-def seed_everything(seed: int, *, deterministic: bool = False) -> None:
+def seed_everything(
+    seed: int,
+    *,
+    deterministic: bool = False,
+    allow_tf32: bool = False,
+    allow_fast_sdp: bool = False,
+) -> None:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -76,14 +96,16 @@ def seed_everything(seed: int, *, deterministic: bool = False) -> None:
     # interpolation. PyTorch has no deterministic backward for that operation,
     # so warn rather than silently disabling determinism for every other op.
     torch.use_deterministic_algorithms(deterministic, warn_only=deterministic)
-    if deterministic and torch.cuda.is_available():
-        torch.backends.cuda.matmul.allow_tf32 = False
-        torch.backends.cudnn.allow_tf32 = False
-        torch.backends.cuda.enable_flash_sdp(False)
-        torch.backends.cuda.enable_mem_efficient_sdp(False)
+    if torch.cuda.is_available():
+        torch.backends.cuda.matmul.allow_tf32 = bool(allow_tf32)
+        torch.backends.cudnn.allow_tf32 = bool(allow_tf32)
+        torch.set_float32_matmul_precision("high" if allow_tf32 else "highest")
+    if torch.cuda.is_available() and (deterministic or allow_fast_sdp):
+        torch.backends.cuda.enable_flash_sdp(bool(allow_fast_sdp))
+        torch.backends.cuda.enable_mem_efficient_sdp(bool(allow_fast_sdp))
         torch.backends.cuda.enable_math_sdp(True)
         if hasattr(torch.backends.cuda, "enable_cudnn_sdp"):
-            torch.backends.cuda.enable_cudnn_sdp(False)
+            torch.backends.cuda.enable_cudnn_sdp(bool(allow_fast_sdp))
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
@@ -96,6 +118,8 @@ def evaluate(
     bim_stats: dict[str, Any],
     amp: bool,
     oracle_min_support: int,
+    loss_cfg,
+    oracle_scale_estimator: str,
 ) -> dict[str, Any]:
     model.eval()
     accumulators = {
@@ -146,12 +170,21 @@ def evaluate(
             for name, prediction in predictions.items():
                 accumulators[name].update(prediction, batch["gt_depth"], support)
 
-            oracle, oracle_supported = absrel_optimal_log_scale(
-                batch["base_depth"],
-                batch["gt_depth"],
-                batch["gt_valid"],
-                min_support=oracle_min_support,
-            )
+            if oracle_scale_estimator == "absrel_optimal":
+                oracle, oracle_supported = absrel_optimal_log_scale(
+                    batch["base_depth"],
+                    batch["gt_depth"],
+                    batch["gt_valid"],
+                    min_support=oracle_min_support,
+                )
+            else:
+                oracle, oracle_supported = log_l1_optimal_log_scale(
+                    batch["base_depth"],
+                    batch["gt_depth"],
+                    batch["gt_valid"],
+                    pixel_weight=build_depth_supervision_weight(batch, loss_cfg),
+                    min_support=oracle_min_support,
+                )
             if model.residual_mode == "direct_low18":
                 residual = output["low1_log_residual"].float()
                 valid = batch["gt_valid"].float()
@@ -201,6 +234,7 @@ def evaluate(
             "oracle_log_scale_mae": scale_abs_error / max(scale_frames, 1),
             "oracle_log_scale_bias": scale_signed_error / max(scale_frames, 1),
             "oracle_scale_relative_error": scale_relative_error / max(scale_frames, 1),
+            "oracle_scale_estimator": oracle_scale_estimator,
         },
         "residual": {
             "mean_abs_low1_native_mean": low1_mean_abs / max(frames, 1),
@@ -215,7 +249,12 @@ def main() -> None:
     args = parse_args()
     cfg = load_config(args.config)
     seed = int(cfg.experiment.seed)
-    seed_everything(seed, deterministic=args.deterministic)
+    seed_everything(
+        seed,
+        deterministic=args.deterministic,
+        allow_tf32=args.allow_tf32,
+        allow_fast_sdp=args.allow_fast_sdp,
+    )
     device = torch.device(args.device)
     if device.type == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA was requested but unavailable")
@@ -287,6 +326,9 @@ def main() -> None:
         ),
         calibrated_disagreement_adapter_include_rgb=bool(
             disagreement_adapter.get("include_rgb", False)
+        ),
+        calibrated_disagreement_adapter_detach_scale=bool(
+            disagreement_adapter.get("detach_scale", True)
         ),
         iterative_geometry_adapters_enabled=bool(
             iterative_geometry.get("enabled", False)
@@ -402,6 +444,17 @@ def main() -> None:
         weight_decay=float(cfg.train.weight_decay),
     )
     epochs = int(args.epochs or cfg.train.epochs)
+    checkpoint_epochs = {
+        int(epoch) for epoch in cfg.train.get("checkpoint_epochs", [])
+    }
+    invalid_checkpoint_epochs = sorted(
+        epoch for epoch in checkpoint_epochs if epoch < 1 or epoch > epochs
+    )
+    if invalid_checkpoint_epochs:
+        raise ValueError(
+            f"checkpoint_epochs must be within [1,{epochs}]: "
+            f"{invalid_checkpoint_epochs}"
+        )
     accumulation = int(cfg.train.gradient_accumulation)
     steps_per_epoch = math.ceil(len(train_loader) / accumulation)
     amp = bool(cfg.train.amp) and device.type == "cuda"
@@ -462,6 +515,8 @@ def main() -> None:
         "continuation_start_epoch": start_epoch,
         "deterministic_algorithms": args.deterministic,
         "deterministic_warn_only": args.deterministic,
+        "allow_tf32": args.allow_tf32,
+        "allow_fast_sdp": args.allow_fast_sdp,
         "known_nondeterministic_cuda_ops": (
             ["upsample_bicubic2d_backward_out_cuda"] if args.deterministic else []
         ),
@@ -475,6 +530,17 @@ def main() -> None:
             if device.type == "cuda"
             else None
         ),
+        "math_sdp_enabled": (
+            torch.backends.cuda.math_sdp_enabled()
+            if device.type == "cuda"
+            else None
+        ),
+        "cudnn_sdp_enabled": (
+            torch.backends.cuda.cudnn_sdp_enabled()
+            if device.type == "cuda"
+            and hasattr(torch.backends.cuda, "cudnn_sdp_enabled")
+            else None
+        ),
         "seed": seed,
         "effective_batch_size": int(cfg.train.batch_size)
         * int(cfg.train.gradient_accumulation),
@@ -485,6 +551,14 @@ def main() -> None:
 
     loss_cfg = cfg.loss
     oracle_min_support = int(loss_cfg.attention_scale_oracle_min_support)
+    oracle_scale_estimator = str(
+        loss_cfg.get("oracle_scale_estimator", "absrel_optimal")
+    )
+    if oracle_scale_estimator not in {"absrel_optimal", "log_l1_optimal"}:
+        raise ValueError(
+            "loss.oracle_scale_estimator must be 'absrel_optimal' or "
+            "'log_l1_optimal'"
+        )
     equivariance_probability = float(joint.equivariance_probability)
     equivariance_log_range = float(joint.equivariance_log_range)
     perturb_cfg = cfg.train.augment.get("da3_global_scale_perturbation", {})
@@ -511,7 +585,12 @@ def main() -> None:
     log_every = int(cfg.train.log_every)
     for epoch in range(start_epoch, epochs + 1):
         epoch_seed = (seed + (epoch - 1) * 1_000_003) % 2**32
-        seed_everything(epoch_seed, deterministic=args.deterministic)
+        seed_everything(
+            epoch_seed,
+            deterministic=args.deterministic,
+            allow_tf32=args.allow_tf32,
+            allow_fast_sdp=args.allow_fast_sdp,
+        )
         train_generator.manual_seed(epoch_seed)
         model.train()
         optimizer.zero_grad(set_to_none=True)
@@ -549,12 +628,22 @@ def main() -> None:
                 condition,
                 probability=condition_dropout_probability,
             )
-            oracle_log_scale, oracle_supported = absrel_optimal_log_scale(
-                batch["base_depth"],
-                batch["gt_depth"],
-                batch["gt_valid"],
-                min_support=oracle_min_support,
-            )
+            pixel_weight = build_depth_supervision_weight(batch, loss_cfg)
+            if oracle_scale_estimator == "absrel_optimal":
+                oracle_log_scale, oracle_supported = absrel_optimal_log_scale(
+                    batch["base_depth"],
+                    batch["gt_depth"],
+                    batch["gt_valid"],
+                    min_support=oracle_min_support,
+                )
+            else:
+                oracle_log_scale, oracle_supported = log_l1_optimal_log_scale(
+                    batch["base_depth"],
+                    batch["gt_depth"],
+                    batch["gt_valid"],
+                    pixel_weight=pixel_weight,
+                    min_support=oracle_min_support,
+                )
             with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=amp):
                 adapter_bim_valid = batch["bim_valid"]
                 if condition_dropout_enabled:
@@ -599,7 +688,7 @@ def main() -> None:
                 losses = joint_scale_low_loss(
                     output,
                     batch,
-                    pixel_weight=build_depth_supervision_weight(batch, loss_cfg),
+                    pixel_weight=pixel_weight,
                     oracle_log_scale=oracle_log_scale,
                     oracle_supported=oracle_supported,
                     depth_weight=float(loss_cfg.depth),
@@ -609,6 +698,9 @@ def main() -> None:
                     zero_mean_weight=float(loss_cfg.residual_zero_mean),
                     teacher_beta=float(loss_cfg.native_teacher_beta),
                     residual_mode=model.residual_mode,
+                    scale_teacher_mode=str(
+                        loss_cfg.get("scale_teacher_mode", "oracle_log_scale")
+                    ),
                     low2_teacher_decomposition=str(
                         loss_cfg.get("low2_teacher_decomposition", "oracle_low18")
                     ),
@@ -665,6 +757,8 @@ def main() -> None:
             bim_stats=bim_stats,
             amp=amp,
             oracle_min_support=oracle_min_support,
+            loss_cfg=loss_cfg,
+            oracle_scale_estimator=oracle_scale_estimator,
         )
         learned = validation["joint_scale_low1_low2"]
         row = {
@@ -735,6 +829,11 @@ def main() -> None:
             architecture += "_predicted_r18_teacher"
         if not bool(loss_cfg.get("spatial_teacher_mean_center", True)):
             architecture += "_uncentered_r36_teacher"
+        if (
+            model.calibrated_disagreement_adapter_enabled
+            and not model.calibrated_disagreement_adapter_detach_scale
+        ):
+            architecture += "_scale_gradient"
         payload = {
             "schema_version": 1,
             "architecture": architecture,
@@ -754,6 +853,8 @@ def main() -> None:
         atomic_torch_save(output_dir / "latest.pt", payload)
         if improved:
             atomic_torch_save(output_dir / "best.pt", payload)
+        if epoch in checkpoint_epochs:
+            atomic_torch_save(output_dir / f"epoch_{epoch:03d}.pt", payload)
         write_history(output_dir / "training_history.csv", history)
         shutil.copy2(output_dir / "training_history.csv", results_dir / "training_history.csv")
         print(
@@ -773,6 +874,8 @@ def main() -> None:
         bim_stats=bim_stats,
         amp=amp,
         oracle_min_support=oracle_min_support,
+        loss_cfg=loss_cfg,
+        oracle_scale_estimator=oracle_scale_estimator,
     )
     val_summary.update({"selected_checkpoint": "best.pt", "best_epoch": best_epoch})
     atomic_json(output_dir / "val_summary.json", val_summary)
@@ -794,6 +897,8 @@ def main() -> None:
             bim_stats=bim_stats,
             amp=amp,
             oracle_min_support=oracle_min_support,
+            loss_cfg=loss_cfg,
+            oracle_scale_estimator=oracle_scale_estimator,
         )
         test_summary.update({"selected_checkpoint": "best.pt", "best_epoch": best_epoch})
         atomic_json(output_dir / "test_summary.json", test_summary)

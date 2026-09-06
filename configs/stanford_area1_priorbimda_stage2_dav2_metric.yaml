@@ -1,0 +1,87 @@
+extends: stanford_area1_priorbimda_stage1_fixed_attention_huber_3epoch.yaml
+
+# PriorBIMDA Stage 2. Stage 1 is loaded from its validation-best checkpoint,
+# kept in eval mode, and fully frozen. A fresh zero-initialized three-channel
+# projection conditions the pretrained DAv2 Metric Indoor backbone.
+experiment:
+  name: stanford_area1_priorbimda_stage2_dav2_metric
+  output_dir: outputs/stanford_area1_priorbimda_stage2_dav2_metric
+  results_dir: results/stanford_area1/priorbimda_stage2_dav2_metric
+
+model:
+  frozen_scale:
+    checkpoint: outputs/stanford_area1_priorbimda_stage1_fixed_attention_huber_3epoch/best.pt
+    # Fill this after Stage 1 when an immutable cross-machine receipt is needed.
+    # The Stage-2 checkpoint always records the observed SHA256.
+    checkpoint_sha256: null
+    selection: validation_best
+    freeze: true
+  dav2:
+    model_id: depth-anything/Depth-Anything-V2-Metric-Indoor-Base-hf
+    revision: 9560f57a2f07803ba353bb918d6a6e5e005b9277
+    checkpoint_sha256: 8b902f5d9a8c8a9520f3a8c6a00afe442b464eff5aaf0cb405d1da721cd9f79f
+    local_files_only: true
+    encoder: vitb
+    patch_size: 14
+    hidden_size: 768
+    max_depth_m: 20.0
+  priorbimda_condition:
+    channels:
+      - train_normalized_log_scaled_da3
+      - train_mean_normalized_effective_reliability
+      - clipped_bim_scaled_da3_log_disagreement
+    disagreement_clip: 1.5
+    fusion: zero_init_additive_patch_before_dinov2_transformer
+    projection_initialization: zeros
+    normalization: fixed_full_train_split_no_per_frame_statistics
+    train_statistics:
+      # On the first run these are measured with frozen Stage 1 over the full,
+      # unaugmented train split and persisted in every Stage-2 checkpoint.
+      depth_log_mean: null
+      depth_log_std: null
+      effective_reliability_mean: null
+
+train:
+  # Matches the established PriorDA fine-stage duration. Only Stage 2 trains.
+  epochs: 9
+  scale_only_experiment: false
+  batch_size: 2
+  val_batch_size: 2
+  gradient_accumulation: 8
+  num_workers: 8
+  region_balanced_sampling: false
+  encoder_learning_rate: 0.000005
+  decoder_learning_rate: 0.00005
+  prior_condition_learning_rate: 0.00005
+  weight_decay: 0.01
+  scheduler: cosine
+  amp: true
+  amp_initial_scale: 1024.0
+  gradient_checkpointing: true
+  gradient_clip_norm: 1.0
+  early_stopping_patience: 9
+  log_every: 200
+  augment:
+    horizontal_flip_probability: 0.5
+    color_jitter: 0.10
+    bim_shift_probability: 0.0
+    bim_shift_pixels: 0
+    bim_dropout_probability: 0.0
+    bim_dropout_fraction: 0.0
+    bim_full_dropout_probability: 0.0
+    bim_depth_noise_probability: 0.0
+    bim_depth_noise_log_std: 0.0
+    bim_edge_dilation_probability: 0.0
+    bim_edge_dilation_pixels: 0
+    crop_height: 504
+    crop_width: 504
+
+loss:
+  # Mirrors the existing PriorDA fine-stage balance: a robust native-domain
+  # primary term, plus weaker metric-depth and gradient supervision. Here the
+  # native domain is log metric depth, preserving absolute scale end to end.
+  robust_log_depth: 1.0
+  robust_log_beta: 0.02
+  depth: 0.1
+  gradient: 0.02
+

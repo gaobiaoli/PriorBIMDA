@@ -1,0 +1,28 @@
+extends: stanford_area1_fixed_attention_huber_no_da3_features_no_confidence_no_bim_geometry_3round_3epoch_full_depth_metric_da3.yaml
+
+# PriorBIMDA Stage 1.  The inherited estimator learns one global metric scale
+# from DA3 Metric depth and BIM ratios. Attention is evaluated once at z=0 and
+# held fixed through all three pseudo-Huber updates.
+experiment:
+  name: stanford_area1_priorbimda_stage1_fixed_attention_huber_3epoch
+  output_dir: outputs/stanford_area1_priorbimda_stage1_fixed_attention_huber_3epoch
+  results_dir: results/stanford_area1/priorbimda_stage1_fixed_attention_huber_3epoch
+
+data:
+  # Fingerprint of the currently materialized local Area-1 split. The parent
+  # config pins an older preparation of the same annotated room split.
+  split_fingerprint_sha256: 87dbde4e9e454c9dca1e2f38d86fd339ae45b401145b29324ada4174d35043f7
+
+train:
+  epochs: 3
+  scale_only_experiment: true
+  early_stopping_patience: 3
+
+model:
+  attention_scale:
+    estimator: pseudo_huber_attention_v1
+    iterative_updates: 3
+    iterative_refresh_attention: false
+    iterative_initial_log_scale: 0.0
+    use_fallback_gate: false
+    use_deterministic_fallback_input: false

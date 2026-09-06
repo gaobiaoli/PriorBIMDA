@@ -16,6 +16,7 @@ import hashlib
 import importlib.util
 import json
 import math
+import os
 import sys
 import time
 from collections.abc import Iterable, Mapping
@@ -32,10 +33,13 @@ from bim_priorda3.checkpoints import validate_checkpoint_model_config
 from bim_priorda3.config import load_config, resolve_project_path
 from bim_priorda3.data.geometry import depth_edges
 from bim_priorda3.models import (
+    FIXED_TRAIN_LOG_NORMALIZATION,
     BIMEarlyFusionDAv2JointScaleLow,
+    BIMEarlyFusionDepthAnythingV2,
     BIMPriorDA3,
     FrozenHuberDAv2LowRefiner,
     FrozenHuberPriorDAV11BIM,
+    PriorBIMDATwoStage,
     build_bim_condition,
 )
 
@@ -82,6 +86,14 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--progress-every", type=int, default=100)
     parser.add_argument("--max-frames", type=int)
+    parser.add_argument(
+        "--da3-cache-dir",
+        type=Path,
+        help=(
+            "Optional persistent cache root for lossless float32 DA3 depth, "
+            "confidence, and requested feature tensors."
+        ),
+    )
     parser.add_argument("--no-resume", action="store_true")
     parser.add_argument("--allow-network", action="store_true")
     return parser.parse_args()
@@ -149,12 +161,139 @@ def _tensor(value: np.ndarray, device: torch.device, *, channel: bool = False) -
     return torch.from_numpy(np.ascontiguousarray(array)).to(device=device, dtype=torch.float32)
 
 
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _da3_cache_signature(
+    args: argparse.Namespace,
+    feature_layers: tuple[int, ...],
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "da3_model": str(args.da3_model),
+        "da3_revision": str(args.da3_revision),
+        "process_res": int(args.process_res),
+        "process_res_method": str(BENCHMARK.PROCESS_RES_METHOD),
+        "feature_layers": list(feature_layers),
+        "array_storage": "lossless_float32_uncompressed_npz",
+    }
+
+
+def _da3_cache_namespace(
+    args: argparse.Namespace,
+    feature_layers: tuple[int, ...],
+) -> Path | None:
+    if args.da3_cache_dir is None:
+        return None
+    signature = _da3_cache_signature(args, feature_layers)
+    payload = json.dumps(signature, sort_keys=True, separators=(",", ":")).encode()
+    key = hashlib.sha256(payload).hexdigest()[:20]
+    return args.da3_cache_dir.expanduser().resolve() / key
+
+
+def _da3_cache_entry_path(cache_namespace: Path, frame: Any) -> Path:
+    identity = f"{frame.scene_id}/{frame.frame_id}".encode()
+    entry_key = hashlib.sha256(identity).hexdigest()
+    return cache_namespace / str(frame.scene_id) / f"{entry_key}.npz"
+
+
+def _load_da3_cache_entry(
+    path: Path,
+    *,
+    frame: Any,
+    rgb_sha256: str,
+    expected_shape: tuple[int, int],
+    signature: Mapping[str, Any],
+) -> dict[str, np.ndarray | None] | None:
+    if not path.is_file():
+        return None
+    try:
+        with np.load(path, allow_pickle=False) as archive:
+            metadata = json.loads(str(archive["metadata"].item()))
+            expected_metadata = {
+                "signature": dict(signature),
+                "scene_id": str(frame.scene_id),
+                "frame_id": str(frame.frame_id),
+                "rgb_sha256": rgb_sha256,
+                "depth_shape": list(expected_shape),
+            }
+            if metadata != expected_metadata:
+                return None
+            depth = np.asarray(archive["canonical_depth"], dtype=np.float32)
+            if depth.shape != expected_shape:
+                return None
+            confidence = (
+                np.asarray(archive["raw_confidence"], dtype=np.float32)
+                if bool(np.asarray(archive["has_confidence"]).item())
+                else None
+            )
+            output: dict[str, np.ndarray | None] = {
+                "canonical_depth": depth.copy(),
+                "raw_confidence": None if confidence is None else confidence.copy(),
+            }
+            for index, _layer in enumerate(signature["feature_layers"]):
+                key = f"feature_{index}"
+                if key not in archive:
+                    return None
+                output[key] = np.asarray(archive[key], dtype=np.float32).copy()
+            return output
+    except (OSError, ValueError, KeyError, json.JSONDecodeError):
+        return None
+
+
+def _save_da3_cache_entry(
+    path: Path,
+    *,
+    frame: Any,
+    rgb_sha256: str,
+    expected_shape: tuple[int, int],
+    signature: Mapping[str, Any],
+    canonical_depth: np.ndarray,
+    raw_confidence: np.ndarray | None,
+    features: tuple[np.ndarray, ...],
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    metadata = {
+        "signature": dict(signature),
+        "scene_id": str(frame.scene_id),
+        "frame_id": str(frame.frame_id),
+        "rgb_sha256": rgb_sha256,
+        "depth_shape": list(expected_shape),
+    }
+    payload: dict[str, np.ndarray] = {
+        "metadata": np.asarray(json.dumps(metadata, sort_keys=True)),
+        "canonical_depth": np.asarray(canonical_depth, dtype=np.float32),
+        "has_confidence": np.asarray(raw_confidence is not None),
+        "raw_confidence": (
+            np.asarray(raw_confidence, dtype=np.float32)
+            if raw_confidence is not None
+            else np.empty((0,), dtype=np.float32)
+        ),
+    }
+    for index, feature in enumerate(features):
+        payload[f"feature_{index}"] = np.asarray(feature, dtype=np.float32)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        with temporary.open("wb") as handle:
+            np.savez(handle, **payload)
+        temporary.replace(path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
 def build_batch(
     *,
     model: BIMPriorDA3
     | FrozenHuberDAv2LowRefiner
     | FrozenHuberPriorDAV11BIM
-    | BIMEarlyFusionDAv2JointScaleLow,
+    | BIMEarlyFusionDAv2JointScaleLow
+    | PriorBIMDATwoStage,
     rgb: np.ndarray,
     base_depth: np.ndarray,
     base_confidence: np.ndarray,
@@ -187,7 +326,14 @@ def build_batch(
     else:
         scale_system = (
             model.scale_system
-            if isinstance(model, (FrozenHuberDAv2LowRefiner, FrozenHuberPriorDAV11BIM))
+            if isinstance(
+                model,
+                (
+                    FrozenHuberDAv2LowRefiner,
+                    FrozenHuberPriorDAV11BIM,
+                    PriorBIMDATwoStage,
+                ),
+            )
             else model
         )
         deterministic_scale, support, _, _ = scale_system._robust_bim_scale(
@@ -204,10 +350,12 @@ def evaluate_frame(
     model: BIMPriorDA3
     | FrozenHuberDAv2LowRefiner
     | FrozenHuberPriorDAV11BIM
-    | BIMEarlyFusionDAv2JointScaleLow,
+    | BIMEarlyFusionDAv2JointScaleLow
+    | PriorBIMDATwoStage,
     raycaster: Any,
     args: argparse.Namespace,
     feature_layers: tuple[int, ...],
+    da3_cache_namespace: Path | None = None,
     bim_log_mean: float | None = None,
     bim_log_std: float | None = None,
 ) -> dict[str, Any]:
@@ -244,24 +392,70 @@ def evaluate_frame(
     render_seconds = time.perf_counter() - render_start
 
     da3_start = time.perf_counter()
-    with torch.inference_mode():
-        da3_output = da3_model.inference(
-            [str(frame.rgb_path)],
-            process_res=args.process_res,
-            process_res_method=BENCHMARK.PROCESS_RES_METHOD,
-            export_dir=None,
-            export_feat_layers=list(feature_layers),
+    cache_signature = _da3_cache_signature(args, feature_layers)
+    rgb_sha256 = _file_sha256(Path(frame.rgb_path)) if da3_cache_namespace else None
+    cache_path = (
+        _da3_cache_entry_path(da3_cache_namespace, frame)
+        if da3_cache_namespace is not None
+        else None
+    )
+    cached = (
+        _load_da3_cache_entry(
+            cache_path,
+            frame=frame,
+            rgb_sha256=str(rgb_sha256),
+            expected_shape=expected_shape,
+            signature=cache_signature,
         )
-    if torch.cuda.is_available():
-        torch.cuda.synchronize()
+        if cache_path is not None
+        else None
+    )
+    da3_cache_hit = cached is not None
+    if cached is None:
+        with torch.inference_mode():
+            da3_output = da3_model.inference(
+                [str(frame.rgb_path)],
+                process_res=args.process_res,
+                process_res_method=BENCHMARK.PROCESS_RES_METHOD,
+                export_dir=None,
+                export_feat_layers=list(feature_layers),
+            )
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        canonical_depth = np.asarray(da3_output.depth[0], dtype=np.float32)
+        raw_confidence = getattr(da3_output, "conf", None)
+        if raw_confidence is None:
+            raw_confidence = getattr(da3_output, "depth_conf", None)
+        if raw_confidence is not None:
+            raw_confidence = np.asarray(raw_confidence[0], dtype=np.float32)
+        cached_features: tuple[np.ndarray, ...] = ()
+        if feature_layers:
+            grid_shape = (process_height // 14, process_width // 14)
+            cached_features = tuple(
+                _da3_feature(da3_output.aux, layer, grid_shape) for layer in feature_layers
+            )
+        if cache_path is not None:
+            _save_da3_cache_entry(
+                cache_path,
+                frame=frame,
+                rgb_sha256=str(rgb_sha256),
+                expected_shape=expected_shape,
+                signature=cache_signature,
+                canonical_depth=canonical_depth,
+                raw_confidence=raw_confidence,
+                features=cached_features,
+            )
+    else:
+        canonical_depth = np.asarray(cached["canonical_depth"], dtype=np.float32)
+        raw_confidence = cached["raw_confidence"]
+        cached_features = tuple(
+            np.asarray(cached[f"feature_{index}"], dtype=np.float32)
+            for index, _layer in enumerate(feature_layers)
+        )
     da3_seconds = time.perf_counter() - da3_start
-    canonical_depth = np.asarray(da3_output.depth[0], dtype=np.float32)
     if canonical_depth.shape != expected_shape:
         raise RuntimeError(f"DA3 depth {canonical_depth.shape} != expected {expected_shape}")
     base_depth = canonical_depth * focal_scale
-    raw_confidence = getattr(da3_output, "conf", None)
-    if raw_confidence is None:
-        raw_confidence = getattr(da3_output, "depth_conf", None)
     if raw_confidence is None:
         log_depth = np.log(np.maximum(base_depth, 1e-4))
         laplacian = np.abs(cv2.Laplacian(log_depth, cv2.CV_32F))
@@ -269,7 +463,7 @@ def evaluate_frame(
         base_confidence = np.exp(-laplacian / confidence_scale).astype(np.float32)
         confidence_source = "log-depth Laplacian fallback"
     else:
-        base_confidence = np.asarray(raw_confidence[0], dtype=np.float32)
+        base_confidence = np.asarray(raw_confidence, dtype=np.float32)
         if base_confidence.shape != expected_shape:
             base_confidence = cv2.resize(
                 base_confidence, (process_width, process_height), interpolation=cv2.INTER_LINEAR
@@ -279,9 +473,7 @@ def evaluate_frame(
     da3_feature_mid = None
     da3_feature_deep = None
     if feature_layers:
-        grid_shape = (process_height // 14, process_width // 14)
-        da3_feature_mid = _da3_feature(da3_output.aux, feature_layers[0], grid_shape)
-        da3_feature_deep = _da3_feature(da3_output.aux, feature_layers[1], grid_shape)
+        da3_feature_mid, da3_feature_deep = cached_features
     rgb = cv2.imread(str(frame.rgb_path), cv2.IMREAD_COLOR)
     if rgb is None:
         raise RuntimeError(f"Cannot read RGB image: {frame.rgb_path}")
@@ -350,6 +542,12 @@ def evaluate_frame(
         # For this adapter, scale_low denotes the non-learned local Huber
         # condition. The final column is the official PriorDA v1.1 fine output.
         scale_low_process = output["local_depth"].detach().float().squeeze().cpu().numpy()
+    elif isinstance(model, PriorBIMDATwoStage):
+        # This architecture has one coarse scale stage followed directly by
+        # the conditioned metric DAv2 prediction. Keep the legacy scale_low
+        # column equal to the final prediction so the shared benchmark schema
+        # remains comparable without inventing an intermediate output.
+        scale_low_process = output["depth"].detach().float().squeeze().cpu().numpy()
     else:
         scale_low_process = (
             (output["refinement_anchor_depth"] * torch.exp(output["low_log_residual"]))
@@ -363,7 +561,7 @@ def evaluate_frame(
     final_process = output["depth"].detach().float().squeeze().cpu().numpy()
     learned_scale = (
         float(output["scale"].detach().float().item())
-        if isinstance(model, BIMEarlyFusionDAv2JointScaleLow)
+        if isinstance(model, (BIMEarlyFusionDAv2JointScaleLow, PriorBIMDATwoStage))
         else float((scale_process / np.maximum(base_depth, 1e-6)).mean())
     )
 
@@ -429,6 +627,8 @@ def evaluate_frame(
         "oracle_frame_scale": oracle_scale,
         "scale_abs_log_error": abs(math.log(learned_scale) - math.log(oracle_scale)),
         "confidence_source": confidence_source,
+        "da3_cache_hit": da3_cache_hit,
+        "da3_cache_path": str(cache_path) if cache_path is not None else "",
         "bim_render_seconds": render_seconds,
         "da3_inference_seconds": da3_seconds,
         "model_inference_seconds": model_seconds,
@@ -567,13 +767,19 @@ def build_summary(
     model: BIMPriorDA3
     | FrozenHuberDAv2LowRefiner
     | FrozenHuberPriorDAV11BIM
-    | BIMEarlyFusionDAv2JointScaleLow,
+    | BIMEarlyFusionDAv2JointScaleLow
+    | PriorBIMDATwoStage,
     scene_id: str,
     bimnet_key: str,
     mesh_metadata: Mapping[str, Any],
 ) -> dict[str, Any]:
     ok = [row for row in rows if row.get("status") == "ok"]
     valid = [row for row in ok if bool(row.get("three_rule_pass"))]
+    summary_feature_layers = (
+        tuple(int(value) for value in model.da3_feature_layers)
+        if isinstance(model, BIMPriorDA3) and model.da3_feature_fusion_enabled
+        else ()
+    )
     frame_sha = _frame_set_sha256(valid)
     expected = _expected_selection(args, bimnet_key=bimnet_key, scene_id=scene_id)
     if expected is not None:
@@ -675,12 +881,17 @@ def build_summary(
                 )
                 if isinstance(model, BIMEarlyFusionDAv2JointScaleLow)
                 else (
+                    "frozen fixed-attention pseudo-Huber global scale + "
+                    "train-statistics-conditioned DAv2 Metric Indoor"
+                    if isinstance(model, PriorBIMDATwoStage)
+                    else (
                     "frozen 3-round iterative-attention Huber + official PriorDA v1.1 BIM fine stage"
                     if isinstance(model, FrozenHuberPriorDAV11BIM)
                     else (
                         "frozen 3-round iterative-attention Huber + pretrained DINOv2/DPT r_low"
                         if isinstance(model, FrozenHuberDAv2LowRefiner)
                         else "3-round attention scale + r_low + r_detail"
+                    )
                     )
                 )
             ),
@@ -695,6 +906,24 @@ def build_summary(
             "da3_model": args.da3_model,
             "da3_revision": args.da3_revision,
             "focal_correction": "mean(processed fx, fy) / 300",
+            "da3_prediction_cache": {
+                "enabled": args.da3_cache_dir is not None,
+                "root": (
+                    str(args.da3_cache_dir.expanduser().resolve())
+                    if args.da3_cache_dir is not None
+                    else None
+                ),
+                "namespace": (
+                    str(_da3_cache_namespace(args, summary_feature_layers))
+                    if args.da3_cache_dir is not None
+                    else None
+                ),
+                "signature": (
+                    _da3_cache_signature(args, summary_feature_layers)
+                    if args.da3_cache_dir is not None
+                    else None
+                ),
+            },
         },
         "bim": dict(mesh_metadata),
         "selection": {
@@ -716,6 +945,12 @@ def build_summary(
             "ok": len(ok),
             "error": sum(row.get("status") == "error" for row in rows),
             "skipped_bad_gt": sum(row.get("status") == "skipped_bad_gt" for row in rows),
+            "da3_cache_hits": sum(
+                str(row.get("da3_cache_hit", "")).casefold() == "true" for row in ok
+            ),
+            "da3_cache_misses": sum(
+                str(row.get("da3_cache_hit", "")).casefold() == "false" for row in ok
+            ),
         },
         "subsets": {
             "all_gt_valid": aggregate_rows(ok),
@@ -757,6 +992,8 @@ def _csv_columns() -> list[str]:
         "oracle_frame_scale",
         "scale_abs_log_error",
         "confidence_source",
+        "da3_cache_hit",
+        "da3_cache_path",
         "round_1_log_scale",
         "round_2_log_scale",
         "round_3_log_scale",
@@ -803,6 +1040,93 @@ def _load_frozen_huber_dpt_model(
     if set(state) != expected:
         raise RuntimeError(
             "DPT trainable-state contract changed: "
+            f"missing={sorted(expected - set(state))[:5]}, "
+            f"unexpected={sorted(set(state) - expected)[:5]}"
+        )
+    merged = model.state_dict()
+    merged.update(state)
+    model.load_state_dict(merged, strict=True)
+    return model
+
+
+def _load_priorbimda_two_stage_model(
+    cfg: Any,
+    checkpoint: Mapping[str, Any],
+) -> PriorBIMDATwoStage:
+    expected_architectures = {
+        "priorbimda_fixed_attention_huber_then_dav2_metric_conditioned",
+        "priorbimda_fixed_attention_huber_then_dav2_metric_depth_conditioned",
+        "priorbimda_fixed_attention_huber_then_dav2_relative_disparity_conditioned",
+    }
+    if checkpoint.get("architecture") not in expected_architectures:
+        raise RuntimeError("Checkpoint is not the registered PriorBIMDA two-stage model")
+    if "trainable_model" not in checkpoint:
+        raise KeyError("PriorBIMDA two-stage checkpoint lacks trainable_model")
+
+    scale_path = resolve_project_path(cfg, cfg.model.frozen_scale.checkpoint)
+    actual_scale_sha = BENCHMARK._sha256(scale_path)
+    if str(checkpoint.get("frozen_scale_checkpoint_sha256")) != actual_scale_sha:
+        raise RuntimeError("PriorBIMDA checkpoint refers to a different frozen Stage 1")
+    expected_dav2_sha = str(cfg.model.dav2.checkpoint_sha256)
+    if str(checkpoint.get("official_dav2_checkpoint_sha256")) != expected_dav2_sha:
+        raise RuntimeError("PriorBIMDA checkpoint refers to a different official DAv2 checkpoint")
+
+    dav2_cfg = cfg.model.dav2
+    dav2_path = Path(
+        hf_hub_download(
+            repo_id=str(dav2_cfg.model_id),
+            filename="model.safetensors",
+            revision=str(dav2_cfg.revision),
+            local_files_only=bool(dav2_cfg.local_files_only),
+        )
+    ).resolve()
+    if BENCHMARK._sha256(dav2_path) != expected_dav2_sha:
+        raise RuntimeError("Local official DAv2 checkpoint SHA256 differs from config")
+
+    scale_checkpoint = torch.load(scale_path, map_location="cpu", weights_only=False)
+    scale_system = BIMPriorDA3(cfg)
+    scale_system.load_state_dict(scale_checkpoint["model"], strict=True)
+    statistics = checkpoint.get("condition_statistics")
+    if not isinstance(statistics, Mapping):
+        raise TypeError("PriorBIMDA checkpoint lacks condition statistics")
+    condition_normalization = str(
+        cfg.model.priorbimda_condition.get(
+            "normalization", FIXED_TRAIN_LOG_NORMALIZATION
+        )
+    )
+    refiner = BIMEarlyFusionDepthAnythingV2.from_pretrained(
+        str(dav2_cfg.model_id),
+        revision=str(dav2_cfg.revision),
+        local_files_only=bool(dav2_cfg.local_files_only),
+    )
+    model = PriorBIMDATwoStage(
+        scale_system,
+        refiner,
+        depth_log_mean=(
+            float(statistics["depth_log_mean"])
+            if "depth_log_mean" in statistics
+            else None
+        ),
+        depth_log_std=(
+            float(statistics["depth_log_std"])
+            if "depth_log_std" in statistics
+            else None
+        ),
+        effective_reliability_mean=(
+            float(statistics["effective_reliability_mean"])
+            if "effective_reliability_mean" in statistics
+            else None
+        ),
+        disagreement_clip=float(cfg.model.priorbimda_condition.disagreement_clip),
+        output_max_depth_m=float(dav2_cfg.max_depth_m),
+        condition_normalization=condition_normalization,
+        refiner_output_domain=str(dav2_cfg.get("output_domain", "metric_depth")),
+    )
+    state = checkpoint["trainable_model"]
+    expected = {name for name in model.state_dict() if name.startswith("refiner.")}
+    if set(state) != expected:
+        raise RuntimeError(
+            "PriorBIMDA trainable-state contract changed: "
             f"missing={sorted(expected - set(state))[:5]}, "
             f"unexpected={sorted(set(state) - expected)[:5]}"
         )
@@ -877,6 +1201,7 @@ def _load_joint_dav2_scale_low_model(
         "dav2_early_fusion_joint_global_scale_iterative_shared_geometry_trunk_separate_r18_r36_heads_detached_iteration_low18_low36_predicted_r18_teacher",
         "dav2_early_fusion_joint_global_scale_low36",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter",
+        "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_scale_gradient",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_uncentered_r36_teacher",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_rgb6",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_projected_p36",
@@ -921,6 +1246,9 @@ def _load_joint_dav2_scale_low_model(
         ),
         calibrated_disagreement_adapter_include_rgb=bool(
             disagreement_adapter.get("include_rgb", False)
+        ),
+        calibrated_disagreement_adapter_detach_scale=bool(
+            disagreement_adapter.get("detach_scale", True)
         ),
         iterative_geometry_adapters_enabled=bool(
             iterative_geometry.get("enabled", False)
@@ -982,7 +1310,9 @@ def main() -> None:
 
     cfg = load_config(args.config)
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
-    if "dav2_joint_scale_low" in cfg.model:
+    if "priorbimda_condition" in cfg.model:
+        model = _load_priorbimda_two_stage_model(cfg, checkpoint)
+    elif "dav2_joint_scale_low" in cfg.model:
         model = _load_joint_dav2_scale_low_model(cfg, checkpoint)
     elif "priorda_v11" in cfg.model:
         model = _load_frozen_huber_priorda_model(cfg, checkpoint)
@@ -1007,6 +1337,18 @@ def main() -> None:
     )
     if feature_layers and len(feature_layers) != 2:
         raise RuntimeError(f"Expected two DA3 feature layers, got {feature_layers}")
+    da3_cache_namespace = _da3_cache_namespace(args, feature_layers)
+    if da3_cache_namespace is not None:
+        da3_cache_namespace.mkdir(parents=True, exist_ok=True)
+        cache_manifest = {
+            "created_or_verified_at": datetime.now(timezone.utc).isoformat(),
+            "cache_root": str(args.da3_cache_dir.expanduser().resolve()),
+            "namespace": str(da3_cache_namespace),
+            "signature": _da3_cache_signature(args, feature_layers),
+            "entry_identity": "sha256(scene_id/frame_id)",
+            "source_validation": "RGB file SHA-256",
+        }
+        BENCHMARK._atomic_json(da3_cache_namespace / "manifest.json", cache_manifest)
 
     bim_dataset = BIMNetDataset(args.bimnet_root)
     bim_scene = bim_dataset[args.bimnet_scene]
@@ -1068,6 +1410,8 @@ def main() -> None:
         "GT is used only for scoring and the frozen three-rule selection",
         flush=True,
     )
+    if da3_cache_namespace is not None:
+        print(f"da3_cache_namespace={da3_cache_namespace}", flush=True)
 
     columns = _csv_columns()
     write_header = not csv_path.exists() or csv_path.stat().st_size == 0
@@ -1085,6 +1429,7 @@ def main() -> None:
                     raycaster=raycaster,
                     args=args,
                     feature_layers=feature_layers,
+                    da3_cache_namespace=da3_cache_namespace,
                     bim_log_mean=(
                         float(cfg.model.bim_normalization.mean)
                         if isinstance(model, BIMEarlyFusionDAv2JointScaleLow)

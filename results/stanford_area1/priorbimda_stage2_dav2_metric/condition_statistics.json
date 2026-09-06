@@ -1,0 +1,10 @@
+{
+  "definition": "pixel-micro train-split moments of frozen Stage-1 log(D_s); train-split mean of unnormalized W_eff on valid BIM/ratio pixels",
+  "depth_log_mean": 0.5893081055686403,
+  "depth_log_std": 0.5951806062041225,
+  "depth_valid_pixels": 1781414208,
+  "effective_reliability_mean": 0.000233687382009554,
+  "effective_reliability_valid_pixels": 1698012174,
+  "full_train_split": true,
+  "train_records": 7013
+}

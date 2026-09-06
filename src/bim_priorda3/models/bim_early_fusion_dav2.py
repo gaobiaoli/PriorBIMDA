@@ -13,9 +13,10 @@ class BIMEarlyFusionDepthAnythingV2(nn.Module):
     """Zero-initialized BIM conditioning before the DINOv2 transformer.
 
     The wrapped model is the official Hugging Face conversion of Depth
-    Anything V2 Metric Indoor Base. RGB follows the checkpoint's native patch
-    embedding. A separate three-channel BIM projection is added to the RGB
-    patch tokens before the class token, positional encoding, and transformer.
+    Anything V2 Base, either relative or metric. RGB follows the checkpoint's
+    native patch embedding. A separate three-channel BIM projection is added
+    to the RGB patch tokens before the class token, positional encoding, and
+    transformer.
     """
 
     PATCH_SIZE = 14
@@ -34,9 +35,12 @@ class BIMEarlyFusionDepthAnythingV2(nn.Module):
             raise ValueError(f"Expected DAv2 patch size 14, got {patch_size}")
         if hidden_size != 768:
             raise ValueError(f"Expected DAv2 ViT-B hidden size 768, got {hidden_size}")
-        if str(config.depth_estimation_type) != "metric":
-            raise ValueError("BIM early fusion requires the official metric-depth checkpoint")
-        if float(config.max_depth) != 20.0:
+        self.depth_estimation_type = str(config.depth_estimation_type)
+        if self.depth_estimation_type not in {"metric", "relative"}:
+            raise ValueError(
+                "BIM early fusion requires an official metric or relative DAv2 checkpoint"
+            )
+        if self.depth_estimation_type == "metric" and float(config.max_depth) != 20.0:
             raise ValueError(f"Expected indoor max depth 20 m, got {config.max_depth}")
         projection = self.dav2.backbone.embeddings.patch_embeddings.projection
         if (

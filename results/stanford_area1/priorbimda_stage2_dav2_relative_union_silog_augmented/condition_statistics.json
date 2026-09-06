@@ -1,0 +1,6 @@
+{
+  "definition": "per-frame valid-BIM and frozen Stage-1 union minimum/range; per-frame maximum normalization of W_eff; no train-split moments",
+  "full_train_split": true,
+  "normalization": "per_frame_stage1_bim_union_minmax_0_1",
+  "train_records": 7013
+}

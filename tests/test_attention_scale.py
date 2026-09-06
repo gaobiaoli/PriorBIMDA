@@ -7,6 +7,7 @@ from bim_priorda3.losses import (
     BIMPriorLoss,
     absrel_optimal_log_scale,
     attention_scale_distribution_target_loss,
+    log_l1_optimal_log_scale,
 )
 from bim_priorda3.models import BIMPriorDA3
 from bim_priorda3.models.attention_scale import AttentiveBIMScaleHead
@@ -1270,6 +1271,41 @@ def test_absrel_optimal_log_scale_is_exact_weighted_median() -> None:
         ).mean(dim=1)
         grid_optimum = candidates[errors.argmin()]
         assert torch.isclose(expected, grid_optimum, atol=3e-4)
+
+
+def test_log_l1_optimal_log_scale_is_exact_weighted_median() -> None:
+    base = torch.ones(2, 1, 1, 4)
+    target = torch.tensor([[[[1.0, 2.0, 4.0, 8.0]]], [[[2.0, 2.0, 2.0, 2.0]]]])
+    valid = torch.ones_like(base)
+    valid[0, ..., 3] = 0
+    weight = torch.tensor([[[[1.0, 1.0, 3.0, 100.0]]], [[[1.0, 2.0, 3.0, 4.0]]]])
+
+    log_scale, supported = log_l1_optimal_log_scale(
+        base,
+        target,
+        valid,
+        pixel_weight=weight,
+        min_support=3,
+    )
+
+    # The invalid ratio 8 is ignored despite its large weight. Among valid
+    # ratios 1,2,4 with weights 1,1,3, the weighted median is 4.
+    torch.testing.assert_close(
+        log_scale.flatten(),
+        torch.tensor([torch.log(torch.tensor(4.0)), torch.log(torch.tensor(2.0))]),
+    )
+    assert supported.tolist() == [True, True]
+
+    candidates = torch.linspace(-0.5, 2.0, 25001)
+    for sample_index, expected in enumerate(log_scale.flatten()):
+        mask = valid[sample_index] > 0
+        ratios = (
+            target[sample_index][mask].log() - base[sample_index][mask].log()
+        ).flatten()
+        weights = weight[sample_index][mask].flatten()
+        errors = (candidates[:, None] - ratios[None]).abs().mul(weights[None]).sum(dim=1)
+        grid_optimum = candidates[errors.argmin()]
+        assert torch.isclose(expected, grid_optimum, atol=2e-4)
 
 
 def test_oracle_scale_loss_directly_supervises_attention_scale() -> None:

@@ -1,0 +1,19 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_local_retrain_full_depth_metric_da3.yaml
+
+# Original scale+r36 baseline without the post-scale calibrated-disagreement
+# adapter. The scale head receives no oracle-scale or equivariance auxiliary
+# loss: its only direct supervision is the final composed depth loss. The r36
+# native teacher and its zero-mean regularizer remain unchanged.
+experiment:
+  name: stanford_area1_scale_r36_final_depth_scale_supervision_effective_batch16_6epoch_20260905
+  output_dir: outputs/stanford_area1_scale_r36_final_depth_scale_supervision_effective_batch16_6epoch_20260905
+  results_dir: results/stanford_area1/scale_r36_final_depth_scale_supervision_effective_batch16_6epoch_20260905
+
+model:
+  dav2_joint_scale_low:
+    equivariance_probability: 0.0
+    equivariance_log_range: 0.0
+
+loss:
+  attention_scale_oracle: 0.0
+  attention_scale_equivariance: 0.0

@@ -1,0 +1,136 @@
+{
+  "architecture": "priorbimda_fixed_attention_huber_then_dav2_metric_conditioned",
+  "best_epoch": 9,
+  "best_validation_abs_rel": 0.0552635593181265,
+  "condition_statistics": {
+    "definition": "pixel-micro train-split moments of frozen Stage-1 log(D_s); train-split mean of unnormalized W_eff on valid BIM/ratio pixels",
+    "depth_log_mean": 0.5893081055686403,
+    "depth_log_std": 0.5951806062041225,
+    "depth_valid_pixels": 1781414208,
+    "effective_reliability_mean": 0.000233687382009554,
+    "effective_reliability_valid_pixels": 1698012174,
+    "full_train_split": true,
+    "train_records": 7013
+  },
+  "final_epoch_validation_abs_rel": 0.0552635593181265,
+  "initialization": {
+    "all_pass": true,
+    "bim_invariance": {
+      "atol": 1e-06,
+      "max_abs_diff": 0.0,
+      "mean_abs_diff": 0.0,
+      "pass": true,
+      "rtol": 1e-05
+    },
+    "bim_projection_zero_init": {
+      "max_abs_output": 0.0,
+      "pass": true
+    },
+    "condition_statistics": {
+      "definition": "pixel-micro train-split moments of frozen Stage-1 log(D_s); train-split mean of unnormalized W_eff on valid BIM/ratio pixels",
+      "depth_log_mean": 0.5893081055686403,
+      "depth_log_std": 0.5951806062041225,
+      "depth_valid_pixels": 1781414208,
+      "effective_reliability_mean": 0.000233687382009554,
+      "effective_reliability_valid_pixels": 1698012174,
+      "full_train_split": true,
+      "train_records": 7013
+    },
+    "dpt_pretrained_loading": {
+      "max_abs_diff": 0.0,
+      "mean_abs_diff": 0.0,
+      "parameter_values": 10890305,
+      "pass": true
+    },
+    "early_equals_pretrained_dav2": {
+      "atol": 1e-06,
+      "max_abs_diff": 0.0,
+      "mean_abs_diff": 0.0,
+      "pass": true,
+      "rtol": 1e-05
+    },
+    "stage1_all_frozen": true,
+    "stage1_checkpoint": "/home/bgao491/PriorBIMDA/outputs/stanford_area1_priorbimda_stage1_fixed_attention_huber_3epoch/best.pt",
+    "stage1_checkpoint_sha256": "5af5e74432fd216b62abffe10e428df04ba7e55851e28bb1e9b315aae439ee2c",
+    "stage1_epoch": 2,
+    "stage1_eval": true,
+    "stage1_validation_metric": 0.07091348003452419
+  },
+  "optimizer_steps": 3950,
+  "skipped_steps": 1,
+  "test": {
+    "alignment": "none",
+    "best_epoch": 9,
+    "frames": 1641,
+    "frozen_stage1_scale": {
+      "abs_rel": 0.06671129024237109,
+      "count": 404367334,
+      "delta1": 0.9472444651031084,
+      "delta2": 0.9774280308211049,
+      "mae": 0.12412329331256407,
+      "rmse": 0.3128863775012914,
+      "rmse_log": 0.1578742726587424
+    },
+    "inference_seconds": 29.72948864195496,
+    "mean_normalized_effective_reliability": 0.9521882812357302,
+    "priorbimda_two_stage": {
+      "abs_rel": 0.06083122932447087,
+      "count": 404367334,
+      "delta1": 0.949144826322692,
+      "delta2": 0.9793962610243883,
+      "mae": 0.11635307203621,
+      "rmse": 0.2811186290211047,
+      "rmse_log": 0.1480509528360287
+    },
+    "raw_da3_focal_corrected": {
+      "abs_rel": 0.08440634670708837,
+      "count": 404367334,
+      "delta1": 0.9406275903582261,
+      "delta2": 0.977522279284805,
+      "mae": 0.16101586456713823,
+      "rmse": 0.33612447217255037,
+      "rmse_log": 0.16736493120206913
+    },
+    "relative_improvement_over_stage1": 0.08814191565681265,
+    "selected_checkpoint": "best.pt",
+    "support": "fixed GT support 0.2-5 m"
+  },
+  "training_seconds": 3994.3931256895885,
+  "validation": {
+    "alignment": "none",
+    "best_epoch": 9,
+    "frames": 1673,
+    "frozen_stage1_scale": {
+      "abs_rel": 0.06763275581357353,
+      "count": 364913264,
+      "delta1": 0.9479791943106787,
+      "delta2": 0.9840131571649311,
+      "mae": 0.1361073030546625,
+      "rmse": 0.35196441413067986,
+      "rmse_log": 0.12956967651693774
+    },
+    "inference_seconds": 30.17924386728555,
+    "mean_normalized_effective_reliability": 0.9586787692097016,
+    "priorbimda_two_stage": {
+      "abs_rel": 0.0552635593181265,
+      "count": 364913264,
+      "delta1": 0.9569212370422359,
+      "delta2": 0.9887310673365932,
+      "mae": 0.11396832101226004,
+      "rmse": 0.24167333462045046,
+      "rmse_log": 0.11081811070446644
+    },
+    "raw_da3_focal_corrected": {
+      "abs_rel": 0.08903245378067473,
+      "count": 364913264,
+      "delta1": 0.9337392241242292,
+      "delta2": 0.9830750054621199,
+      "mae": 0.1825018864866046,
+      "rmse": 0.3861419642006605,
+      "rmse_log": 0.14356536368915876
+    },
+    "relative_improvement_over_stage1": 0.18288766067055037,
+    "selected_checkpoint": "best.pt",
+    "support": "fixed GT support 0.2-5 m"
+  }
+}

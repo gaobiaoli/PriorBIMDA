@@ -1,0 +1,9 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_resblocks3_full_depth_metric_da3.yaml
+
+# Exact reproduction of the historical Adapter + 3 ResBlocks experiment.
+# Only artifact destinations are changed; all data/model/loss/train settings
+# are inherited without override.
+experiment:
+  name: stanford_area1_f36_adapter_resblocks3_exact_reproduction_20260906
+  output_dir: outputs/stanford_area1_f36_adapter_resblocks3_exact_reproduction_20260906
+  results_dir: results/stanford_area1/f36_adapter_resblocks3_exact_reproduction_20260906
