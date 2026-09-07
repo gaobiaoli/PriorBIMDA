@@ -1,0 +1,82 @@
+experiment:
+  name: stanford_area1_dense3_scale_residual_logdepth_effective_batch16_6epoch_20260907
+  seed: 42
+  output_dir: /mnt/priorbimda-data/PriorBIMDA-Outputs/stanford_area1_dense3_scale_residual_logdepth_effective_batch16_6epoch_20260907
+  results_dir: results/stanford_area1/dense3_scale_residual_logdepth_effective_batch16_6epoch_20260907
+data:
+  source_root: ../Stanford2D3DS/no_xyz
+  slabim_root: ../SLABIM
+  processed_root: data/processed/stanford_area1_hit_only_504
+  regions: [WC_1, conferenceRoom_1, conferenceRoom_2, copyRoom_1, hallway_1, hallway_2, hallway_3, hallway_4, hallway_5, hallway_6, hallway_7, hallway_8, office_1, office_2, office_3, office_4, office_5, office_6, office_7, office_8, office_9, office_10, office_11, office_12, office_13, office_14, office_15, office_16, office_17, office_18, office_19, office_20, office_21, office_22, office_23, office_24, office_25, office_26, office_27, office_28, office_29, office_30, office_31, pantry_1]
+  target_height: 504
+  target_width: 504
+  split_annotation: data/annotations/stanford_area1_room_v1.jsonl
+  split_annotation_sha256: 18f4e68838f24ee10feba23f66d4baddd005e5eac5ed5288a459224152c0ed59
+  split_fingerprint_sha256: 87dbde4e9e454c9dca1e2f38d86fd339ae45b401145b29324ada4174d35043f7
+  ground_truth_support: official_all_valid
+  apply_da3_metric_focal_scaling: true
+  da3_model: depth-anything/da3metric-large
+  da3_revision: 4010e39f3634a45bc60553321fb49fb760bd594e
+model:
+  dense3_scale_residual:
+    enabled: true
+    condition: [masked_log_metric_bim, log_metric_da3, bim_hit_mask]
+    normalization: none
+    disagreement_channel: false
+    regression_hidden_size: 256
+    head_dropout_probability: 0.0
+    max_dense_log_residual: 0.45
+    global_scale_output: D_s_equals_D_DA3_times_exp_z_s
+    final_output: D_final_equals_D_s_times_exp_zero_mean_r
+    scale_teacher: none
+    residual_teacher: none
+  dav2:
+    model_id: depth-anything/Depth-Anything-V2-Metric-Indoor-Base-hf
+    revision: 9560f57a2f07803ba353bb918d6a6e5e005b9277
+    checkpoint_sha256: 8b902f5d9a8c8a9520f3a8c6a00afe442b464eff5aaf0cb405d1da721cd9f79f
+    local_files_only: true
+loss:
+  name: absolute_log_depth
+  reduction: 0.5_pixel_micro_plus_0.5_frame_macro
+  supervision: final_depth_only
+  # Needed only by the inherited split validator, not used as a loss.
+  trust_margin: 0.005
+  trust_temperature: 0.03
+train:
+  epochs: 6
+  batch_size: 2
+  gradient_accumulation: 8
+  val_batch_size: 2
+  num_workers: 8
+  optimizer: AdamW
+  encoder_learning_rate: 5.0e-6
+  decoder_learning_rate: 5.0e-5
+  bim_condition_learning_rate: 5.0e-5
+  scale_head_learning_rate: 5.0e-5
+  residual_head_learning_rate: 5.0e-5
+  weight_decay: 0.01
+  scheduler: cosine
+  gradient_clip_norm: 1.0
+  amp: true
+  amp_initial_scale: 1024.0
+  gradient_checkpointing: true
+  log_every: 20
+  checkpoint_epochs: [3, 4, 5, 6]
+  region_balanced_sampling: true
+  region_balance_exponent: 0.5
+  samples_per_epoch: null
+  augment:
+    da3_global_scale_probability: 1.0
+    da3_global_scale_log_range: 0.2
+    color_jitter: 0.1
+    horizontal_flip_probability: 0.5
+    bim_dropout_probability: 0.15
+    bim_dropout_fraction: 0.12
+    bim_full_dropout_probability: 0.05
+    bim_shuffle_probability: 0.05
+    bim_shuffle_scope: other_training_room
+evaluation:
+  primary_aggregation: frame_macro
+  best_selection: val_frame_macro_abs_rel
+  ground_truth_support: official_all_valid
+  alignment: none

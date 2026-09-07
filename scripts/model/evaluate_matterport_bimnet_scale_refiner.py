@@ -33,6 +33,8 @@ from bim_priorda3.checkpoints import validate_checkpoint_model_config
 from bim_priorda3.config import load_config, resolve_project_path
 from bim_priorda3.data.geometry import depth_edges
 from bim_priorda3.models.dav2_dense4 import DAv2Dense4
+from bim_priorda3.models.dav2_dense3_residual import DAv2Dense3Residual
+from bim_priorda3.models.dav2_dense3_scale_residual import DAv2Dense3ScaleResidual
 from bim_priorda3.models import (
     FIXED_TRAIN_LOG_NORMALIZATION,
     BIMEarlyFusionDAv2JointScaleLow,
@@ -318,7 +320,7 @@ def build_batch(
         batch["da3_feature_mid"] = _tensor(da3_feature_mid, device)
     if da3_feature_deep is not None:
         batch["da3_feature_deep"] = _tensor(da3_feature_deep, device)
-    if isinstance(model, (BIMEarlyFusionDAv2JointScaleLow, DAv2Dense4)):
+    if isinstance(model, (BIMEarlyFusionDAv2JointScaleLow, DAv2Dense4, DAv2Dense3Residual, DAv2Dense3ScaleResidual)):
         # The joint regressor never consumes an analytic BIM scale. Keep the
         # legacy diagnostic columns neutral rather than instantiating a
         # deterministic estimator outside the model.
@@ -525,10 +527,13 @@ def evaluate_frame(
         torch.cuda.synchronize()
     model_seconds = time.perf_counter() - model_start
 
-    dense4 = isinstance(model, DAv2Dense4)
+    dense4 = isinstance(model, (DAv2Dense4, DAv2Dense3Residual))
+    dense3_scale_residual = isinstance(model, DAv2Dense3ScaleResidual)
     scale_process = None if dense4 else output["scaled_depth"].detach().float().squeeze().cpu().numpy()
     if dense4:
         scale_low_process = None
+    elif dense3_scale_residual:
+        scale_low_process = scale_process
     elif isinstance(model, BIMEarlyFusionDAv2JointScaleLow):
         scale_low_process = (
             (output["scaled_depth"] * torch.exp(output["low1_log_residual"].float()))
@@ -565,12 +570,12 @@ def evaluate_frame(
     final_process = output["depth"].detach().float().squeeze().cpu().numpy()
     learned_scale = None if dense4 else (
         float(output["scale"].detach().float().item())
-        if isinstance(model, (BIMEarlyFusionDAv2JointScaleLow, PriorBIMDATwoStage))
+        if isinstance(model, (BIMEarlyFusionDAv2JointScaleLow, PriorBIMDATwoStage, DAv2Dense3ScaleResidual))
         else float((scale_process / np.maximum(base_depth, 1e-6)).mean())
     )
 
-    if dense4 and not np.all(np.isfinite(final_process) & (final_process > 0)):
-        raise FloatingPointError("Invalid dense4 depth; refusing prediction-dependent GT masking")
+    if (dense4 or dense3_scale_residual) and not np.all(np.isfinite(final_process) & (final_process > 0)):
+        raise FloatingPointError("Invalid dense depth; refusing prediction-dependent GT masking")
     predictions_process = {"raw": base_depth, "final": final_process} if dense4 else {
         "raw": base_depth,
         "scale": scale_process,
@@ -854,7 +859,7 @@ def build_summary(
             "config": str(args.config.expanduser().resolve()),
             "checkpoint": str(args.checkpoint.expanduser().resolve()),
             "checkpoint_sha256": BENCHMARK._sha256(args.checkpoint),
-            "architecture": (DAv2Dense4.ARCHITECTURE if isinstance(model, DAv2Dense4) else None) or iterative_geometry_architecture or (
+            "architecture": ((DAv2Dense4.ARCHITECTURE if isinstance(model, DAv2Dense4) else None) or (DAv2Dense3Residual.ARCHITECTURE if isinstance(model, DAv2Dense3Residual) else None) or (DAv2Dense3ScaleResidual.ARCHITECTURE if isinstance(model, DAv2Dense3ScaleResidual) else None)) or iterative_geometry_architecture or (
                 (
                     (
                         "single early-fusion DAv2 F144 + PriorDA-style upsampling r504; no global scale"
@@ -1337,7 +1342,37 @@ def main() -> None:
 
     cfg = load_config(args.config)
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
-    if cfg.model.get("dense4", {}).get("enabled", False):
+    if cfg.model.get("dense3_residual", {}).get("enabled", False):
+        if checkpoint.get("architecture") != DAv2Dense3Residual.ARCHITECTURE:
+            raise ValueError("Expected the single-output dense3 residual checkpoint")
+        if checkpoint["config"]["model"] != dict(cfg.model):
+            raise ValueError("Dense3 residual evaluation config differs from training")
+        dav2 = cfg.model.dav2
+        model = DAv2Dense3Residual.from_pretrained(
+            dav2.model_id,
+            revision=dav2.revision,
+            local_files_only=True,
+        )
+        model.load_state_dict(checkpoint["model"], strict=True)
+        PREDICTION_NAMES = ("raw", "final", "oracle_frame_scale")
+    elif cfg.model.get("dense3_scale_residual", {}).get("enabled", False):
+        if checkpoint.get("architecture") != DAv2Dense3ScaleResidual.ARCHITECTURE:
+            raise ValueError("Expected the dense3 global-scale+dense-residual checkpoint")
+        if checkpoint["config"]["model"] != dict(cfg.model):
+            raise ValueError("Dense3 evaluation model config differs from the training checkpoint")
+        dav2 = cfg.model.dav2
+        dense = cfg.model.dense3_scale_residual
+        model = DAv2Dense3ScaleResidual.from_pretrained(
+            dav2.model_id,
+            revision=dav2.revision,
+            local_files_only=True,
+            regression_hidden_size=int(dense.regression_hidden_size),
+            head_dropout_probability=float(dense.head_dropout_probability),
+            max_dense_log_residual=float(dense.max_dense_log_residual),
+        )
+        model.load_state_dict(checkpoint["model"], strict=True)
+        PREDICTION_NAMES = ("raw", "scale", "final", "oracle_frame_scale")
+    elif cfg.model.get("dense4", {}).get("enabled", False):
         if checkpoint.get("architecture") != DAv2Dense4.ARCHITECTURE:
             raise ValueError("Expected the four-channel direct metric DPT checkpoint")
         if checkpoint["config"]["model"] != dict(cfg.model):
@@ -1527,6 +1562,16 @@ def main() -> None:
         summary["protocol"]["aggregation"] = "frame-macro primary; pixel-micro secondary; no alignment"
         summary["model"]["output_head"] = "official metric sigmoid*20m; all positive GT retained"
         summary["model"]["condition"] = dict(cfg.model.dense4)
+    elif isinstance(model, DAv2Dense3Residual):
+        summary["protocol"]["name"] = "frozen Area_1 single-output dense3 residual zero-shot; three-rule valid frames"
+        summary["protocol"]["aggregation"] = "frame-macro primary; pixel-micro secondary; no alignment"
+        summary["model"]["output_head"] = "D_DA3*exp(uncentered r504); no scale head; all positive GT retained"
+        summary["model"]["condition"] = dict(cfg.model.dense3_residual)
+    elif isinstance(model, DAv2Dense3ScaleResidual):
+        summary["protocol"]["name"] = "frozen Area_1 dense3 global-scale+dense-residual zero-shot; three-rule valid frames"
+        summary["protocol"]["aggregation"] = "frame-macro primary; pixel-micro secondary; no alignment"
+        summary["model"]["output_head"] = "D_DA3*exp(z_s)*exp(mean-centered r504); all positive GT retained"
+        summary["model"]["condition"] = dict(cfg.model.dense3_scale_residual)
     BENCHMARK._atomic_json(summary_path, summary)
     valid = summary["subsets"]["three_rule_valid"]
     predictions = valid.get("predictions", {})
