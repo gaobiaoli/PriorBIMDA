@@ -9,6 +9,7 @@ from bim_priorda3.models.dav2_dense3_residual import (
     build_dense3_condition,
     dense_log_depth_loss,
 )
+from bim_priorda3.models.dav2_dense3_residual_aux72 import build_native_auxiliary_head
 
 
 def batch():
@@ -70,3 +71,16 @@ def test_zero_init_head_and_no_mean_center_constraint():
         head.output_projection.bias.fill_(0.5)
     output = head(torch.randn(2, 8, 4, 4), output_size=(8, 8))
     torch.testing.assert_close(output.mean(dim=(-2, -1)), torch.full((2, 1), 0.5))
+
+
+def test_auxiliary_head_matches_r18_only_structure_and_zero_init():
+    head = build_native_auxiliary_head(128, 64)
+    assert isinstance(head[0], nn.Conv2d)
+    assert head[0].kernel_size == (3, 3)
+    assert (head[0].in_channels, head[0].out_channels) == (128, 64)
+    assert isinstance(head[1], nn.GELU)
+    assert isinstance(head[2], nn.Conv2d)
+    assert head[2].kernel_size == (1, 1)
+    output = head(torch.randn(2, 128, 72, 72))
+    assert output.shape == (2, 1, 72, 72)
+    assert torch.count_nonzero(output) == 0

@@ -47,6 +47,9 @@ class Dense4Dataset(BIMDepthDataset):
             raise ValueError("Dense4 augmentation/shuffle is train-only")
         if self.ground_truth_support != "official_all_valid" or not self.apply_da3_metric_focal_scaling:
             raise ValueError("Dense4 requires official all-valid GT and focal-corrected DA3")
+        self.rgb_resize_interpolation = (
+            cv2.INTER_CUBIC if cfg.model.get("priorda_relative_metric_refiner", {}).get("enabled", False) else cv2.INTER_AREA
+        )
         self.donor_indices = {
             region: [i for i, r in enumerate(self.records) if r["region"] != region]
             for region in {r["region"] for r in self.records}
@@ -57,7 +60,7 @@ class Dense4Dataset(BIMDepthDataset):
         image = cv2.imread(record["image"], cv2.IMREAD_COLOR)
         if image is None:
             raise RuntimeError(f"Cannot read {record['image']}")
-        rgb = cv2.resize(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), (self.width, self.height), interpolation=cv2.INTER_AREA)
+        rgb = cv2.resize(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), (self.width, self.height), interpolation=self.rgb_resize_interpolation)
         with np.load(record["sample"]) as item:
             intrinsic = item["intrinsic"].astype(np.float32)
             focal = float((intrinsic[0, 0] + intrinsic[1, 1]) / 2) / 300

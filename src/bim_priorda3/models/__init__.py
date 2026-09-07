@@ -43,7 +43,14 @@ from .priorda_v11_bim_adapter import (
     effective_attention_top_prior,
     local_huber_log_scale_field,
 )
+from .priorda_relative_metric_refiner import (
+    PriorDARelativeMetricRefiner,
+    bim_affine_frame,
+    build_priorda_relative_condition,
+    depth2disparity,
+)
 from .system import BIMPriorDA3
+from .dav3_dense3_residual_aux72 import DA3MetricDense3ResidualAux72
 
 __all__ = [
     "DAV2_METRIC_DEPTH_OUTPUT",
@@ -57,11 +64,13 @@ __all__ = [
     "BIMEarlyFusionDAv2ScaleRegressor",
     "BIMEarlyFusionDepthAnythingV2",
     "BIMPriorDA3",
+    "DA3MetricDense3ResidualAux72",
     "CalibratedDisagreementAdapter",
     "FrozenHuberDAv2LowRefiner",
     "FrozenHuberPriorDAV11BIM",
     "PriorBIMDAConditionStatistics",
     "PriorBIMDATwoStage",
+    "PriorDARelativeMetricRefiner",
     "SharedGeometryAdapterWithStageHeads",
     "ZeroInitDINOFeatureAdapter",
     "ZeroInitDPTShortcutAdapter",
@@ -69,6 +78,7 @@ __all__ = [
     "build_calibrated_disagreement_condition",
     "build_native_residual_head",
     "build_priorbimda_condition",
+    "build_priorda_relative_condition",
     "build_priorda_v11_bim_condition",
     "effective_attention_top_prior",
     "fixed_attention_effective_reliability",
@@ -79,5 +89,7 @@ __all__ = [
     "priorbimda_prior_min_range",
     "rebuild_bim_condition_with_scaled_prediction",
     "run_fixed_attention_stage1",
+    "bim_affine_frame",
+    "depth2disparity",
     "scale_regression_loss",
 ]
