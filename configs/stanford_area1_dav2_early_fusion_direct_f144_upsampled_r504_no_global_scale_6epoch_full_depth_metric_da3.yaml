@@ -1,0 +1,42 @@
+extends: stanford_area1_dav2_early_fusion_joint_scale_low18_low36_3epoch_full_depth_metric_da3.yaml
+
+data:
+  split_fingerprint_sha256: 87dbde4e9e454c9dca1e2f38d86fd339ae45b401145b29324ada4174d35043f7
+
+# One pretrained DAv2 ViT-B/DPT pass predicts a native F144 feature followed by a PriorDA-style full-resolution log-depth
+# correction directly. Its DC component replaces the separate global scale;
+# no scale head, r36 band, or residual zero-mean constraint is used.
+experiment:
+  name: stanford_area1_dav2_early_fusion_direct_f144_upsampled_r504_no_global_scale_6epoch
+  output_dir: /mnt/priorbimda-data/PriorBIMDA-Outputs/stanford_area1_dav2_early_fusion_direct_f144_upsampled_r504_no_global_scale_6epoch
+  results_dir: results/stanford_area1/dav2_early_fusion_direct_f144_upsampled_r504_no_global_scale_6epoch
+
+model:
+  dav2_joint_scale_low:
+    residual_mode: direct_low144
+    global_scale_enabled: false
+    scale_feature: none
+    residual_features:
+      low1: dpt_F144_then_pretrained_shaped_spatial_head_to_r504
+      low2: disabled
+    residual_composition: D_DA3_times_exp_bounded_r504
+    # Direct r504 must contain both scale and spatial correction. Match the
+    # project's existing maximum total log-residual range.
+    max_low1_log_residual: 0.45
+    equivariance_probability: 0.0
+    equivariance_log_range: 0.0
+
+loss:
+  depth: 1.0
+  attention_scale_oracle: 0.0
+  attention_scale_equivariance: 0.0
+  low1_residual_teacher: 0.50
+  low2_residual_teacher: 0.0
+  residual_zero_mean: 0.0
+
+train:
+  epochs: 6
+  scale_head_learning_rate: 0.0
+  log_every: 20
+  checkpoint_epochs: [3, 4, 5, 6]
+

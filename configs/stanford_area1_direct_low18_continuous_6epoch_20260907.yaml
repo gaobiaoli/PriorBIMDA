@@ -1,0 +1,16 @@
+extends: stanford_area1_dav2_early_fusion_direct_low18_no_global_scale_3epoch_full_depth_metric_da3.yaml
+
+# Fresh, uninterrupted r18-only training. The original stage-1 learning rates
+# and one cosine schedule are used for all six epochs; no checkpoint resume or
+# optimizer/scheduler reset is involved.
+data:
+  split_fingerprint_sha256: 87dbde4e9e454c9dca1e2f38d86fd339ae45b401145b29324ada4174d35043f7
+
+experiment:
+  name: stanford_area1_direct_low18_continuous_6epoch_20260907
+  output_dir: /mnt/priorbimda-data/PriorBIMDA-Outputs/stanford_area1_direct_low18_continuous_6epoch_20260907
+  results_dir: results/stanford_area1/direct_low18_continuous_6epoch_20260907
+
+train:
+  epochs: 6
+  checkpoint_epochs: [3, 4, 5, 6]

@@ -1,0 +1,12 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_resblocks3_full_depth_metric_da3.yaml
+
+# Exact Adapter + 3 ResBlocks architecture and training protocol, with only the
+# explicit r36 zero-mean regularization disabled. The native r36 teacher remains
+# mean-centered, and calibrated disagreement continues to detach global scale.
+experiment:
+  name: stanford_area1_f36_adapter_resblocks3_no_r36_zero_mean_effective_batch16_6epoch_20260906
+  output_dir: outputs/stanford_area1_f36_adapter_resblocks3_no_r36_zero_mean_effective_batch16_6epoch_20260906
+  results_dir: results/stanford_area1/f36_adapter_resblocks3_no_r36_zero_mean_effective_batch16_6epoch_20260906
+
+loss:
+  residual_zero_mean: 0.0

@@ -1,0 +1,159 @@
+{
+  "best_epoch": 6,
+  "best_validation_abs_rel": 0.06313006602630236,
+  "final_epoch_validation_abs_rel": 0.06313006602630236,
+  "initialization": {
+    "active_residual_shape": [
+      144,
+      144
+    ],
+    "active_residual_shape_match": true,
+    "all_pass": true,
+    "bim_projection_zero": true,
+    "calibrated_disagreement_adapter_zero": true,
+    "detached_scale_second_pass_dino_adapter_zero": true,
+    "initial_residual_exact_zero": true,
+    "iterative_geometry_adapters_zero": true,
+    "low1_output_zero": true,
+    "low2_output_zero": true,
+    "native_feature_shapes": [
+      [
+        18,
+        18
+      ],
+      [
+        36,
+        36
+      ],
+      [
+        72,
+        72
+      ],
+      [
+        144,
+        144
+      ]
+    ],
+    "native_shapes_match": true,
+    "official_encoder_dpt_exact": true,
+    "official_max_abs_difference": 0.0,
+    "official_parameter_values": 97378496
+  },
+  "optimizer_steps": 2634,
+  "skipped_steps": 0,
+  "test": {
+    "alignment": "none",
+    "best_epoch": 6,
+    "frames": 1641,
+    "inference_seconds": 21.777371656149626,
+    "joint_global_scale": {
+      "abs_rel": 0.08542850952745411,
+      "count": 413756559,
+      "delta1": 0.9380231311330101,
+      "delta2": 0.9753578407925613,
+      "mae": 0.17707628677774326,
+      "rmse": 0.4351796705821845,
+      "rmse_log": 0.1782501680910353
+    },
+    "joint_scale_low1": {
+      "abs_rel": 0.0641112374227228,
+      "count": 413756559,
+      "delta1": 0.9424536953382774,
+      "delta2": 0.9751220282165968,
+      "mae": 0.12763186934070678,
+      "rmse": 0.41483411952175875,
+      "rmse_log": 0.16736113273424422
+    },
+    "joint_scale_low1_low2": {
+      "abs_rel": 0.0641112374227228,
+      "count": 413756559,
+      "delta1": 0.9424536953382774,
+      "delta2": 0.9751220282165968,
+      "mae": 0.12763186934070678,
+      "rmse": 0.41483411952175875,
+      "rmse_log": 0.16736113273424422
+    },
+    "raw_da3_focal_corrected": {
+      "abs_rel": 0.08542850952745411,
+      "count": 413756559,
+      "delta1": 0.9380231311330101,
+      "delta2": 0.9753578407925613,
+      "mae": 0.17707628677774326,
+      "rmse": 0.4351796705821845,
+      "rmse_log": 0.1782501680910353
+    },
+    "relative_improvement_over_scale_only": 0.2495334663175949,
+    "residual": {
+      "mean_abs_combined36_mean": 0.04231799167278797,
+      "mean_abs_low1_native_mean": 0.04231799167278797
+    },
+    "scale": {
+      "oracle_log_scale_bias": 0.005374282561180152,
+      "oracle_log_scale_mae": 0.026503081609836072,
+      "oracle_scale_estimator": "absrel_optimal",
+      "oracle_scale_relative_error": 0.02705614836313316,
+      "oracle_supported_frames": 1641,
+      "prediction_source": "GT-support mean of direct r144"
+    },
+    "selected_checkpoint": "best.pt",
+    "support": "official all positive non-sentinel GT depth"
+  },
+  "training_seconds": 2357.5677091516554,
+  "validation": {
+    "alignment": "none",
+    "best_epoch": 6,
+    "frames": 1673,
+    "inference_seconds": 22.28410641103983,
+    "joint_global_scale": {
+      "abs_rel": 0.09068927825048927,
+      "count": 422186615,
+      "delta1": 0.9263529375510875,
+      "delta2": 0.9765533660985439,
+      "mae": 0.265998657986269,
+      "rmse": 0.6545811357502725,
+      "rmse_log": 0.1585273341159249
+    },
+    "joint_scale_low1": {
+      "abs_rel": 0.06313006602630236,
+      "count": 422186615,
+      "delta1": 0.942421895587571,
+      "delta2": 0.9771533282740382,
+      "mae": 0.19585691596588528,
+      "rmse": 0.633654645041918,
+      "rmse_log": 0.1439653099562809
+    },
+    "joint_scale_low1_low2": {
+      "abs_rel": 0.06313006602630236,
+      "count": 422186615,
+      "delta1": 0.942421895587571,
+      "delta2": 0.9771533282740382,
+      "mae": 0.19585691596588528,
+      "rmse": 0.633654645041918,
+      "rmse_log": 0.1439653099562809
+    },
+    "raw_da3_focal_corrected": {
+      "abs_rel": 0.09068927825048927,
+      "count": 422186615,
+      "delta1": 0.9263529375510875,
+      "delta2": 0.9765533660985439,
+      "mae": 0.265998657986269,
+      "rmse": 0.6545811357502725,
+      "rmse_log": 0.1585273341159249
+    },
+    "relative_improvement_over_scale_only": 0.3038861126236631,
+    "residual": {
+      "mean_abs_combined36_mean": 0.05125314716385534,
+      "mean_abs_low1_native_mean": 0.05125314716385534
+    },
+    "scale": {
+      "oracle_log_scale_bias": 0.00395188253017747,
+      "oracle_log_scale_mae": 0.022646817914920025,
+      "oracle_scale_estimator": "absrel_optimal",
+      "oracle_scale_relative_error": 0.023087392897927966,
+      "oracle_supported_frames": 1673,
+      "prediction_source": "GT-support mean of direct r144"
+    },
+    "selected_checkpoint": "best.pt",
+    "support": "official all positive non-sentinel GT depth"
+  }
+}

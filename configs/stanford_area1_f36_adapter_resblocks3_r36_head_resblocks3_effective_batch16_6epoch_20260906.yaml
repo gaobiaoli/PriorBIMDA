@@ -1,0 +1,13 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_resblocks3_full_depth_metric_da3.yaml
+
+# Adapter + 3 ResBlocks baseline with three additional residual blocks in the
+# r36 decoder at its 64-channel hidden representation. All other settings are
+# inherited unchanged from the reproduced baseline.
+experiment:
+  name: stanford_area1_f36_adapter_resblocks3_r36_head_resblocks3_effective_batch16_6epoch_20260906
+  output_dir: outputs/stanford_area1_f36_adapter_resblocks3_r36_head_resblocks3_effective_batch16_6epoch_20260906
+  results_dir: results/stanford_area1/f36_adapter_resblocks3_r36_head_resblocks3_effective_batch16_6epoch_20260906
+
+model:
+  dav2_joint_scale_low:
+    low2_decoder_residual_blocks: 3

@@ -1,5 +1,44 @@
 # Continuous scale+r36 experiment log
 
+## 2026-09-07：新增 direct metric dense4 实验（已启动，尚无完整结果）
+
+新实验 `stanford_area1_dense4_metric_silog_effective_batch16_6epoch_20260907`：
+
+- 完整官方 Metric Indoor Base DINOv2 + DPT，直接输出 504×504 metric depth；
+  无 scale/r18/r36 head、无 F36 disagreement Adapter、无 D_local 或 BIM 输出硬替换。
+- Early fusion 是 zero-init Conv(4→768, kernel=stride=14)，输入
+  `[log(q*D_DA3_metric), M*log(D_BIM), M*log(D_BIM/(q*D_DA3_metric)), M]`。
+  用米的自然对数，不作逐帧归一化、训练集标准化或 disagreement clipping；
+  无 BIM 时为 `[log(q*D_DA3_metric),0,0,0]`。M 仅代表命中，不代表正确性。
+- 只使用 SILog：`10*sqrt(var(g, correction=1)+0.15*mean(g)^2)`，
+  `g=log(pred+1e-7)-log(GT+1e-7)`；FP32 loss，sqrt 输入数值下限 1e-12。
+  无 oracle/scale-equivariance/native residual teacher/zero-mean 等辅助 loss。
+- 主路径 DA3 `q=exp(U(-0.2,0.2))`，p=1；RGB 继承原 gain/bias jitter 0.1；
+  同步水平翻转 p=0.5；BIM 方块 dropout p=0.15、面积 0.12；整体 dropout p=0.05；
+  BIM shuffle p=0.05，仅从其他训练房间取 BIM depth+mask，先 shuffle 再 dropout。
+  不使用 BIM 平移、像素噪声、edge dilation。
+- 与原 3ResBlocks 训练配置核对：microbatch=2、accumulation=8、有效 batch=16，
+  AdamW、encoder LR=5e-6、decoder/condition LR=5e-5、weight decay=0.01、
+  梯度裁剪=1、AMP 初始 scale=1024、gradient checkpointing、region-balanced
+  exponent=0.5、seed=42、6 epoch cosine 均保持。每 20 microiterations 打印。
+  SILog 在每个物理 microbatch 的 GT-valid 像素上计算，再梯度累积；
+  不是物理 batch16 的一次全局方差计算。沿用非严格确定性、TF32=false、fast SDP 可用。
+- 训练 GT 范围审计：7013 帧、1,771,860,649 有效像素，其中 1,278,731
+  （约 0.07217%）超过 20m，最大 49.9765625m。保留官方 sigmoid×20m 输出头，
+  但不裁剪/删除超 20m GT；这一输出上限限制须在解读实验时保留。
+- 本次 Area_1 与 MP3D 都以 frame-macro 为主，同时记录 pixel-micro；
+  best 按 val frame-macro AbsRel 选择，与旧 pixel-micro 选 best 的口径有区别。
+  best/latest 均自动评测 Area_1 test + MP3D hxp/759/1px 冻结 1935 帧；GT 不输入模型。
+- 启动前验证：33 项单元/回归测试通过；官方 zero-init 输出逐值等于原模型；
+  完整 DPT 参数加载差值为 0；504×504 短训练完成 1 次更新、AMP skipped=0、
+  condition projection 已收到梯度；抽检未增强样本与旧数据管线逐值相同；
+  hxp 单帧评测及数据盘 DA3 raw cache 读取通过。短训练结果不作为正式性能。
+- Pipeline：`scripts/model/run_dense4_metric_silog_pipeline_20260907.sh`
+- 配置：`configs/stanford_area1_dense4_metric_silog_effective_batch16_6epoch_20260907.yaml`
+- 日志/CMD/status：`/home/bgao491/tmp/stanford_area1_dense4_metric_silog_effective_batch16_6epoch_20260907.*`
+- 权重：`/mnt/priorbimda-data/PriorBIMDA-Outputs/stanford_area1_dense4_metric_silog_effective_batch16_6epoch_20260907/`
+- 不保存源码快照；原实验的代码改动与历史结果均保留。
+
 更新日期：2026-09-04（Pacific/Auckland）
 
 ## 固定协议

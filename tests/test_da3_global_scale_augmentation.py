@@ -16,6 +16,16 @@ CONFIG = (
     "da3_global_scale_perturb_full_depth_metric_da3.yaml"
 )
 
+ADAPTER_MAIN_PATH_CONFIG = (
+    "configs/stanford_area1_f36_adapter_resblocks3_main_path_da3_scale_perturb_"
+    "no_equivariance_effective_batch16_6epoch_20260906.yaml"
+)
+
+ADAPTER_MAIN_PATH_12_EPOCH_CONFIG = (
+    "configs/stanford_area1_f36_adapter_resblocks3_main_path_da3_scale_perturb_"
+    "no_equivariance_effective_batch16_12epoch_20260906.yaml"
+)
+
 
 def _batch() -> dict[str, torch.Tensor]:
     base = torch.tensor(
@@ -55,6 +65,44 @@ def test_augmented_config_is_six_epoch_continuous_scale_r36() -> None:
     assert cfg.data.split_fingerprint_sha256 == (
         "87dbde4e9e454c9dca1e2f38d86fd339ae45b401145b29324ada4174d35043f7"
     )
+
+
+def test_adapter_main_path_perturbation_replaces_auxiliary_equivariance() -> None:
+    cfg = load_config(ADAPTER_MAIN_PATH_CONFIG)
+
+    joint = cfg.model.dav2_joint_scale_low
+    adapter = joint.calibrated_disagreement_adapter
+    perturb = cfg.train.augment.da3_global_scale_perturbation
+    assert adapter.enabled is True
+    assert adapter.hidden_channels == 32
+    assert adapter.residual_blocks == 3
+    assert adapter.get("expansion_channels") is None
+    assert joint.get("low2_output_mean_center", False) is False
+    assert joint.equivariance_probability == 0.0
+    assert joint.equivariance_log_range == 0.0
+    assert cfg.loss.attention_scale_equivariance == 0.0
+    assert perturb == {
+        "enabled": True,
+        "probability": 1.0,
+        "log_range": 0.2,
+    }
+    assert cfg.loss.residual_zero_mean == 0.1
+    assert cfg.train.batch_size * cfg.train.gradient_accumulation == 16
+
+
+def test_adapter_main_path_12_epoch_experiment_only_extends_schedule() -> None:
+    cfg = load_config(ADAPTER_MAIN_PATH_12_EPOCH_CONFIG)
+
+    assert cfg.train.epochs == 12
+    assert cfg.train.reset_optimizer_scheduler_on_resume is False
+    assert cfg.train.batch_size * cfg.train.gradient_accumulation == 16
+    assert cfg.model.dav2_joint_scale_low.equivariance_probability == 0.0
+    assert cfg.loss.attention_scale_equivariance == 0.0
+    assert cfg.train.augment.da3_global_scale_perturbation == {
+        "enabled": True,
+        "probability": 1.0,
+        "log_range": 0.2,
+    }
 
 
 def test_da3_global_scale_perturbation_preserves_gt_bim_and_shifts_targets() -> None:

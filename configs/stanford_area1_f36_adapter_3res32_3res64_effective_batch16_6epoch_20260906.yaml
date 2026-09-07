@@ -1,0 +1,15 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_resblocks3_full_depth_metric_da3.yaml
+
+# Keep the original 128->64->1 r36 head. Expand the calibrated-disagreement
+# adapter to 3->32->3xResBlock32->64->3xResBlock64->128; the final 1x1
+# projection remains zero-initialized.
+experiment:
+  name: stanford_area1_f36_adapter_3res32_3res64_effective_batch16_6epoch_20260906
+  output_dir: outputs/stanford_area1_f36_adapter_3res32_3res64_effective_batch16_6epoch_20260906
+  results_dir: results/stanford_area1/f36_adapter_3res32_3res64_effective_batch16_6epoch_20260906
+
+model:
+  dav2_joint_scale_low:
+    calibrated_disagreement_adapter:
+      expansion_channels: 64
+      expansion_residual_blocks: 3

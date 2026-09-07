@@ -17,6 +17,7 @@ from .dav2_joint_scale_low import (
     build_native_residual_head,
     joint_scale_low_loss,
     masked_area_downsample,
+    mean_center_native_residual,
     rebuild_bim_condition_with_scaled_prediction,
 )
 from .frozen_huber_dav2_low_refiner import (
@@ -74,6 +75,7 @@ __all__ = [
     "joint_scale_low_loss",
     "local_huber_log_scale_field",
     "masked_area_downsample",
+    "mean_center_native_residual",
     "priorbimda_prior_min_range",
     "rebuild_bim_condition_with_scaled_prediction",
     "run_fixed_attention_stage1",

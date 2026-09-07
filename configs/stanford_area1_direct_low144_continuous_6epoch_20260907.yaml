@@ -1,0 +1,18 @@
+extends: stanford_area1_direct_low18_continuous_6epoch_20260907.yaml
+
+# Direct native-grid ablation symmetric to r18-only: predict a signed r144
+# from F144, then bilinearly upsample it to 504 for metric-DA3 correction.
+experiment:
+  name: stanford_area1_direct_low144_continuous_6epoch_20260907
+  output_dir: /mnt/priorbimda-data/PriorBIMDA-Outputs/stanford_area1_direct_low144_continuous_6epoch_20260907
+  results_dir: results/stanford_area1/direct_low144_continuous_6epoch_20260907
+
+model:
+  dav2_joint_scale_low:
+    residual_mode: direct_native144
+    global_scale_enabled: false
+    scale_feature: none
+    residual_features:
+      low1: dpt_highest_resolution_native_F144
+      low2: disabled
+    residual_composition: D_DA3_times_exp_bilinear_upsampled_bounded_r144

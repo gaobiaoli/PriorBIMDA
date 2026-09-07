@@ -104,7 +104,7 @@ class BIMEarlyFusionDepthAnythingV2(nn.Module):
         bim_condition: torch.Tensor,
     ) -> torch.Tensor:
         if bim_condition.ndim != 4 or bim_condition.shape[1] != self.CONDITION_CHANNELS:
-            raise ValueError("BIM condition must have shape [B, 3, H, W]")
+            raise ValueError(f"BIM condition must have shape [B, {self.CONDITION_CHANNELS}, H, W]")
         if normalized_rgb.shape[0] != bim_condition.shape[0] or normalized_rgb.shape[-2:] != (
             bim_condition.shape[-2:]
         ):
@@ -236,8 +236,8 @@ class BIMEarlyFusionDepthAnythingV2(nn.Module):
         self.eval()
         generator = torch.Generator(device=device).manual_seed(42)
         rgb = torch.rand((1, 3, height, width), generator=generator, device=device)
-        condition_a = torch.randn((1, 3, height, width), generator=generator, device=device)
-        condition_b = torch.randn((1, 3, height, width), generator=generator, device=device)
+        condition_a = torch.randn((1, self.CONDITION_CHANNELS, height, width), generator=generator, device=device)
+        condition_b = torch.randn((1, self.CONDITION_CHANNELS, height, width), generator=generator, device=device)
         with torch.inference_mode():
             projection = self.bim_condition_embed(condition_a)
             early_a = self(rgb, condition_a)

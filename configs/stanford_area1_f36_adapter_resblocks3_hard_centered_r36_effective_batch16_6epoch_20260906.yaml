@@ -1,0 +1,13 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_resblocks3_full_depth_metric_da3.yaml
+
+# Exact Adapter + 3 ResBlocks baseline with a hard per-sample spatial-mean
+# projection on the native 36x36 r36 output before full-resolution upsampling.
+# The original zero-mean loss and mean-centered teacher remain unchanged.
+experiment:
+  name: stanford_area1_f36_adapter_resblocks3_hard_centered_r36_effective_batch16_6epoch_20260906
+  output_dir: outputs/stanford_area1_f36_adapter_resblocks3_hard_centered_r36_effective_batch16_6epoch_20260906
+  results_dir: results/stanford_area1/f36_adapter_resblocks3_hard_centered_r36_effective_batch16_6epoch_20260906
+
+model:
+  dav2_joint_scale_low:
+    low2_output_mean_center: true

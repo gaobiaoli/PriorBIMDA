@@ -13,6 +13,7 @@ from bim_priorda3.models import (
     ZeroInitDPTShortcutAdapter,
     build_calibrated_disagreement_condition,
     build_native_residual_head,
+    mean_center_native_residual,
     rebuild_bim_condition_with_scaled_prediction,
 )
 
@@ -365,6 +366,115 @@ def test_residual_adapter_experiment_adds_three_blocks() -> None:
     assert adapter.enabled is True
     assert adapter.hidden_channels == 32
     assert adapter.residual_blocks == 3
+
+
+def test_r36_head_resblocks_experiment_adds_three_blocks_at_64_channels() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_f36_adapter_resblocks3_r36_head_resblocks3_"
+        "effective_batch16_6epoch_20260906.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    assert joint.calibrated_disagreement_adapter.residual_blocks == 3
+    assert joint.residual_hidden_channels == 64
+    assert joint.low2_decoder_residual_blocks == 3
+
+    head = build_native_residual_head(128, [64], residual_blocks=3)
+    blocks = [module for module in head if isinstance(module, AdapterResidualBlock)]
+    assert len(blocks) == 3
+    assert all(block.conv1.in_channels == 64 for block in blocks)
+    assert head[0].weight.shape == (64, 128, 3, 3)
+    assert head[-1].weight.shape == (1, 64, 1, 1)
+    assert torch.count_nonzero(head[-1].weight) == 0
+    assert torch.count_nonzero(head[-1].bias) == 0
+    prediction = head(torch.randn(2, 128, 36, 36))
+    assert prediction.shape == (2, 1, 36, 36)
+    assert torch.count_nonzero(prediction) == 0
+
+
+def test_two_stage_adapter_experiment_adds_three_blocks_at_each_width() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_f36_adapter_3res32_3res64_"
+        "effective_batch16_6epoch_20260906.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    adapter_cfg = joint.calibrated_disagreement_adapter
+    assert adapter_cfg.hidden_channels == 32
+    assert adapter_cfg.residual_blocks == 3
+    assert adapter_cfg.expansion_channels == 64
+    assert adapter_cfg.expansion_residual_blocks == 3
+    assert joint.get("low2_decoder_residual_blocks", 0) == 0
+    assert joint.get("low2_decoder_hidden_channels") is None
+
+    adapter = CalibratedDisagreementAdapter(
+        128,
+        hidden_channels=32,
+        residual_blocks=3,
+        expansion_channels=64,
+        expansion_residual_blocks=3,
+    )
+    assert len(adapter.residual_blocks) == 3
+    assert len(adapter.expansion_residual_blocks) == 3
+    assert all(block.conv1.in_channels == 32 for block in adapter.residual_blocks)
+    assert all(
+        block.conv1.in_channels == 64 for block in adapter.expansion_residual_blocks
+    )
+    assert adapter.output_projection.weight.shape == (128, 64, 1, 1)
+    delta = adapter(torch.randn(2, 3, 36, 36))
+    assert delta.shape == (2, 128, 36, 36)
+    assert torch.count_nonzero(delta) == 0
+
+
+def test_adapter_resblocks3_without_r36_zero_mean_changes_only_loss_weight() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_f36_adapter_resblocks3_no_r36_zero_mean_"
+        "effective_batch16_6epoch_20260906.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    adapter = joint.calibrated_disagreement_adapter
+    assert adapter.hidden_channels == 32
+    assert adapter.residual_blocks == 3
+    assert adapter.get("expansion_channels") is None
+    assert joint.get("low2_decoder_hidden_channels") is None
+    assert joint.get("low2_decoder_residual_blocks", 0) == 0
+    assert cfg.loss.residual_zero_mean == 0.0
+    assert cfg.loss.low2_residual_teacher == 0.5
+    assert cfg.loss.get("spatial_teacher_mean_center", True) is True
+
+
+def test_hard_centered_r36_experiment_preserves_original_model_except_projection() -> None:
+    cfg = load_config(
+        "configs/stanford_area1_f36_adapter_resblocks3_hard_centered_r36_"
+        "effective_batch16_6epoch_20260906.yaml"
+    )
+
+    joint = cfg.model.dav2_joint_scale_low
+    adapter = joint.calibrated_disagreement_adapter
+    assert adapter.hidden_channels == 32
+    assert adapter.residual_blocks == 3
+    assert adapter.get("expansion_channels") is None
+    assert joint.get("low2_decoder_hidden_channels") is None
+    assert joint.get("low2_decoder_residual_blocks", 0) == 0
+    assert joint.low2_output_mean_center is True
+    assert cfg.loss.residual_zero_mean == 0.1
+    assert cfg.loss.get("spatial_teacher_mean_center", True) is True
+
+
+def test_mean_center_native_residual_removes_each_sample_spatial_dc() -> None:
+    residual = torch.randn(3, 1, 36, 36, requires_grad=True)
+    centered = mean_center_native_residual(residual)
+
+    torch.testing.assert_close(
+        centered.mean(dim=(-2, -1)),
+        torch.zeros((3, 1)),
+        atol=1e-7,
+        rtol=0.0,
+    )
+    assert centered.shape == residual.shape
+    centered.square().mean().backward()
+    assert residual.grad is not None
 
 
 def test_progressive_adapter_and_decoder_experiment_channels() -> None:

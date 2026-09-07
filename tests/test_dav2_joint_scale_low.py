@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 import torch
 
 from bim_priorda3.config import load_config
@@ -296,7 +297,12 @@ def test_single_native_teacher_ignores_disabled_low18() -> None:
 
 
 @torch.no_grad()
-def test_direct_low18_teacher_keeps_global_dc_and_has_no_zero_mean_loss() -> None:
+@pytest.mark.parametrize(
+    "residual_mode", ["direct_low18", "direct_low144", "direct_native144"]
+)
+def test_direct_residual_teacher_keeps_global_dc_and_has_no_zero_mean_loss(
+    residual_mode: str,
+) -> None:
     shape = (1, 1, 4, 4)
     gt = torch.full(shape, 2.0)
     base = torch.ones(shape)
@@ -323,7 +329,7 @@ def test_direct_low18_teacher_keeps_global_dc_and_has_no_zero_mean_loss() -> Non
         low2_teacher_weight=0.0,
         zero_mean_weight=0.0,
         teacher_beta=0.02,
-        residual_mode="direct_low18",
+        residual_mode=residual_mode,
     )
 
     # A mean-centered target would be exactly zero for this constant scale
@@ -331,3 +337,25 @@ def test_direct_low18_teacher_keeps_global_dc_and_has_no_zero_mean_loss() -> Non
     assert float(losses["low1_teacher"]) > 0.6
     assert float(losses["scale_teacher"]) == 0.0
     assert float(losses["zero_mean"]) == 0.0
+
+
+def test_direct_f144_r504_config_preserves_r18_only_objective() -> None:
+    base = load_config(
+        "configs/stanford_area1_dav2_early_fusion_direct_low18_no_global_scale_3epoch_full_depth_metric_da3.yaml"
+    )
+    cfg = load_config(
+        "configs/stanford_area1_dav2_early_fusion_direct_f144_upsampled_r504_no_global_scale_6epoch_full_depth_metric_da3.yaml"
+    )
+    joint = cfg.model.dav2_joint_scale_low
+    assert joint.residual_mode == "direct_low144"
+    assert joint.global_scale_enabled is False
+    assert joint.scale_feature == "none"
+    assert joint.max_low1_log_residual == base.model.dav2_joint_scale_low.max_low1_log_residual == 0.45
+    assert cfg.loss.low1_residual_teacher == base.loss.low1_residual_teacher == 0.5
+    assert cfg.loss.attention_scale_oracle == 0.0
+    assert cfg.loss.attention_scale_equivariance == 0.0
+    assert cfg.loss.residual_zero_mean == 0.0
+    assert cfg.train.batch_size * cfg.train.gradient_accumulation == 16
+    assert cfg.train.encoder_learning_rate == base.train.encoder_learning_rate
+    assert cfg.train.decoder_learning_rate == base.train.decoder_learning_rate
+    assert cfg.train.residual_head_learning_rate == base.train.residual_head_learning_rate

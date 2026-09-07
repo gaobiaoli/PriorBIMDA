@@ -1,0 +1,14 @@
+extends: stanford_area1_dav2_early_fusion_direct_low18_no_global_scale_6epoch_continuation_full_depth_metric_da3.yaml
+
+# Resume the freshly trained stage-1 winner, reset optimizer/scheduler, and
+# reproduce the original lower-learning-rate continuation through epoch 6.
+data:
+  split_fingerprint_sha256: 87dbde4e9e454c9dca1e2f38d86fd339ae45b401145b29324ada4174d35043f7
+
+experiment:
+  name: stanford_area1_direct_low18_retrain_stage2_6epoch_20260907
+  output_dir: /mnt/priorbimda-data/PriorBIMDA-Outputs/stanford_area1_direct_low18_retrain_stage2_6epoch_20260907
+  results_dir: results/stanford_area1/direct_low18_retrain_stage2_6epoch_20260907
+
+train:
+  checkpoint_epochs: [3, 4, 5, 6]

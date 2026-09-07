@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,7 @@ class CalibratedDisagreementAdapter(nn.Module):
         hidden_channels: int = 32,
         residual_blocks: int = 0,
         expansion_channels: int | None = None,
+        expansion_residual_blocks: int = 0,
     ) -> None:
         super().__init__()
         if (
@@ -49,6 +51,8 @@ class CalibratedDisagreementAdapter(nn.Module):
             or hidden_channels < 1
             or residual_blocks < 0
             or (expansion_channels is not None and expansion_channels < 1)
+            or expansion_residual_blocks < 0
+            or (expansion_channels is None and expansion_residual_blocks > 0)
         ):
             raise ValueError("Adapter channel counts must be positive")
         self.input_projection = nn.Conv2d(
@@ -67,6 +71,10 @@ class CalibratedDisagreementAdapter(nn.Module):
             else None
         )
         self.expansion_activation = nn.GELU()
+        self.expansion_residual_blocks = nn.ModuleList(
+            AdapterResidualBlock(int(expansion_channels))
+            for _ in range(expansion_residual_blocks)
+        )
         output_input_channels = (
             int(expansion_channels) if expansion_channels is not None else hidden_channels
         )
@@ -92,6 +100,8 @@ class CalibratedDisagreementAdapter(nn.Module):
             values = block(values)
         if self.expansion_projection is not None:
             values = self.expansion_activation(self.expansion_projection(values))
+            for block in self.expansion_residual_blocks:
+                values = block(values)
         return self.output_projection(values)
 
 
@@ -215,11 +225,13 @@ class ZeroInitDPTShortcutAdapter(nn.Module):
 def build_native_residual_head(
     input_channels: int,
     hidden_channels: Sequence[int],
+    *,
+    residual_blocks: int = 0,
 ) -> nn.Sequential:
     """Build a native-grid residual decoder with a zero-output initialization."""
 
     widths = tuple(int(channels) for channels in hidden_channels)
-    if input_channels < 1 or not widths or min(widths) < 1:
+    if input_channels < 1 or not widths or min(widths) < 1 or residual_blocks < 0:
         raise ValueError("Residual decoder channel counts must be positive")
     layers: list[nn.Module] = []
     current_channels = input_channels
@@ -229,11 +241,57 @@ def build_native_residual_head(
         nn.init.zeros_(convolution.bias)
         layers.extend((convolution, nn.GELU()))
         current_channels = channels
+    layers.extend(AdapterResidualBlock(current_channels) for _ in range(residual_blocks))
     output = nn.Conv2d(current_channels, 1, kernel_size=1)
     nn.init.zeros_(output.weight)
     nn.init.zeros_(output.bias)
     layers.append(output)
     return nn.Sequential(*layers)
+
+
+class DirectFullResolutionResidualHead(nn.Module):
+    """PriorDA-style F144 decoder adapted to a signed log-residual."""
+
+    def __init__(self, pretrained_head: nn.Module) -> None:
+        super().__init__()
+        self.feature_projection = copy.deepcopy(pretrained_head.conv1)
+        self.output_features = copy.deepcopy(pretrained_head.conv2)
+        self.activation = nn.ReLU()
+        self.output_projection = nn.Conv2d(
+            self.output_features.out_channels, 1, kernel_size=1
+        )
+        nn.init.zeros_(self.output_projection.weight)
+        nn.init.zeros_(self.output_projection.bias)
+
+    def __getitem__(self, index: int) -> nn.Module:
+        if index == -1:
+            return self.output_projection
+        raise IndexError(index)
+
+    def forward(
+        self,
+        feature144: torch.Tensor,
+        *,
+        output_size: tuple[int, int],
+    ) -> torch.Tensor:
+        value = self.feature_projection(feature144)
+        value = functional.interpolate(
+            value,
+            size=output_size,
+            mode="bilinear",
+            align_corners=True,
+        )
+        return self.output_projection(
+            self.activation(self.output_features(value))
+        )
+
+
+def mean_center_native_residual(residual: torch.Tensor) -> torch.Tensor:
+    """Remove each sample's spatial DC component on its native prediction grid."""
+
+    if residual.ndim != 4:
+        raise ValueError("Native residual must have shape [B,C,H,W]")
+    return residual - residual.mean(dim=(-2, -1), keepdim=True)
 
 
 def build_calibrated_disagreement_condition(
@@ -403,6 +461,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         calibrated_disagreement_adapter_hidden_channels: int = 32,
         calibrated_disagreement_adapter_residual_blocks: int = 0,
         calibrated_disagreement_adapter_expansion_channels: int | None = None,
+        calibrated_disagreement_adapter_expansion_residual_blocks: int = 0,
         calibrated_disagreement_adapter_injection: str = "fused_f36",
         calibrated_disagreement_adapter_include_rgb: bool = False,
         calibrated_disagreement_adapter_detach_scale: bool = True,
@@ -414,6 +473,8 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         iterative_geometry_adapters_detach_previous_prediction: bool = True,
         low1_decoder_hidden_channels: Sequence[int] | None = None,
         low2_decoder_hidden_channels: Sequence[int] | None = None,
+        low2_decoder_residual_blocks: int = 0,
+        low2_output_mean_center: bool = False,
         detached_scale_second_pass_dino_adapter_enabled: bool = False,
         detached_scale_second_pass_dino_adapter_hidden_channels: int = 64,
         detached_scale_second_pass_dino_adapter_scope: str = "all_dino_tokens",
@@ -432,6 +493,8 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
             "low36_only",
             "low72_only",
             "direct_low18",
+            "direct_low144",
+            "direct_native144",
         }:
             raise ValueError(f"Unsupported residual_mode: {residual_mode}")
 
@@ -439,6 +502,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         fusion_channels = int(self.dav2.config.fusion_hidden_size)
         self.max_low1_log_residual = float(max_low1_log_residual)
         self.max_low2_log_residual = float(max_low2_log_residual)
+        self.low2_output_mean_center = bool(low2_output_mean_center)
         self.output_max_depth_m = float(output_max_depth_m)
         self.residual_mode = str(residual_mode)
         self.detached_scale_second_pass_dino_adapter_enabled = bool(
@@ -518,11 +582,19 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
             if low2_decoder_hidden_channels is None
             else tuple(int(channels) for channels in low2_decoder_hidden_channels)
         )
-        self.low1_head = build_native_residual_head(
-            fusion_channels,
-            low1_widths,
+        self.low1_head = (
+            DirectFullResolutionResidualHead(self.dav2.head)
+            if self.residual_mode == "direct_low144"
+            else build_native_residual_head(
+                fusion_channels,
+                low1_widths,
+            )
         )
-        self.low2_head = build_native_residual_head(fusion_channels, low2_widths)
+        self.low2_head = build_native_residual_head(
+            fusion_channels,
+            low2_widths,
+            residual_blocks=int(low2_decoder_residual_blocks),
+        )
         self.calibrated_disagreement_adapter = (
             CalibratedDisagreementAdapter(
                 fusion_channels,
@@ -530,6 +602,9 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 hidden_channels=int(calibrated_disagreement_adapter_hidden_channels),
                 residual_blocks=int(calibrated_disagreement_adapter_residual_blocks),
                 expansion_channels=calibrated_disagreement_adapter_expansion_channels,
+                expansion_residual_blocks=int(
+                    calibrated_disagreement_adapter_expansion_residual_blocks
+                ),
             )
             if self.calibrated_disagreement_adapter_enabled
             else None
@@ -586,8 +661,8 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         if self.residual_mode in {"low36_only", "low72_only"}:
             for parameter in self.low1_head.parameters():
                 parameter.requires_grad_(False)
-        elif self.residual_mode == "direct_low18":
-            # The DC component of r18 is the scale estimate in this ablation.
+        elif self.residual_mode in {"direct_low18", "direct_low144", "direct_native144"}:
+            # The DC component of the direct residual is the scale estimate.
             # No independent global regression path is trainable or applied.
             for parameter in self.scale_head.parameters():
                 parameter.requires_grad_(False)
@@ -661,7 +736,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         width: int,
         shortcut36_delta: torch.Tensor | None = None,
         projected36_delta: torch.Tensor | None = None,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         if len(feature_maps) != 4:
             raise ValueError("DPT decoding requires exactly four DINO feature maps")
         patch_height = height // self.PATCH_SIZE
@@ -710,7 +785,16 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         fusion72 = dpt_neck.fusion_stage.layers[2]
         feature72 = top_down72 + fusion72.residual_layer1(projected[1])
         feature72 = fusion72.projection(fusion72.residual_layer2(feature72))
-        return feature18, feature36, feature72
+        top_down144 = functional.interpolate(
+            feature72,
+            size=projected[0].shape[-2:],
+            mode="bilinear",
+            align_corners=True,
+        )
+        fusion144 = dpt_neck.fusion_stage.layers[3]
+        feature144 = top_down144 + fusion144.residual_layer1(projected[0])
+        feature144 = fusion144.projection(fusion144.residual_layer2(feature144))
+        return feature18, feature36, feature72, feature144
 
     def _detached_second_pass_r36_shortcut(
         self,
@@ -744,7 +828,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         bim_condition: torch.Tensor,
     ) -> torch.Tensor:
         """Scale-only auxiliary path used by DA3 scale equivariance."""
-        if self.residual_mode == "direct_low18":
+        if self.residual_mode in {"direct_low18", "direct_low144", "direct_native144"}:
             return rgb.new_zeros((rgb.shape[0], 1, 1, 1))
         normalized = self.normalized_rgb(rgb)
         embeddings = self._early_embeddings(normalized, bim_condition)
@@ -803,7 +887,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         descriptor = torch.cat((tokens[:, 0], tokens[:, 1:].mean(dim=1)), dim=1)
         log_scale = (
             descriptor.new_zeros((descriptor.shape[0], 1, 1, 1))
-            if self.residual_mode == "direct_low18"
+            if self.residual_mode in {"direct_low18", "direct_low144", "direct_native144"}
             else self.scale_head(descriptor.float()).view(-1, 1, 1, 1)
         )
         scale = log_scale.exp()
@@ -897,7 +981,7 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
             if self.calibrated_disagreement_adapter_injection == "projected_p36"
             else None
         )
-        feature18, feature36, feature72 = self._decode_dpt_native_features(
+        feature18, feature36, feature72, feature144 = self._decode_dpt_native_features(
             dpt_feature_maps,
             height=normalized_rgb.shape[-2],
             width=normalized_rgb.shape[-1],
@@ -909,7 +993,9 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
         iterative_condition36 = None
         iterative_delta18 = None
         iterative_delta36 = None
-        low1_feature = feature18
+        low1_feature = (
+            feature144 if self.residual_mode in {"direct_low144", "direct_native144"} else feature18
+        )
         if self.iterative_geometry_adapters_enabled:
             if bim_depth is None or bim_valid is None:
                 raise ValueError(
@@ -928,18 +1014,26 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
             )
             low1_feature = feature18 + iterative_delta18.to(dtype=feature18.dtype)
 
-        low1_native = (
-            self.max_low1_log_residual * torch.tanh(self.low1_head(low1_feature))
-            if self.residual_mode in {"low18_low36", "direct_low18"}
-            else torch.zeros_like(feature18[:, :1])
+        if self.residual_mode == "direct_low144":
+            low1_logits = self.low1_head(
+                low1_feature, output_size=tuple(base_depth.shape[-2:])
+            )
+        elif self.residual_mode in {"low18_low36", "direct_low18", "direct_native144"}:
+            low1_logits = self.low1_head(low1_feature)
+        else:
+            low1_logits = torch.zeros_like(feature18[:, :1])
+        low1_native = self.max_low1_log_residual * torch.tanh(low1_logits)
+        low1_full = (
+            low1_native
+            if self.residual_mode == "direct_low144"
+            else functional.interpolate(
+                low1_native,
+                size=base_depth.shape[-2:],
+                mode="bilinear",
+                align_corners=False,
+            )
         )
-        low1_full = functional.interpolate(
-            low1_native,
-            size=base_depth.shape[-2:],
-            mode="bilinear",
-            align_corners=False,
-        )
-        if self.residual_mode == "direct_low18":
+        if self.residual_mode in {"direct_low18", "direct_low144", "direct_native144"}:
             low2_native = torch.zeros_like(low1_native)
         else:
             low2_feature = feature72 if self.residual_mode == "low72_only" else feature36
@@ -971,6 +1065,8 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
             ):
                 low2_feature = feature36 + calibrated_delta.to(dtype=feature36.dtype)
             low2_native = self.max_low2_log_residual * torch.tanh(self.low2_head(low2_feature))
+            if self.low2_output_mean_center:
+                low2_native = mean_center_native_residual(low2_native)
         low2_full = functional.interpolate(
             low2_native,
             size=base_depth.shape[-2:],
@@ -994,9 +1090,10 @@ class BIMEarlyFusionDAv2JointScaleLow(BIMEarlyFusionDepthAnythingV2):
                 list(feature18.shape[-2:]),
                 list(feature36.shape[-2:]),
                 list(feature72.shape[-2:]),
+                list(feature144.shape[-2:]),
             ],
             "active_residual_shape": list(
-                (low1_native if self.residual_mode == "direct_low18" else low2_native).shape[-2:]
+                (low1_native if self.residual_mode in {"direct_low18", "direct_low144", "direct_native144"} else low2_native).shape[-2:]
             ),
         }
         if self.calibrated_disagreement_adapter is not None:
@@ -1282,7 +1379,7 @@ def joint_scale_low_loss(
     frame_macro = (per_numerator[available] / per_denominator[available]).mean()
     depth = 0.5 * (pixel_micro + frame_macro)
 
-    if residual_mode == "direct_low18":
+    if residual_mode in {"direct_low18", "direct_low144", "direct_native144"}:
         scale_teacher = prediction.sum() * 0.0
         # Direct r18 contains both its DC/global-scale component and spatial
         # low-frequency correction. Do not oracle-scale or mean-center it.
@@ -1375,7 +1472,7 @@ def joint_scale_low_loss(
             ),
             valid18,
         )
-    elif residual_mode == "direct_low18":
+    elif residual_mode in {"direct_low18", "direct_low144", "direct_native144"}:
         target_low2 = torch.zeros_like(low2)
         low1_teacher = _masked_per_sample_mean(
             functional.smooth_l1_loss(
@@ -1412,7 +1509,7 @@ def joint_scale_low_loss(
     )
     zero_mean = (
         prediction.sum() * 0.0
-        if residual_mode == "direct_low18"
+        if residual_mode in {"direct_low18", "direct_low144", "direct_native144"}
         else (
             0.5
             * (low1.mean(dim=(1, 2, 3)).abs().mean() + combined36.mean(dim=(1, 2, 3)).abs().mean())

@@ -1,0 +1,26 @@
+extends: stanford_area1_dav2_early_fusion_scale_low36_only_6epoch_continuous_calibrated_disagreement_adapter_resblocks3_full_depth_metric_da3.yaml
+
+# Replace the auxiliary scale-equivariance second encoder forward with direct
+# main-path augmentation of the cached DA3 prediction. Every training sample
+# receives q=exp(epsilon), epsilon~U(-0.20,0.20), before condition construction,
+# oracle-scale estimation, the full model forward, and all depth/residual losses.
+# GT and BIM remain unchanged. Validation, test, and zero-shot are unperturbed.
+experiment:
+  name: stanford_area1_f36_adapter_resblocks3_main_path_da3_scale_perturb_no_equivariance_effective_batch16_6epoch_20260906
+  output_dir: outputs/stanford_area1_f36_adapter_resblocks3_main_path_da3_scale_perturb_no_equivariance_effective_batch16_6epoch_20260906
+  results_dir: results/stanford_area1/f36_adapter_resblocks3_main_path_da3_scale_perturb_no_equivariance_effective_batch16_6epoch_20260906
+
+model:
+  dav2_joint_scale_low:
+    equivariance_probability: 0.0
+    equivariance_log_range: 0.0
+
+loss:
+  attention_scale_equivariance: 0.0
+
+train:
+  augment:
+    da3_global_scale_perturbation:
+      enabled: true
+      probability: 1.0
+      log_range: 0.20

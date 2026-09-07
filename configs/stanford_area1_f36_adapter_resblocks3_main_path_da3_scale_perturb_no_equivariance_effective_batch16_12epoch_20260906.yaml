@@ -1,0 +1,13 @@
+extends: stanford_area1_f36_adapter_resblocks3_main_path_da3_scale_perturb_no_equivariance_effective_batch16_6epoch_20260906.yaml
+
+# Fresh 12-epoch run of the main-path DA3 scale-perturbation experiment. This
+# makes the cosine schedule span all 12 epochs; it does not resume the completed
+# six-epoch scheduler. All model, loss, data, augmentation, and batch settings
+# are inherited unchanged.
+experiment:
+  name: stanford_area1_f36_adapter_resblocks3_main_path_da3_scale_perturb_no_equivariance_effective_batch16_12epoch_20260906
+  output_dir: outputs/stanford_area1_f36_adapter_resblocks3_main_path_da3_scale_perturb_no_equivariance_effective_batch16_12epoch_20260906
+  results_dir: results/stanford_area1/f36_adapter_resblocks3_main_path_da3_scale_perturb_no_equivariance_effective_batch16_12epoch_20260906
+
+train:
+  epochs: 12

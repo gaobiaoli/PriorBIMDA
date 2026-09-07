@@ -185,7 +185,7 @@ def evaluate(
                     pixel_weight=build_depth_supervision_weight(batch, loss_cfg),
                     min_support=oracle_min_support,
                 )
-            if model.residual_mode == "direct_low18":
+            if model.residual_mode in {"direct_low18", "direct_low144", "direct_native144"}:
                 residual = output["low1_log_residual"].float()
                 valid = batch["gt_valid"].float()
                 predicted = (residual * valid).flatten(1).sum(dim=1) / valid.flatten(1).sum(
@@ -219,6 +219,11 @@ def evaluate(
     metrics = {name: accumulator.compute() for name, accumulator in accumulators.items()}
     final_abs_rel = float(metrics["joint_scale_low1_low2"]["abs_rel"])
     scale_abs_rel = float(metrics["joint_global_scale"]["abs_rel"])
+    direct_residual_name = {
+        "direct_low18": "r18",
+        "direct_native144": "r144",
+        "direct_low144": "r504",
+    }.get(model.residual_mode)
     return {
         "frames": frames,
         "support": "official all positive non-sentinel GT depth",
@@ -226,8 +231,8 @@ def evaluate(
         **metrics,
         "scale": {
             "prediction_source": (
-                "GT-support mean of direct r18"
-                if model.residual_mode == "direct_low18"
+                f"GT-support mean of direct {direct_residual_name}"
+                if direct_residual_name is not None
                 else "global scale head"
             ),
             "oracle_supported_frames": scale_frames,
@@ -321,6 +326,9 @@ def main() -> None:
             if disagreement_adapter.get("expansion_channels") is not None
             else None
         ),
+        calibrated_disagreement_adapter_expansion_residual_blocks=int(
+            disagreement_adapter.get("expansion_residual_blocks", 0)
+        ),
         calibrated_disagreement_adapter_injection=str(
             disagreement_adapter.get("injection", "fused_f36")
         ),
@@ -352,6 +360,10 @@ def main() -> None:
         ),
         low1_decoder_hidden_channels=joint.get("low1_decoder_hidden_channels"),
         low2_decoder_hidden_channels=joint.get("low2_decoder_hidden_channels"),
+        low2_decoder_residual_blocks=int(
+            joint.get("low2_decoder_residual_blocks", 0)
+        ),
+        low2_output_mean_center=bool(joint.get("low2_output_mean_center", False)),
         detached_scale_second_pass_dino_adapter_enabled=bool(
             joint.get("detached_scale_second_pass_dino_adapter", {}).get("enabled", False)
         ),
@@ -410,12 +422,21 @@ def main() -> None:
         [18, 18],
         [36, 36],
         [72, 72],
+        [144, 144],
     ]
     initialization["active_residual_shape"] = audit_output["active_residual_shape"]
     expected_active_shape = (
         [18, 18]
         if model.residual_mode == "direct_low18"
-        else ([72, 72] if model.residual_mode == "low72_only" else [36, 36])
+        else (
+            [144, 144]
+            if model.residual_mode == "direct_native144"
+            else (
+                [504, 504]
+                if model.residual_mode == "direct_low144"
+                else ([72, 72] if model.residual_mode == "low72_only" else [36, 36])
+            )
+        )
     )
     initialization["active_residual_shape_match"] = (
         initialization["active_residual_shape"] == expected_active_shape
@@ -786,6 +807,10 @@ def main() -> None:
             best_epoch = epoch
         if model.residual_mode == "direct_low18":
             architecture = "dav2_early_fusion_direct_low18_no_global_scale"
+        elif model.residual_mode == "direct_native144":
+            architecture = "dav2_early_fusion_direct_low144_no_global_scale"
+        elif model.residual_mode == "direct_low144":
+            architecture = "dav2_early_fusion_direct_f144_upsampled_r504_no_global_scale"
         elif model.residual_mode == "low72_only":
             architecture = "dav2_early_fusion_joint_global_scale_low72"
         elif model.iterative_geometry_adapters_enabled:
@@ -834,6 +859,8 @@ def main() -> None:
             and not model.calibrated_disagreement_adapter_detach_scale
         ):
             architecture += "_scale_gradient"
+        if model.low2_output_mean_center:
+            architecture += "_centered_r36_output"
         payload = {
             "schema_version": 1,
             "architecture": architecture,

@@ -32,6 +32,7 @@ from huggingface_hub import hf_hub_download
 from bim_priorda3.checkpoints import validate_checkpoint_model_config
 from bim_priorda3.config import load_config, resolve_project_path
 from bim_priorda3.data.geometry import depth_edges
+from bim_priorda3.models.dav2_dense4 import DAv2Dense4
 from bim_priorda3.models import (
     FIXED_TRAIN_LOG_NORMALIZATION,
     BIMEarlyFusionDAv2JointScaleLow,
@@ -317,7 +318,7 @@ def build_batch(
         batch["da3_feature_mid"] = _tensor(da3_feature_mid, device)
     if da3_feature_deep is not None:
         batch["da3_feature_deep"] = _tensor(da3_feature_deep, device)
-    if isinstance(model, BIMEarlyFusionDAv2JointScaleLow):
+    if isinstance(model, (BIMEarlyFusionDAv2JointScaleLow, DAv2Dense4)):
         # The joint regressor never consumes an analytic BIM scale. Keep the
         # legacy diagnostic columns neutral rather than instantiating a
         # deterministic estimator outside the model.
@@ -524,8 +525,11 @@ def evaluate_frame(
         torch.cuda.synchronize()
     model_seconds = time.perf_counter() - model_start
 
-    scale_process = output["scaled_depth"].detach().float().squeeze().cpu().numpy()
-    if isinstance(model, BIMEarlyFusionDAv2JointScaleLow):
+    dense4 = isinstance(model, DAv2Dense4)
+    scale_process = None if dense4 else output["scaled_depth"].detach().float().squeeze().cpu().numpy()
+    if dense4:
+        scale_low_process = None
+    elif isinstance(model, BIMEarlyFusionDAv2JointScaleLow):
         scale_low_process = (
             (output["scaled_depth"] * torch.exp(output["low1_log_residual"].float()))
             .detach()
@@ -559,13 +563,15 @@ def evaluate_frame(
             .numpy()
         )
     final_process = output["depth"].detach().float().squeeze().cpu().numpy()
-    learned_scale = (
+    learned_scale = None if dense4 else (
         float(output["scale"].detach().float().item())
         if isinstance(model, (BIMEarlyFusionDAv2JointScaleLow, PriorBIMDATwoStage))
         else float((scale_process / np.maximum(base_depth, 1e-6)).mean())
     )
 
-    predictions_process = {
+    if dense4 and not np.all(np.isfinite(final_process) & (final_process > 0)):
+        raise FloatingPointError("Invalid dense4 depth; refusing prediction-dependent GT masking")
+    predictions_process = {"raw": base_depth, "final": final_process} if dense4 else {
         "raw": base_depth,
         "scale": scale_process,
         "scale_low": scale_low_process,
@@ -623,9 +629,9 @@ def evaluate_frame(
         "deterministic_scale": deterministic_scale,
         "deterministic_scale_support": deterministic_support,
         "learned_scale": learned_scale,
-        "learned_log_scale": math.log(learned_scale),
+        "learned_log_scale": math.log(learned_scale) if learned_scale is not None else None,
         "oracle_frame_scale": oracle_scale,
-        "scale_abs_log_error": abs(math.log(learned_scale) - math.log(oracle_scale)),
+        "scale_abs_log_error": abs(math.log(learned_scale) - math.log(oracle_scale)) if learned_scale is not None else None,
         "confidence_source": confidence_source,
         "da3_cache_hit": da3_cache_hit,
         "da3_cache_path": str(cache_path) if cache_path is not None else "",
@@ -685,6 +691,8 @@ def aggregate_rows(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
     raw_abs = float(predictions["raw"]["pixel_micro"]["abs_rel"])
     comparisons = {}
     for prefix in ("scale", "scale_low", "final"):
+        if prefix not in predictions:
+            continue
         value = float(predictions[prefix]["pixel_micro"]["abs_rel"])
         comparisons[f"{prefix}_vs_raw"] = {
             "pixel_micro_abs_rel_difference": value - raw_abs,
@@ -846,10 +854,18 @@ def build_summary(
             "config": str(args.config.expanduser().resolve()),
             "checkpoint": str(args.checkpoint.expanduser().resolve()),
             "checkpoint_sha256": BENCHMARK._sha256(args.checkpoint),
-            "architecture": iterative_geometry_architecture or (
+            "architecture": (DAv2Dense4.ARCHITECTURE if isinstance(model, DAv2Dense4) else None) or iterative_geometry_architecture or (
                 (
-                    "single early-fusion DAv2 native 18x18 direct residual; no global scale"
-                    if model.residual_mode == "direct_low18"
+                    (
+                        "single early-fusion DAv2 F144 + PriorDA-style upsampling r504; no global scale"
+                        if model.residual_mode == "direct_low144"
+                        else (
+                            "single early-fusion DAv2 native 144x144 direct residual; no global scale"
+                            if model.residual_mode == "direct_native144"
+                            else "single early-fusion DAv2 native 18x18 direct residual; no global scale"
+                        )
+                    )
+                    if model.residual_mode in {"direct_low18", "direct_low144", "direct_native144"}
                     else (
                         "single early-fusion DAv2 global scale + native 72x72 r_low"
                         if model.residual_mode == "low72_only"
@@ -1202,6 +1218,7 @@ def _load_joint_dav2_scale_low_model(
         "dav2_early_fusion_joint_global_scale_low36",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_scale_gradient",
+        "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_centered_r36_output",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_uncentered_r36_teacher",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_rgb6",
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_projected_p36",
@@ -1210,6 +1227,8 @@ def _load_joint_dav2_scale_low_model(
         "dav2_early_fusion_joint_global_scale_low36_calibrated_disagreement_adapter_detached_second_pass_dino_r36_shortcut_adapter",
         "dav2_early_fusion_joint_global_scale_low72",
         "dav2_early_fusion_direct_low18_no_global_scale",
+        "dav2_early_fusion_direct_low144_no_global_scale",
+        "dav2_early_fusion_direct_f144_upsampled_r504_no_global_scale",
     }
     if checkpoint.get("architecture") not in expected_architectures:
         raise RuntimeError("Checkpoint is not the registered joint DAv2 scale+r_low model")
@@ -1240,6 +1259,9 @@ def _load_joint_dav2_scale_low_model(
             int(disagreement_adapter.expansion_channels)
             if disagreement_adapter.get("expansion_channels") is not None
             else None
+        ),
+        calibrated_disagreement_adapter_expansion_residual_blocks=int(
+            disagreement_adapter.get("expansion_residual_blocks", 0)
         ),
         calibrated_disagreement_adapter_injection=str(
             disagreement_adapter.get("injection", "fused_f36")
@@ -1272,6 +1294,10 @@ def _load_joint_dav2_scale_low_model(
         ),
         low1_decoder_hidden_channels=joint.get("low1_decoder_hidden_channels"),
         low2_decoder_hidden_channels=joint.get("low2_decoder_hidden_channels"),
+        low2_decoder_residual_blocks=int(
+            joint.get("low2_decoder_residual_blocks", 0)
+        ),
+        low2_output_mean_center=bool(joint.get("low2_output_mean_center", False)),
         detached_scale_second_pass_dino_adapter_enabled=bool(
             joint.get("detached_scale_second_pass_dino_adapter", {}).get("enabled", False)
         ),
@@ -1291,6 +1317,7 @@ def _load_joint_dav2_scale_low_model(
 
 
 def main() -> None:
+    global PREDICTION_NAMES
     args = parse_args()
     validate_args(args)
     toolkit_src = args.toolkit_root.expanduser().resolve() / "src"
@@ -1310,7 +1337,16 @@ def main() -> None:
 
     cfg = load_config(args.config)
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
-    if "priorbimda_condition" in cfg.model:
+    if cfg.model.get("dense4", {}).get("enabled", False):
+        if checkpoint.get("architecture") != DAv2Dense4.ARCHITECTURE:
+            raise ValueError("Expected the four-channel direct metric DPT checkpoint")
+        if checkpoint["config"]["model"] != dict(cfg.model):
+            raise ValueError("Dense4 evaluation model config differs from the training checkpoint")
+        dav2 = cfg.model.dav2
+        model = DAv2Dense4.from_pretrained(dav2.model_id, revision=dav2.revision, local_files_only=True)
+        model.load_state_dict(checkpoint["model"], strict=True)
+        PREDICTION_NAMES = ("raw", "final", "oracle_frame_scale")
+    elif "priorbimda_condition" in cfg.model:
         model = _load_priorbimda_two_stage_model(cfg, checkpoint)
     elif "dav2_joint_scale_low" in cfg.model:
         model = _load_joint_dav2_scale_low_model(cfg, checkpoint)
@@ -1461,8 +1497,9 @@ def main() -> None:
                 rate = index / elapsed if elapsed else 0.0
                 eta = (len(pending) - index) / rate if rate else float("nan")
                 metric_text = (
-                    f" raw={row['raw_abs_rel']:.5f} scale={row['scale_abs_rel']:.5f} "
-                    f"final={row['final_abs_rel']:.5f}"
+                    f" raw={row['raw_abs_rel']:.5f} "
+                    + (f"scale={row['scale_abs_rel']:.5f} " if "scale_abs_rel" in row else "")
+                    + f"final={row['final_abs_rel']:.5f}"
                     if row.get("status") == "ok"
                     else ""
                 )
@@ -1485,6 +1522,11 @@ def main() -> None:
         "per_frame_csv": str(csv_path),
         "per_frame_csv_sha256": BENCHMARK._sha256(csv_path),
     }
+    if isinstance(model, DAv2Dense4):
+        summary["protocol"]["name"] = "frozen Area_1 direct metric dense4 zero-shot; three-rule valid frames"
+        summary["protocol"]["aggregation"] = "frame-macro primary; pixel-micro secondary; no alignment"
+        summary["model"]["output_head"] = "official metric sigmoid*20m; all positive GT retained"
+        summary["model"]["condition"] = dict(cfg.model.dense4)
     BENCHMARK._atomic_json(summary_path, summary)
     valid = summary["subsets"]["three_rule_valid"]
     predictions = valid.get("predictions", {})
@@ -1492,7 +1534,7 @@ def main() -> None:
         f"COMPLETE rows={len(rows)}/{len(frames)} selected={valid.get('frames', 0)} "
         + " ".join(
             f"{name}_abs_rel={predictions.get(name, {}).get('pixel_micro', {}).get('abs_rel')}"
-            for name in ("raw", "scale", "scale_low", "final")
+            for name in PREDICTION_NAMES
         )
         + f" summary={summary_path}",
         flush=True,
