@@ -47,8 +47,12 @@ class Dense4Dataset(BIMDepthDataset):
             raise ValueError("Dense4 augmentation/shuffle is train-only")
         if self.ground_truth_support != "official_all_valid" or not self.apply_da3_metric_focal_scaling:
             raise ValueError("Dense4 requires official all-valid GT and focal-corrected DA3")
+        priorda_relative = any(
+            cfg.model.get(name, {}).get("enabled", False)
+            for name in ("priorda_relative_metric_refiner", "priorda_relative_zero_anchor_refiner", "priorda_relative_prior_identity_refiner", "priorda_relative_prior_frame_refiner")
+        )
         self.rgb_resize_interpolation = (
-            cv2.INTER_CUBIC if cfg.model.get("priorda_relative_metric_refiner", {}).get("enabled", False) else cv2.INTER_AREA
+            cv2.INTER_CUBIC if priorda_relative else cv2.INTER_AREA
         )
         self.donor_indices = {
             region: [i for i, r in enumerate(self.records) if r["region"] != region]

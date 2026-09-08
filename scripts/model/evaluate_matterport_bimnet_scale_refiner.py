@@ -33,7 +33,12 @@ from bim_priorda3.checkpoints import validate_checkpoint_model_config
 from bim_priorda3.config import load_config, resolve_project_path
 from bim_priorda3.data.geometry import depth_edges
 from bim_priorda3.models.dav2_dense4 import DAv2Dense4
-from bim_priorda3.models.priorda_relative_metric_refiner import PriorDARelativeMetricRefiner
+from bim_priorda3.models.priorda_relative_metric_refiner import (
+    PriorDARelativeMetricRefiner,
+    PriorDARelativePriorFrameMetricRefiner,
+    PriorDARelativePriorIdentityMetricRefiner,
+    PriorDARelativeZeroAnchorMetricRefiner,
+)
 from bim_priorda3.models.dav2_dense3_residual import DAv2Dense3Residual
 from bim_priorda3.models.dav2_dense3_residual_aux72 import DAv2Dense3ResidualAux72
 from bim_priorda3.models.dav3_dense3_residual_aux72 import DA3MetricDense3ResidualAux72
@@ -323,7 +328,7 @@ def build_batch(
         batch["da3_feature_mid"] = _tensor(da3_feature_mid, device)
     if da3_feature_deep is not None:
         batch["da3_feature_deep"] = _tensor(da3_feature_deep, device)
-    if isinstance(model, (BIMEarlyFusionDAv2JointScaleLow, DAv2Dense4, PriorDARelativeMetricRefiner, DAv2Dense3Residual, DAv2Dense3ScaleResidual, DA3MetricDense3ResidualAux72)):
+    if isinstance(model, (BIMEarlyFusionDAv2JointScaleLow, DAv2Dense4, PriorDARelativeMetricRefiner, PriorDARelativePriorFrameMetricRefiner, PriorDARelativePriorIdentityMetricRefiner, PriorDARelativeZeroAnchorMetricRefiner, DAv2Dense3Residual, DAv2Dense3ScaleResidual, DA3MetricDense3ResidualAux72)):
         # The joint regressor never consumes an analytic BIM scale. Keep the
         # legacy diagnostic columns neutral rather than instantiating a
         # deterministic estimator outside the model.
@@ -486,7 +491,7 @@ def evaluate_frame(
     rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
     rgb = cv2.resize(
         rgb, (process_width, process_height),
-        interpolation=cv2.INTER_CUBIC if isinstance(model, PriorDARelativeMetricRefiner) else cv2.INTER_AREA,
+        interpolation=cv2.INTER_CUBIC if isinstance(model, (PriorDARelativeMetricRefiner, PriorDARelativePriorFrameMetricRefiner, PriorDARelativePriorIdentityMetricRefiner, PriorDARelativeZeroAnchorMetricRefiner)) else cv2.INTER_AREA,
     )
     rgb = rgb.astype(np.float32) / 255.0
 
@@ -534,7 +539,7 @@ def evaluate_frame(
     model_seconds = time.perf_counter() - model_start
 
     auxiliary_r72_model = isinstance(model, (DAv2Dense3ResidualAux72, DA3MetricDense3ResidualAux72))
-    dense4 = isinstance(model, (DAv2Dense4, PriorDARelativeMetricRefiner, DAv2Dense3Residual, DA3MetricDense3ResidualAux72))
+    dense4 = isinstance(model, (DAv2Dense4, PriorDARelativeMetricRefiner, PriorDARelativePriorFrameMetricRefiner, PriorDARelativePriorIdentityMetricRefiner, PriorDARelativeZeroAnchorMetricRefiner, DAv2Dense3Residual, DA3MetricDense3ResidualAux72))
     dense3_scale_residual = isinstance(model, DAv2Dense3ScaleResidual)
     scale_process = None if dense4 else output["scaled_depth"].detach().float().squeeze().cpu().numpy()
     if dense4:
@@ -870,7 +875,7 @@ def build_summary(
             "config": str(args.config.expanduser().resolve()),
             "checkpoint": str(args.checkpoint.expanduser().resolve()),
             "checkpoint_sha256": BENCHMARK._sha256(args.checkpoint),
-            "architecture": ((PriorDARelativeMetricRefiner.ARCHITECTURE if isinstance(model, PriorDARelativeMetricRefiner) else None) or (DAv2Dense4.ARCHITECTURE if isinstance(model, DAv2Dense4) else None) or (DA3MetricDense3ResidualAux72.ARCHITECTURE if isinstance(model, DA3MetricDense3ResidualAux72) else None) or (DAv2Dense3ResidualAux72.ARCHITECTURE if isinstance(model, DAv2Dense3ResidualAux72) else None) or (DAv2Dense3Residual.ARCHITECTURE if isinstance(model, DAv2Dense3Residual) else None) or (DAv2Dense3ScaleResidual.ARCHITECTURE if isinstance(model, DAv2Dense3ScaleResidual) else None)) or iterative_geometry_architecture or (
+            "architecture": ((model.ARCHITECTURE if isinstance(model, (PriorDARelativeMetricRefiner, PriorDARelativePriorFrameMetricRefiner, PriorDARelativePriorIdentityMetricRefiner, PriorDARelativeZeroAnchorMetricRefiner)) else None) or (DAv2Dense4.ARCHITECTURE if isinstance(model, DAv2Dense4) else None) or (DA3MetricDense3ResidualAux72.ARCHITECTURE if isinstance(model, DA3MetricDense3ResidualAux72) else None) or (DAv2Dense3ResidualAux72.ARCHITECTURE if isinstance(model, DAv2Dense3ResidualAux72) else None) or (DAv2Dense3Residual.ARCHITECTURE if isinstance(model, DAv2Dense3Residual) else None) or (DAv2Dense3ScaleResidual.ARCHITECTURE if isinstance(model, DAv2Dense3ScaleResidual) else None)) or iterative_geometry_architecture or (
                 (
                     (
                         "single early-fusion DAv2 F144 + PriorDA-style upsampling r504; no global scale"
@@ -1419,6 +1424,39 @@ def main() -> None:
         )
         model.load_state_dict(checkpoint["model"], strict=True)
         PREDICTION_NAMES = ("raw", "scale", "final", "oracle_frame_scale")
+    elif cfg.model.get("priorda_relative_prior_frame_refiner", {}).get("enabled", False):
+        if checkpoint.get("architecture") != PriorDARelativePriorFrameMetricRefiner.ARCHITECTURE:
+            raise ValueError("Expected the direct DAv2-relative PriorDA prior-frame checkpoint")
+        if checkpoint["config"]["model"] != dict(cfg.model):
+            raise ValueError("Prior-frame evaluation model config differs from training")
+        dav2 = cfg.model.dav2
+        model = PriorDARelativePriorFrameMetricRefiner.from_pretrained(
+            dav2.model_id, revision=dav2.revision, local_files_only=True
+        )
+        model.load_state_dict(checkpoint["model"], strict=True)
+        PREDICTION_NAMES = ("raw", "final", "oracle_frame_scale")
+    elif cfg.model.get("priorda_relative_prior_identity_refiner", {}).get("enabled", False):
+        if checkpoint.get("architecture") != PriorDARelativePriorIdentityMetricRefiner.ARCHITECTURE:
+            raise ValueError("Expected the DAv2-relative exact-prior-identity metric checkpoint")
+        if checkpoint["config"]["model"] != dict(cfg.model):
+            raise ValueError("Prior identity evaluation model config differs from training")
+        dav2 = cfg.model.dav2
+        model = PriorDARelativePriorIdentityMetricRefiner.from_pretrained(
+            dav2.model_id, revision=dav2.revision, local_files_only=True
+        )
+        model.load_state_dict(checkpoint["model"], strict=True)
+        PREDICTION_NAMES = ("raw", "final", "oracle_frame_scale")
+    elif cfg.model.get("priorda_relative_zero_anchor_refiner", {}).get("enabled", False):
+        if checkpoint.get("architecture") != PriorDARelativeZeroAnchorMetricRefiner.ARCHITECTURE:
+            raise ValueError("Expected the DAv2-relative PriorDA zero-anchor metric checkpoint")
+        if checkpoint["config"]["model"] != dict(cfg.model):
+            raise ValueError("PriorDA zero-anchor evaluation model config differs from training")
+        dav2 = cfg.model.dav2
+        model = PriorDARelativeZeroAnchorMetricRefiner.from_pretrained(
+            dav2.model_id, revision=dav2.revision, local_files_only=True
+        )
+        model.load_state_dict(checkpoint["model"], strict=True)
+        PREDICTION_NAMES = ("raw", "final", "oracle_frame_scale")
     elif cfg.model.get("priorda_relative_metric_refiner", {}).get("enabled", False):
         if checkpoint.get("architecture") != PriorDARelativeMetricRefiner.ARCHITECTURE:
             raise ValueError("Expected the DAv2-relative PriorDA-style metric checkpoint")
@@ -1616,7 +1654,22 @@ def main() -> None:
         "per_frame_csv": str(csv_path),
         "per_frame_csv_sha256": BENCHMARK._sha256(csv_path),
     }
-    if isinstance(model, PriorDARelativeMetricRefiner):
+    if isinstance(model, PriorDARelativePriorFrameMetricRefiner):
+        summary["protocol"]["name"] = "frozen Area_1 direct DAv2-relative PriorDA prior-frame refinement zero-shot; three-rule valid frames"
+        summary["protocol"]["aggregation"] = "frame-macro primary; pixel-micro secondary; no alignment"
+        summary["model"]["output_head"] = "unaltered official DPT+ReLU normalized disparity; reciprocal then D_prior min-range de-normalization"
+        summary["model"]["condition"] = dict(cfg.model.priorda_relative_prior_frame_refiner)
+    elif isinstance(model, PriorDARelativePriorIdentityMetricRefiner):
+        summary["protocol"]["name"] = "frozen Area_1 DAv2-relative exact-prior-identity refinement zero-shot; three-rule valid frames"
+        summary["protocol"]["aggregation"] = "frame-macro primary; pixel-micro secondary; no alignment"
+        summary["model"]["output_head"] = "zero-initialized bounded metric log-depth residual around D_prior; no depth floor"
+        summary["model"]["condition"] = dict(cfg.model.priorda_relative_prior_identity_refiner)
+    elif isinstance(model, PriorDARelativeZeroAnchorMetricRefiner):
+        summary["protocol"]["name"] = "frozen Area_1 DAv2-relative zero-anchor metric refinement zero-shot; three-rule valid frames"
+        summary["protocol"]["aggregation"] = "frame-macro primary; pixel-micro secondary; no alignment"
+        summary["model"]["output_head"] = "Softplus(beta=10) normalized disparity; reciprocal times valid-BIM maximum depth"
+        summary["model"]["condition"] = dict(cfg.model.priorda_relative_zero_anchor_refiner)
+    elif isinstance(model, PriorDARelativeMetricRefiner):
         summary["protocol"]["name"] = "frozen Area_1 DAv2-relative PriorDA-style metric refinement zero-shot; three-rule valid frames"
         summary["protocol"]["aggregation"] = "frame-macro primary; pixel-micro secondary; no alignment"
         summary["model"]["output_head"] = "ReLU normalized disparity; reciprocal then BIM-only affine de-normalization"

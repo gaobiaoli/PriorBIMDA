@@ -275,57 +275,19 @@ def transform_relative_to_prior_normalized_disparity(
     return transformed, slope, intercept
 
 
-class PriorDARelativePriorFrameMetricRefiner(BIMEarlyFusionDepthAnythingV2):
-    """Direct PriorDA path using the dense metric prior as the affine frame.
-
-    The official DAv2-relative DPT+ReLU output is interpreted directly as
-    normalized disparity. No output adapter, residual, or fitted scale/shift is
-    added: q_theta -> reciprocal normalized depth -> prior-frame de-normalization.
-    """
-
-    CONDITION_CHANNELS = 3
-    ARCHITECTURE = "dav2_relative_priorda_prior_frame_direct_disparity_metric_refiner"
-
-    def __init__(self, pretrained_model) -> None:
-        super().__init__(pretrained_model)
-        if self.depth_estimation_type != "relative":
-            raise ValueError("Prior-frame refiner requires the official DAv2-relative checkpoint")
-
-    def forward(self, rgb, bim_condition=None):
-        if not isinstance(rgb, Mapping):
-            return super().forward(rgb, bim_condition)
-        batch = rgb
-        condition, minimum, value_range, q_prior = build_prior_identity_condition(batch)
-        normalized_disparity = super().forward(batch["rgb"], condition)[:, None].float()
-        normalized_depth = depth2disparity(normalized_disparity)
-        depth = minimum + value_range * normalized_depth
-        if not bool((torch.isfinite(depth) & (depth > 0)).all()):
-            raise FloatingPointError("Invalid prior-frame direct metric depth")
-        return {
-            "depth": depth,
-            "normalized_disparity": normalized_disparity,
-            "normalized_depth": normalized_depth,
-            "prior_normalized_disparity": q_prior,
-            "prior_minimum": minimum,
-            "prior_range": value_range,
-        }
-
-
 class PriorDARelativePriorIdentityMetricRefiner(BIMEarlyFusionDepthAnythingV2):
     """Prior-normalized DAv2 refiner with an exact metric identity at step zero.
 
     The pretrained relative output q_theta and the proposed affine calibration
     map T are retained as signals. A zero-initialized dense head predicts a
-    bounded metric log-depth correction around D_prior. This makes the metric
-    output exactly D_prior before any optimizer update without assuming two
-    different depth models are related by a pointwise affine transform. The
-    metric residual also avoids imposing D_out >= min(D_prior), which would
-    discard valid nearer geometry in the original PriorDA inverse.
+    bounded log-disparity correction around q_prior^N, so the metric output is
+    exactly D_prior before any optimizer update without assuming two different
+    depth models are related by a pointwise two-parameter transform.
     """
 
     CONDITION_CHANNELS = 3
     ARCHITECTURE = "dav2_relative_prior_normalized_exact_prior_identity"
-    MAX_LOG_DEPTH_RESIDUAL = 0.7
+    MAX_LOG_DISPARITY_RESIDUAL = 0.7
 
     def __init__(self, pretrained_model) -> None:
         super().__init__(pretrained_model)
@@ -381,10 +343,12 @@ class PriorDARelativePriorIdentityMetricRefiner(BIMEarlyFusionDepthAnythingV2):
             dim=1,
         )
         correction_logits = self.prior_identity_head(correction_input).float()
-        log_depth_residual = self.MAX_LOG_DEPTH_RESIDUAL * torch.tanh(correction_logits)
-        reconstructed = prior * torch.exp(log_depth_residual)
+        log_disparity_residual = self.MAX_LOG_DISPARITY_RESIDUAL * torch.tanh(correction_logits)
+        q_output = q_prior * torch.exp(log_disparity_residual)
+        normalized_depth = depth2disparity(q_output)
+        reconstructed = minimum + value_range * normalized_depth
         # Makes the initialization contract bit-exact, not merely allclose.
-        depth = torch.where(log_depth_residual == 0, prior, reconstructed)
+        depth = torch.where(log_disparity_residual == 0, prior, reconstructed)
         if not bool((torch.isfinite(depth) & (depth > 0)).all()):
             raise FloatingPointError("Invalid prior-identity metric depth")
         return {
@@ -392,7 +356,8 @@ class PriorDARelativePriorIdentityMetricRefiner(BIMEarlyFusionDepthAnythingV2):
             "relative_disparity": relative,
             "transformed_disparity": transformed,
             "prior_normalized_disparity": q_prior,
-            "log_depth_residual": log_depth_residual,
+            "output_normalized_disparity": q_output,
+            "log_disparity_residual": log_disparity_residual,
             "prior_minimum": minimum,
             "prior_range": value_range,
             "calibration_slope": slope,
@@ -416,41 +381,3 @@ class PriorDARelativePriorIdentityMetricRefiner(BIMEarlyFusionDepthAnythingV2):
         result = super().initialization_audit(**kwargs)
         weight = self.prior_identity_head.weight.detach()
         bias = self.prior_identity_head.bias.detach()
-        head_pass = bool(torch.count_nonzero(weight).item() == 0 and torch.count_nonzero(bias).item() == 0)
-        result["prior_identity_head_zero_init"] = {
-            "pass": head_pass,
-            "max_abs_weight": float(weight.abs().max()),
-            "max_abs_bias": float(bias.abs().max()),
-        }
-
-        device = kwargs["device"]
-        height = int(kwargs.get("height", 56))
-        width = int(kwargs.get("width", 56))
-        was_training = self.training
-        self.eval()
-        prior = torch.linspace(0.4, 6.0, height * width, device=device).reshape(1, 1, height, width)
-        identity_batch = {
-            "rgb": torch.rand((1, 3, height, width), device=device),
-            "base_depth": prior,
-            "bim_depth": prior * 1.1,
-            "bim_valid": torch.ones_like(prior),
-        }
-        with torch.inference_mode():
-            identity_output = self(identity_batch)
-        difference = (identity_output["depth"] - prior).abs()
-        residual = identity_output["log_depth_residual"].abs()
-        identity_pass = bool(
-            torch.equal(identity_output["depth"], prior)
-            and torch.count_nonzero(residual).item() == 0
-        )
-        result["exact_prior_identity"] = {
-            "pass": identity_pass,
-            "bitwise_equal": bool(torch.equal(identity_output["depth"], prior)),
-            "max_abs_depth_diff_m": float(difference.max()),
-            "max_abs_log_depth_residual": float(residual.max()),
-        }
-        self.train(was_training)
-        result["all_pass"] = all(
-            bool(value["pass"]) for key, value in result.items() if key != "all_pass"
-        )
-        return result

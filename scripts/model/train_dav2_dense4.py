@@ -21,7 +21,12 @@ from bim_priorda3.data.stanford2d3ds import load_stanford_all_valid_depth, offic
 from bim_priorda3.early_fusion import DenseDepthMetricAccumulator
 from bim_priorda3.engine import build_loader
 from bim_priorda3.models.dav2_dense4 import DAv2Dense4, dense_silog_loss
-from bim_priorda3.models.priorda_relative_metric_refiner import PriorDARelativeMetricRefiner
+from bim_priorda3.models.priorda_relative_metric_refiner import (
+    PriorDARelativeMetricRefiner,
+    PriorDARelativePriorFrameMetricRefiner,
+    PriorDARelativePriorIdentityMetricRefiner,
+    PriorDARelativeZeroAnchorMetricRefiner,
+)
 from train_bim_early_fusion_dense import atomic_json, atomic_torch_save, plain, resolve_checkpoint, selected_batch, write_history
 from train_dav2_joint_scale_low import seed_everything
 
@@ -99,13 +104,24 @@ def main():
     device=torch.device(args.device)
     if device.type=="cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA unavailable")
-    priorda_relative=bool(cfg.model.get("priorda_relative_metric_refiner", {}).get("enabled", False))
+    priorda_affine=bool(cfg.model.get("priorda_relative_metric_refiner", {}).get("enabled", False))
+    priorda_zero_anchor=bool(cfg.model.get("priorda_relative_zero_anchor_refiner", {}).get("enabled", False))
+    priorda_identity=bool(cfg.model.get("priorda_relative_prior_identity_refiner", {}).get("enabled", False))
+    priorda_prior_frame=bool(cfg.model.get("priorda_relative_prior_frame_refiner", {}).get("enabled", False))
+    if sum((priorda_affine, priorda_zero_anchor, priorda_identity, priorda_prior_frame)) > 1:
+        raise ValueError("Enable exactly one PriorDA-relative metric representation")
+    priorda_relative=priorda_affine or priorda_zero_anchor or priorda_identity or priorda_prior_frame
     if priorda_relative:
         aug=cfg.train.augment
         if float(aug.bim_full_dropout_probability) != 0:
-            raise ValueError("BIM-only affine normalization is undefined after full BIM dropout")
+            raise ValueError("BIM-defined normalization is undefined after full BIM dropout")
         if float(aug.bim_shuffle_probability) != 0:
             raise ValueError("BIM shuffle changes the output affine frame and is disabled for this control")
+    if (priorda_zero_anchor or priorda_identity or priorda_prior_frame) and (
+        float(cfg.train.augment.da3_global_scale_probability) != 0
+        or float(cfg.train.augment.da3_global_scale_log_range) != 0
+    ):
+        raise ValueError("PriorDA representation controls require DA3 scale perturbation to be disabled")
 
     out=(args.output_dir or resolve_project_path(cfg,cfg.experiment.output_dir)).resolve()
     results=(args.results_dir or resolve_project_path(cfg,cfg.experiment.results_dir)).resolve()
@@ -122,17 +138,26 @@ def main():
         train_ds.donor_indices={r["region"]:[i for i,s in enumerate(train_ds.records) if s["region"]!=r["region"]] for r in train_ds.records}
     if args.max_val_samples:
         val_ds.records=val_ds.records[:args.max_val_samples]
-    range_audit=audit_depth_range(
-        train_ds,
-        policy=(
-            "BIM-only shared affine frame; relative disparity output de-normalized to metric depth; retain all GT"
-            if priorda_relative
-            else "retain official metric sigmoid*20 head; do not discard any GT"
-        ),
-    )
+    if priorda_prior_frame:
+        range_policy="D_prior min/range; direct DAv2-relative disparity reciprocal and de-normalization; retain all positive GT"
+    elif priorda_identity:
+        range_policy="D_prior min/range condition plus exact metric identity residual; retain all positive GT"
+    elif priorda_zero_anchor:
+        range_policy="BIM maximum scale with physical-zero origin; retain all positive GT"
+    elif priorda_affine:
+        range_policy="BIM-only shared affine frame; relative disparity output de-normalized to metric depth; retain all GT"
+    else:
+        range_policy="retain official metric sigmoid*20 head; do not discard any GT"
+    range_audit=audit_depth_range(train_ds,policy=range_policy)
     print("TRAIN_GT_RANGE "+json.dumps(range_audit),flush=True)
     official_path,model_id,revision=resolve_checkpoint(cfg)
-    model_cls=PriorDARelativeMetricRefiner if priorda_relative else DAv2Dense4
+    model_cls=(
+        PriorDARelativePriorFrameMetricRefiner if priorda_prior_frame
+        else PriorDARelativePriorIdentityMetricRefiner if priorda_identity
+        else PriorDARelativeZeroAnchorMetricRefiner if priorda_zero_anchor
+        else PriorDARelativeMetricRefiner if priorda_affine
+        else DAv2Dense4
+    )
     model=model_cls.from_pretrained(model_id,revision=revision,local_files_only=True).to(device)
     init=model.initialization_audit(checkpoint_path=official_path,device=device)
     if not init["all_pass"]:
@@ -147,6 +172,41 @@ def main():
         samples_per_epoch=cfg.train.samples_per_epoch,generator=generator,persistent_workers=False)
     val_loader=build_loader(val_ds,int(cfg.train.val_batch_size),workers,False,
         generator=torch.Generator().manual_seed(seed+17),persistent_workers=False)
+    if priorda_identity:
+        model.eval()
+        identity_batch=selected_batch(next(iter(val_loader)),device)
+        with torch.inference_mode():
+            identity_output=model(identity_batch)
+        identity_difference=(identity_output["depth"]-identity_batch["base_depth"]).abs()
+        identity_equal=torch.equal(identity_output["depth"],identity_batch["base_depth"])
+        init["real_data_exact_prior_identity"]={
+            "pass":bool(identity_equal),"bitwise_equal":bool(identity_equal),
+            "frames":int(identity_batch["rgb"].shape[0]),
+            "pixels":int(identity_batch["base_depth"].numel()),
+            "max_abs_depth_diff_m":float(identity_difference.max()),
+            "mean_abs_depth_diff_m":float(identity_difference.mean()),
+        }
+        init["all_pass"]=all(bool(value["pass"]) for key,value in init.items() if key!="all_pass")
+        if not init["all_pass"]:
+            raise RuntimeError(f"Real-data exact-prior initialization failed: {init}")
+    if priorda_prior_frame:
+        model.eval()
+        semantic_batch=selected_batch(next(iter(val_loader)),device)
+        with torch.inference_mode():
+            semantic_output=model(semantic_batch)
+        prior=semantic_batch["base_depth"]
+        initial_abs_rel=(semantic_output["depth"]-prior).abs().div(prior).mean()
+        init["real_data_direct_output_diagnostics"]={
+            "pass":bool(torch.isfinite(semantic_output["depth"]).all()),
+            "frames":int(prior.shape[0]),"pixels":int(prior.numel()),
+            "output_vs_prior_abs_rel":float(initial_abs_rel),
+            "output_disparity_zero_fraction":float((semantic_output["normalized_disparity"]<=0).float().mean()),
+            "output_depth_min_m":float(semantic_output["depth"].min()),
+            "output_depth_max_m":float(semantic_output["depth"].max()),
+        }
+        init["all_pass"]=all(bool(value["pass"]) for key,value in init.items() if key!="all_pass")
+        if not init["all_pass"]:
+            raise RuntimeError(f"Direct PriorDA initialization failed: {init}")
     groups=model.optimizer_parameter_groups(encoder_lr=float(cfg.train.encoder_learning_rate),
         decoder_lr=float(cfg.train.decoder_learning_rate),condition_lr=float(cfg.train.bim_condition_learning_rate))
     optimizer=torch.optim.AdamW(groups,weight_decay=float(cfg.train.weight_decay))
@@ -174,7 +234,13 @@ def main():
              "amp_dtype":str(amp_dtype).removeprefix("torch."),
              "gradient_scaler":bool(scaler.is_enabled()),
              "foundation":"DAv2-Relative ViT-B/14" if priorda_relative else "DAv2-Metric-Indoor ViT-B/14",
-             "metric_frame":"per-frame valid-BIM min/range" if priorda_relative else "native metric head"}
+             "metric_frame":(
+                 "per-frame D_prior min/range; direct official relative disparity inverse and de-normalization" if priorda_prior_frame
+                 else "per-frame D_prior min/range condition; exact unrestricted metric log-depth identity residual" if priorda_identity
+                 else "per-frame valid-BIM maximum with physical-zero origin" if priorda_zero_anchor
+                 else "per-frame valid-BIM min/range" if priorda_affine
+                 else "native metric head"
+             )}
     materialized=plain(dict(cfg))
     materialized["runtime"]=runtime
     # Config is a small receipt, not a source snapshot. Eval uses the repo config.

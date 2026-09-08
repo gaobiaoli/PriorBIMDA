@@ -45,8 +45,17 @@ from .priorda_v11_bim_adapter import (
 )
 from .priorda_relative_metric_refiner import (
     PriorDARelativeMetricRefiner,
+    PriorDARelativePriorFrameMetricRefiner,
+    PriorDARelativePriorIdentityMetricRefiner,
+    PriorDARelativeZeroAnchorMetricRefiner,
     bim_affine_frame,
+    bim_zero_anchor_scale,
+    build_prior_identity_condition,
     build_priorda_relative_condition,
+    build_priorda_zero_anchor_condition,
+    fit_disparity_affine,
+    prior_affine_frame,
+    transform_relative_to_prior_normalized_disparity,
     depth2disparity,
 )
 from .system import BIMPriorDA3
@@ -71,6 +80,9 @@ __all__ = [
     "PriorBIMDAConditionStatistics",
     "PriorBIMDATwoStage",
     "PriorDARelativeMetricRefiner",
+    "PriorDARelativePriorFrameMetricRefiner",
+    "PriorDARelativePriorIdentityMetricRefiner",
+    "PriorDARelativeZeroAnchorMetricRefiner",
     "SharedGeometryAdapterWithStageHeads",
     "ZeroInitDINOFeatureAdapter",
     "ZeroInitDPTShortcutAdapter",
@@ -78,7 +90,9 @@ __all__ = [
     "build_calibrated_disagreement_condition",
     "build_native_residual_head",
     "build_priorbimda_condition",
+    "build_prior_identity_condition",
     "build_priorda_relative_condition",
+    "build_priorda_zero_anchor_condition",
     "build_priorda_v11_bim_condition",
     "effective_attention_top_prior",
     "fixed_attention_effective_reliability",
@@ -90,6 +104,10 @@ __all__ = [
     "rebuild_bim_condition_with_scaled_prediction",
     "run_fixed_attention_stage1",
     "bim_affine_frame",
+    "bim_zero_anchor_scale",
     "depth2disparity",
+    "fit_disparity_affine",
+    "prior_affine_frame",
+    "transform_relative_to_prior_normalized_disparity",
     "scale_regression_loss",
 ]
