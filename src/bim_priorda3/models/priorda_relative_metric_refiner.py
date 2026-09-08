@@ -311,6 +311,32 @@ class PriorDARelativePriorFrameMetricRefiner(BIMEarlyFusionDepthAnythingV2):
         }
 
 
+class PriorDARelativePriorFrameNoReLUMetricRefiner(PriorDARelativePriorFrameMetricRefiner):
+    """Direct PriorDA prior-frame path with only the final ReLU removed."""
+
+    ARCHITECTURE = "dav2_relative_priorda_prior_frame_direct_no_relu_metric_refiner"
+
+    def __init__(self, pretrained_model) -> None:
+        super().__init__(pretrained_model)
+        self.dav2.head.activation2 = torch.nn.Identity()
+
+    def initialization_audit(self, **kwargs):
+        result = super().initialization_audit(**kwargs)
+        result["early_equals_pretrained_dav2"]["reference_note"] = (
+            "official pretrained weights on both paths; only configured final ReLU is Identity"
+        )
+        result["output_activation"] = {
+            "pass": isinstance(self.dav2.head.activation2, torch.nn.Identity),
+            "official_activation": "ReLU",
+            "configured_activation": "Identity",
+            "changed_parameters": 0,
+        }
+        result["all_pass"] = all(
+            bool(value["pass"]) for key, value in result.items() if key != "all_pass"
+        )
+        return result
+
+
 class PriorDARelativePriorIdentityMetricRefiner(BIMEarlyFusionDepthAnythingV2):
     """Prior-normalized DAv2 refiner with an exact metric identity at step zero.
 

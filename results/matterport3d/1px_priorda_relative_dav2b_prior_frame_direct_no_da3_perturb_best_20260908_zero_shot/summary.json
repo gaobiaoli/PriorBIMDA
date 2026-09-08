@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-08T02:25:03.011752+00:00",
+  "protocol": {
+    "name": "frozen Area_1 direct DAv2-relative PriorDA prior-frame refinement zero-shot; three-rule valid frames",
+    "rules": [
+      "GT positive-depth fraction > 0.1",
+      "BIM ray-hit fraction > 0.2",
+      "camera center inside BIM AABB"
+    ],
+    "excluded_selection_rules": [
+      "BIM/GT agreement",
+      "BIM/DA3 ratio support",
+      "confidence or model prediction error"
+    ],
+    "depth_support": "all finite positive Matterport GT depth",
+    "aggregation": "frame-macro primary; pixel-micro secondary; no alignment",
+    "gt_is_model_input": false,
+    "inference_scope": "frozen three-rule frame set"
+  },
+  "scene": {
+    "matterport_scene_id": "1pXnuDYAj8r",
+    "bimnet_scene_key": "train/1px"
+  },
+  "model": {
+    "config": "/home/bgao491/PriorBIMDA/configs/stanford_area1_priorda_relative_dav2b_prior_frame_direct_no_da3_perturb_effective_batch16_6epoch_20260908.yaml",
+    "checkpoint": "/mnt/priorbimda-data/PriorBIMDA-Outputs/stanford_area1_priorda_relative_dav2b_prior_frame_direct_no_da3_perturb_effective_batch16_6epoch_20260908/best.pt",
+    "checkpoint_sha256": "4019f04648bf33cd78ce30517f520097a2588cd44cdbcb988b85fe023a74df17",
+    "architecture": "dav2_relative_priorda_prior_frame_direct_disparity_metric_refiner",
+    "da3_feature_layers": [],
+    "da3_feature_fusion_enabled": false,
+    "da3_model": "depth-anything/da3metric-large",
+    "da3_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+    "focal_correction": "mean(processed fx, fy) / 300",
+    "da3_prediction_cache": {
+      "enabled": true,
+      "root": "/mnt/priorbimda-data/PriorBIMDA-Caches/matterport3d_da3_raw_v1",
+      "namespace": "/mnt/priorbimda-data/PriorBIMDA-Caches/matterport3d_da3_raw_v1/e7f29e2a962c7cd3ddf8",
+      "signature": {
+        "schema_version": 1,
+        "da3_model": "depth-anything/da3metric-large",
+        "da3_revision": "4010e39f3634a45bc60553321fb49fb760bd594e",
+        "process_res": 504,
+        "process_res_method": "upper_bound_resize",
+        "feature_layers": [],
+        "array_storage": "lossless_float32_uncompressed_npz"
+      }
+    },
+    "output_head": "unaltered official DPT+ReLU normalized disparity; reciprocal then D_prior min-range de-normalization",
+    "condition": {
+      "enabled": true,
+      "condition": [
+        "prior_normalized_disparity",
+        "masked_bim_prior_normalized_disparity",
+        "bim_hit_mask"
+      ],
+      "affine_reference": "dense_focal_corrected_da3metric_prior",
+      "normalized_depth_formula": "prior_depth_minus_prior_minimum_divided_by_prior_range",
+      "disparity_formula": "reciprocal_where_positive_else_zero",
+      "condition_projection": "zero_init_conv3_to_768_kernel14_stride14",
+      "pretrained_rgb_patch_embedding": "unchanged",
+      "pretrained_dinov2_encoder": "unchanged_at_step_zero",
+      "pretrained_dpt_decoder": "unchanged_at_step_zero",
+      "official_relative_head_relu": "unchanged_and_direct_output",
+      "output_domain": "normalized_disparity",
+      "output_formula": "prior_minimum_plus_prior_range_times_reciprocal_network_disparity",
+      "output_adapter": false,
+      "output_residual": false,
+      "output_scale_shift_fit": false,
+      "independent_scale_head": false,
+      "coarse_stage": false
+    }
+  },
+  "bim": {
+    "source": "obj",
+    "wall_filled": true,
+    "coordinates": "Matterport/BIMNet point-cloud world coordinates",
+    "vertices": 4436,
+    "triangles": 8433,
+    "aabb_min": [
+      0.7341785049438485,
+      -13.221203002929688,
+      3.1399994814395904
+    ],
+    "aabb_max": [
+      15.944179496765138,
+      10.486177291870117,
+      6.420000495910644
+    ],
+    "load_seconds": 0.14153076149523258
+  },
+  "selection": {
+    "source_frames": 1710,
+    "frames": 793,
+    "frame_ids_sha256": "91e589da309b4c3eca24e88667e8c31ceab29fee9a151698d41977beea41e13d",
+    "audit_receipt": "/home/bgao491/PriorBIMDA/data/provenance/matterport_bimnet_three_rule_v1.json",
+    "expected_complete_scene_sha256": "91e589da309b4c3eca24e88667e8c31ceab29fee9a151698d41977beea41e13d",
+    "matches_expected": true
+  },
+  "row_counts": {
+    "unique_frames": 793,
+    "ok": 793,
+    "error": 0,
+    "skipped_bad_gt": 0,
+    "da3_cache_hits": 793,
+    "da3_cache_misses": 0
+  },
+  "subsets": {
+    "all_gt_valid": {
+      "frames": 793,
+      "valid_pixels": 953135152,
+      "predictions": {
+        "raw": {
+          "pixel_micro": {
+            "abs_rel": 0.1145669963159127,
+            "sq_rel": 0.08841095185148949,
+            "mae_m": 0.1871676348328424,
+            "mean_log_error": 0.014131423900783079,
+            "mean_abs_log_error": 0.10946913851646436,
+            "log10_error": 0.04754184279640321,
+            "delta1": 0.8943188730489713,
+            "delta2": 0.9600605297998704,
+            "delta3": 0.9794274925661329,
+            "rmse_m": 0.4418536900353032,
+            "rmse_log": 0.20231940391138464,
+            "silog_x100": 20.182528101700832,
+            "valid_pixels": 953135152
+          },
+          "frame_macro": {
+            "abs_rel": 0.11999883276757581,
+            "sq_rel": 0.09504498937308903,
+            "rmse_m": 0.31616383449943175,
+            "mae_m": 0.19032711909725905,
+            "rmse_log": 0.15939995847852526,
+            "mean_log_error": 0.01822897946875456,
+            "mean_abs_log_error": 0.11352823521676195,
+            "log10_error": 0.049304686094854125,
+            "silog_x100": 11.860464990815663,
+            "delta1": 0.8860132869744883,
+            "delta2": 0.9568891106183971,
+            "delta3": 0.9781667237364111
+          }
+        },
+        "final": {
+          "pixel_micro": {
+            "abs_rel": 0.10023210288013326,
+            "sq_rel": 0.060728659340409136,
+            "mae_m": 0.17070465447418356,
+            "mean_log_error": 0.011192775182288242,
+            "mean_abs_log_error": 0.09974168010528948,
+            "log10_error": 0.043317261285486575,
+            "delta1": 0.9050777428466934,
+            "delta2": 0.9662398003761801,
+            "delta3": 0.9807929473993422,
+            "rmse_m": 0.41005713019064527,
+            "rmse_log": 0.19086753151780997,
+            "silog_x100": 19.05390678349743,
+            "valid_pixels": 953135152
+          },
+          "frame_macro": {
+            "abs_rel": 0.10566430532834281,
+            "sq_rel": 0.06478939440203799,
+            "rmse_m": 0.29139067748762193,
+            "mae_m": 0.17407385011288287,
+            "rmse_log": 0.1498071414859885,
+            "mean_log_error": 0.014564978645032686,
+            "mean_abs_log_error": 0.10419535658818918,
+            "log10_error": 0.045251468406192194,
+            "silog_x100": 11.761239653461343,
+            "delta1": 0.8961673968338857,
+            "delta2": 0.962678377954803,
+            "delta3": 0.9793858731143281
+          }
+        },
+        "oracle_frame_scale": {
+          "pixel_micro": {
+            "abs_rel": 0.06657640001941191,
+            "sq_rel": 0.06400484438509776,
+            "mae_m": 0.1299574021602163,
+            "mean_log_error": -0.012421820292867137,
+            "mean_abs_log_error": 0.06830777190258358,
+            "log10_error": 0.029665688408398037,
+            "delta1": 0.9486124607856242,
+            "delta2": 0.9728368207324285,
+            "delta3": 0.9816028640185962,
+            "rmse_m": 0.4112618298876042,
+            "rmse_log": 0.17092309853498042,
+            "silog_x100": 17.047112363509058,
+            "valid_pixels": 953135152
+          },
+          "frame_macro": {
+            "abs_rel": 0.06807530415879849,
+            "sq_rel": 0.06758936199954628,
+            "rmse_m": 0.2704391423954633,
+            "mae_m": 0.13200678981072397,
+            "rmse_log": 0.12439083159280233,
+            "mean_log_error": -0.01311938881416187,
+            "mean_abs_log_error": 0.06982424478725566,
+            "log10_error": 0.030324284214167028,
+            "silog_x100": 11.860464990690534,
+            "delta1": 0.9470193504139589,
+            "delta2": 0.971852491628178,
+            "delta3": 0.9806355403615111
+          }
+        }
+      },
+      "comparisons": {
+        "final_vs_raw": {
+          "pixel_micro_abs_rel_difference": -0.014334893435779442,
+          "pixel_micro_abs_rel_relative_improvement": 0.12512236417765285,
+          "frame_win_fraction": 0.5914249684741488
+        }
+      }
+    },
+    "three_rule_valid": {
+      "frames": 793,
+      "valid_pixels": 953135152,
+      "predictions": {
+        "raw": {
+          "pixel_micro": {
+            "abs_rel": 0.1145669963159127,
+            "sq_rel": 0.08841095185148949,
+            "mae_m": 0.1871676348328424,
+            "mean_log_error": 0.014131423900783079,
+            "mean_abs_log_error": 0.10946913851646436,
+            "log10_error": 0.04754184279640321,
+            "delta1": 0.8943188730489713,
+            "delta2": 0.9600605297998704,
+            "delta3": 0.9794274925661329,
+            "rmse_m": 0.4418536900353032,
+            "rmse_log": 0.20231940391138464,
+            "silog_x100": 20.182528101700832,
+            "valid_pixels": 953135152
+          },
+          "frame_macro": {
+            "abs_rel": 0.11999883276757581,
+            "sq_rel": 0.09504498937308903,
+            "rmse_m": 0.31616383449943175,
+            "mae_m": 0.19032711909725905,
+            "rmse_log": 0.15939995847852526,
+            "mean_log_error": 0.01822897946875456,
+            "mean_abs_log_error": 0.11352823521676195,
+            "log10_error": 0.049304686094854125,
+            "silog_x100": 11.860464990815663,
+            "delta1": 0.8860132869744883,
+            "delta2": 0.9568891106183971,
+            "delta3": 0.9781667237364111
+          }
+        },
+        "final": {
+          "pixel_micro": {
+            "abs_rel": 0.10023210288013326,
+            "sq_rel": 0.060728659340409136,
+            "mae_m": 0.17070465447418356,
+            "mean_log_error": 0.011192775182288242,
+            "mean_abs_log_error": 0.09974168010528948,
+            "log10_error": 0.043317261285486575,
+            "delta1": 0.9050777428466934,
+            "delta2": 0.9662398003761801,
+            "delta3": 0.9807929473993422,
+            "rmse_m": 0.41005713019064527,
+            "rmse_log": 0.19086753151780997,
+            "silog_x100": 19.05390678349743,
+            "valid_pixels": 953135152
+          },
+          "frame_macro": {
+            "abs_rel": 0.10566430532834281,
+            "sq_rel": 0.06478939440203799,
+            "rmse_m": 0.29139067748762193,
+            "mae_m": 0.17407385011288287,
+            "rmse_log": 0.1498071414859885,
+            "mean_log_error": 0.014564978645032686,
+            "mean_abs_log_error": 0.10419535658818918,
+            "log10_error": 0.045251468406192194,
+            "silog_x100": 11.761239653461343,
+            "delta1": 0.8961673968338857,
+            "delta2": 0.962678377954803,
+            "delta3": 0.9793858731143281
+          }
+        },
+        "oracle_frame_scale": {
+          "pixel_micro": {
+            "abs_rel": 0.06657640001941191,
+            "sq_rel": 0.06400484438509776,
+            "mae_m": 0.1299574021602163,
+            "mean_log_error": -0.012421820292867137,
+            "mean_abs_log_error": 0.06830777190258358,
+            "log10_error": 0.029665688408398037,
+            "delta1": 0.9486124607856242,
+            "delta2": 0.9728368207324285,
+            "delta3": 0.9816028640185962,
+            "rmse_m": 0.4112618298876042,
+            "rmse_log": 0.17092309853498042,
+            "silog_x100": 17.047112363509058,
+            "valid_pixels": 953135152
+          },
+          "frame_macro": {
+            "abs_rel": 0.06807530415879849,
+            "sq_rel": 0.06758936199954628,
+            "rmse_m": 0.2704391423954633,
+            "mae_m": 0.13200678981072397,
+            "rmse_log": 0.12439083159280233,
+            "mean_log_error": -0.01311938881416187,
+            "mean_abs_log_error": 0.06982424478725566,
+            "log10_error": 0.030324284214167028,
+            "silog_x100": 11.860464990690534,
+            "delta1": 0.9470193504139589,
+            "delta2": 0.971852491628178,
+            "delta3": 0.9806355403615111
+          }
+        }
+      },
+      "comparisons": {
+        "final_vs_raw": {
+          "pixel_micro_abs_rel_difference": -0.014334893435779442,
+          "pixel_micro_abs_rel_relative_improvement": 0.12512236417765285,
+          "frame_win_fraction": 0.5914249684741488
+        }
+      }
+    }
+  },
+  "artifacts": {
+    "per_frame_csv": "/home/bgao491/PriorBIMDA/results/matterport3d/1px_priorda_relative_dav2b_prior_frame_direct_no_da3_perturb_best_20260908_zero_shot/per_frame.csv",
+    "per_frame_csv_sha256": "c145777e027d0f95faf43f065046d20399f430e3099292b0adadb57fef29dcda"
+  }
+}

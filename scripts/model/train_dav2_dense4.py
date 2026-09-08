@@ -24,6 +24,7 @@ from bim_priorda3.models.dav2_dense4 import DAv2Dense4, dense_silog_loss
 from bim_priorda3.models.priorda_relative_metric_refiner import (
     PriorDARelativeMetricRefiner,
     PriorDARelativePriorFrameMetricRefiner,
+    PriorDARelativePriorFrameNoReLUMetricRefiner,
     PriorDARelativePriorIdentityMetricRefiner,
     PriorDARelativeZeroAnchorMetricRefiner,
 )
@@ -108,16 +109,17 @@ def main():
     priorda_zero_anchor=bool(cfg.model.get("priorda_relative_zero_anchor_refiner", {}).get("enabled", False))
     priorda_identity=bool(cfg.model.get("priorda_relative_prior_identity_refiner", {}).get("enabled", False))
     priorda_prior_frame=bool(cfg.model.get("priorda_relative_prior_frame_refiner", {}).get("enabled", False))
-    if sum((priorda_affine, priorda_zero_anchor, priorda_identity, priorda_prior_frame)) > 1:
+    priorda_no_relu=bool(cfg.model.get("priorda_relative_prior_frame_no_relu_refiner", {}).get("enabled", False))
+    if sum((priorda_affine, priorda_zero_anchor, priorda_identity, priorda_prior_frame, priorda_no_relu)) > 1:
         raise ValueError("Enable exactly one PriorDA-relative metric representation")
-    priorda_relative=priorda_affine or priorda_zero_anchor or priorda_identity or priorda_prior_frame
+    priorda_relative=priorda_affine or priorda_zero_anchor or priorda_identity or priorda_prior_frame or priorda_no_relu
     if priorda_relative:
         aug=cfg.train.augment
         if float(aug.bim_full_dropout_probability) != 0:
             raise ValueError("BIM-defined normalization is undefined after full BIM dropout")
         if float(aug.bim_shuffle_probability) != 0:
             raise ValueError("BIM shuffle changes the output affine frame and is disabled for this control")
-    if (priorda_zero_anchor or priorda_identity or priorda_prior_frame) and (
+    if (priorda_zero_anchor or priorda_identity or priorda_prior_frame or priorda_no_relu) and (
         float(cfg.train.augment.da3_global_scale_probability) != 0
         or float(cfg.train.augment.da3_global_scale_log_range) != 0
     ):
@@ -138,7 +140,9 @@ def main():
         train_ds.donor_indices={r["region"]:[i for i,s in enumerate(train_ds.records) if s["region"]!=r["region"]] for r in train_ds.records}
     if args.max_val_samples:
         val_ds.records=val_ds.records[:args.max_val_samples]
-    if priorda_prior_frame:
+    if priorda_no_relu:
+        range_policy="D_prior min/range; direct signed DAv2-relative disparity without final ReLU; retain all positive GT"
+    elif priorda_prior_frame:
         range_policy="D_prior min/range; direct DAv2-relative disparity reciprocal and de-normalization; retain all positive GT"
     elif priorda_identity:
         range_policy="D_prior min/range condition plus exact metric identity residual; retain all positive GT"
@@ -152,7 +156,8 @@ def main():
     print("TRAIN_GT_RANGE "+json.dumps(range_audit),flush=True)
     official_path,model_id,revision=resolve_checkpoint(cfg)
     model_cls=(
-        PriorDARelativePriorFrameMetricRefiner if priorda_prior_frame
+        PriorDARelativePriorFrameNoReLUMetricRefiner if priorda_no_relu
+        else PriorDARelativePriorFrameMetricRefiner if priorda_prior_frame
         else PriorDARelativePriorIdentityMetricRefiner if priorda_identity
         else PriorDARelativeZeroAnchorMetricRefiner if priorda_zero_anchor
         else PriorDARelativeMetricRefiner if priorda_affine
@@ -189,7 +194,7 @@ def main():
         init["all_pass"]=all(bool(value["pass"]) for key,value in init.items() if key!="all_pass")
         if not init["all_pass"]:
             raise RuntimeError(f"Real-data exact-prior initialization failed: {init}")
-    if priorda_prior_frame:
+    if priorda_prior_frame or priorda_no_relu:
         model.eval()
         semantic_batch=selected_batch(next(iter(val_loader)),device)
         with torch.inference_mode():
@@ -200,7 +205,7 @@ def main():
             "pass":bool(torch.isfinite(semantic_output["depth"]).all()),
             "frames":int(prior.shape[0]),"pixels":int(prior.numel()),
             "output_vs_prior_abs_rel":float(initial_abs_rel),
-            "output_disparity_zero_fraction":float((semantic_output["normalized_disparity"]<=0).float().mean()),
+            "output_disparity_nonpositive_fraction":float((semantic_output["normalized_disparity"]<=0).float().mean()),
             "output_depth_min_m":float(semantic_output["depth"].min()),
             "output_depth_max_m":float(semantic_output["depth"].max()),
         }
@@ -235,7 +240,8 @@ def main():
              "gradient_scaler":bool(scaler.is_enabled()),
              "foundation":"DAv2-Relative ViT-B/14" if priorda_relative else "DAv2-Metric-Indoor ViT-B/14",
              "metric_frame":(
-                 "per-frame D_prior min/range; direct official relative disparity inverse and de-normalization" if priorda_prior_frame
+                 "per-frame D_prior min/range; direct signed relative disparity without final ReLU" if priorda_no_relu
+                 else "per-frame D_prior min/range; direct official relative disparity inverse and de-normalization" if priorda_prior_frame
                  else "per-frame D_prior min/range condition; exact unrestricted metric log-depth identity residual" if priorda_identity
                  else "per-frame valid-BIM maximum with physical-zero origin" if priorda_zero_anchor
                  else "per-frame valid-BIM min/range" if priorda_affine

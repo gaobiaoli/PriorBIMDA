@@ -46,6 +46,7 @@ from .priorda_v11_bim_adapter import (
 from .priorda_relative_metric_refiner import (
     PriorDARelativeMetricRefiner,
     PriorDARelativePriorFrameMetricRefiner,
+    PriorDARelativePriorFrameNoReLUMetricRefiner,
     PriorDARelativePriorIdentityMetricRefiner,
     PriorDARelativeZeroAnchorMetricRefiner,
     bim_affine_frame,
@@ -81,6 +82,7 @@ __all__ = [
     "PriorBIMDATwoStage",
     "PriorDARelativeMetricRefiner",
     "PriorDARelativePriorFrameMetricRefiner",
+    "PriorDARelativePriorFrameNoReLUMetricRefiner",
     "PriorDARelativePriorIdentityMetricRefiner",
     "PriorDARelativeZeroAnchorMetricRefiner",
     "SharedGeometryAdapterWithStageHeads",

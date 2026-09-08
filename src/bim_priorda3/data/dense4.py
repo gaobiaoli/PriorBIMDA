@@ -49,7 +49,7 @@ class Dense4Dataset(BIMDepthDataset):
             raise ValueError("Dense4 requires official all-valid GT and focal-corrected DA3")
         priorda_relative = any(
             cfg.model.get(name, {}).get("enabled", False)
-            for name in ("priorda_relative_metric_refiner", "priorda_relative_zero_anchor_refiner", "priorda_relative_prior_identity_refiner", "priorda_relative_prior_frame_refiner")
+            for name in ("priorda_relative_metric_refiner", "priorda_relative_zero_anchor_refiner", "priorda_relative_prior_identity_refiner", "priorda_relative_prior_frame_refiner", "priorda_relative_prior_frame_no_relu_refiner")
         )
         self.rgb_resize_interpolation = (
             cv2.INTER_CUBIC if priorda_relative else cv2.INTER_AREA
